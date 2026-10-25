@@ -646,6 +646,23 @@ int main(int argc, char **argv)
         song.batt_raw = 0;
         if (bad) return 1;
     }
+    {   /* 1.8.1: every CC alone, 0..127, is polled and its pending bit cleared (the bit 31 of a word, CC 31 / 63 / 95 / 127, did not end the loop) */
+        uint32_t cc, n, bad = 0;
+        for (cc = 0; cc < 128u; cc++) {
+            for (n = 0; n < FA_NCC; n++)
+                fa_cc[n] = 0;
+            fa_cc[5] = (uint8_t)cc;
+            fa_gl = 0;
+            fm_cc_rx[cc] = 77;
+            fm_cc_pend[0] = fm_cc_pend[1] = fm_cc_pend[2] = fm_cc_pend[3] = 0;
+            fm_cc_pend[cc >> 5] = 1u << (cc & 31u);
+            fa_cc_poll();
+            if (fm_cc_pend[0] | fm_cc_pend[1] | fm_cc_pend[2] | fm_cc_pend[3]) { printf("CC %u: its pending bit was not cleared\n", cc); bad++; }
+        }
+        for (n = 0; n < FA_NCC; n++)
+            fa_cc[n] = 0;
+        if (bad) return 1;
+    }
     printf("fmini_app_test: ok\n");
     {   /* the CUTOFF / EMPH / CNTR knobs glide (200 ms): a click is a ramp of tiny steps, silence snaps */
         track_t *t0 = &trk[0];

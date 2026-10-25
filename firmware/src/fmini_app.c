@@ -761,7 +761,7 @@ static uint32_t fa_sound_keys(void)
  * with the version).
  * SELECT picks a line, ALGORITHM changes it (or opens MIDI CC / ABOUT); GLO goes back, then closes. The settings are
  * kept in the flash settings record (favorites.factory rows 7 and 8: no engine of this firmware uses them). */
-#define FMINI_VERSION "v1.8.0"
+#define FMINI_VERSION "v1.8.1"
 #define FA_NPG 44u                                        /* the controls of the seven screens (FMG_PAGE: 8+8+8+4+4+4+8) */
 #define FA_NCC (FA_NPG + FA_AR_N)                         /* .. and the ARP pop-up's six lines */
 static uint8_t fa_gl;                                     /* 0 closed, 1 the list, 2 MIDI CC, 3 ABOUT */
@@ -949,7 +949,8 @@ static void fa_cc_poll(void)
     }
     fm1_irq_on();
     for (w = 0; w < 4u; w++)
-        for (b = 0; pend[w] >> b; b++)
+        for (b = 0; b < 32u && pend[w] >> b; b++)          /* (b < 32: a shift by 32 is undefined, and on a target that masks the count it
+                                                            * never ended for CC 31, 63, 95 and 127: fm_cc_rx was read past its 128 bytes) */
             if ((pend[w] >> b) & 1u) {
                 uint32_t cc = w * 32u + b, n, v = fm_cc_rx[cc];
                 if (fa_gl == 2u) {

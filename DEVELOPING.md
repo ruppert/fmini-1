@@ -184,7 +184,7 @@ of meaning matters to users, add a marker byte there and convert on load.
 | `regress.c` + `golden.txt`, `cpu_baseline.txt`, `target_budget.*` | render hashes of every engine and preset (the 100 FMINI ones are current in the default build; the `FELUCCA_CPU2=0` build differs for 41, see CLAUDE.md); level, DC, voices; CPU: the host's instruction counter may be missing (it was, in the sandbox: the budget is then not checked), the **static loop-instruction count** of the render functions in the chip's disassembly is always checked (+10 %) |
 | the rest | storage, projects, MIDI, USB, update loader, FX, other engines (Felucca's) |
 
-Seven sections fail at 1.8.0 (as at 1.7.0); CLAUDE.md lists them and says which were confirmed on the untouched v1.6.1. `tests/hostsim.c`
+Seven sections fail at 1.8.1 (as at 1.7.0); CLAUDE.md lists them and says which were confirmed on the untouched v1.6.1. `tests/hostsim.c`
 renders any engine and preset to a WAV (`build/host/hostsim ENGINE PRESET MONO OUT.wav`, with `SECS`, `CHORD`, `NOTE`,
 `PSET=id:v`, `BENCH=1` and more: its header) and is the quickest way to listen to a change. For sound work, write the measurement
 first (a test with the number to hit), then the code.
@@ -280,4 +280,7 @@ was written: verify before reusing anything beyond ideas.
   calibrated on a device: its levels are the stock ADC thresholds 531 / 561 / 591 (`ui_draw.c`), red is the stock "empty" (`FA_BATT_LOW`,
   not a measured 15 %), and "charging" is only USB power (no charger status line is read). Read `batt_raw` on the console at
   known charge levels and move the constants. `tests/fmini_app_test.c` checks the four states by pixel.
+- A loop over the set bits of a 32-bit word (`for (b = 0; w >> b; b++)`) needs `b < 32`: with bit 31 set, `w >> 32` is undefined and a
+  target that masks the count never ends it. `fa_cc_poll` had it until 1.8.1 (CC 31, 63, 95, 127 read `fm_cc_rx` past its end);
+  `tests/fmini_app_test.c` polls all 128 CCs one by one.
 - The GitHub token of a session cannot create Releases (403). The owner does it.
