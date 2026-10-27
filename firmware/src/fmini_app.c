@@ -728,7 +728,7 @@ static void fa_seq_note(track_t *t, uint32_t note)
         fa_sq_fresh = 0;
         fa_sq_cur = 0;
     }
-    if (fa_sq_cur >= 16u)
+    if (fa_sq_cur >= NSTEP)
         return;
     s = &t->step[fa_sq_cur];
     memset(s, 0, sizeof *s);
@@ -738,42 +738,29 @@ static void fa_seq_note(track_t *t, uint32_t note)
     s->vel = 100;
     fa_sq_cur++;
     t->p[P_SLEN] = fa_sq_cur;
-    if (fa_sq_cur >= 16u)
-        fa_sq_rec = 0;                                    /* 16 notes: the take is done */
+    if (fa_sq_cur >= NSTEP)
+        fa_sq_rec = 0;                                    /* 64 notes: the take is done */
 }
 
-static void fa_note_name(char *b, uint32_t note)
-{
-    static const char NM[12][3] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    uint32_t n = note % 12u;
-    uint32_t k = 0;
-    b[k++] = NM[n][0];
-    if (NM[n][1])
-        b[k++] = NM[n][1];
-    b[k++] = (char)('0' + (int32_t)(note / 12u) - 1);     /* C4 = 60 */
-    b[k] = 0;
-}
-
+/* 64 squares, 8 by 8: dark gray = empty, red = recorded, orange = the step that plays now; while REC is armed the
+ * next square blinks cream */
 static void fa_seq_dialog(void)
 {
     const track_t *t = TSEL;
-    uint32_t i, len = (uint32_t)clamp(t->p[P_SLEN], 1, 16), now = song.playing ? t->seq_idx % len : 99u;
+    uint32_t i, len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), now = song.playing ? t->seq_idx % len : 99u;
     char b[16];
     fa_frame("SEQUENCER");
-    for (i = 0; i < 16u; i++) {
-        int32_t x = 15 + (int32_t)(i % 4u) * 53, y = 52 + (int32_t)(i / 4u) * 32;
-        int rec_here = fa_sq_rec && i == fa_sq_cur, playing = i == now;
-        const step_t *s = &t->step[i];
-        uint16_t bg = playing ? FA_OR : FA_RGB(0x2A, 0x25, 0x20), fg = playing ? FA_RGB(0x14, 0x12, 0x10) : FA_CR;
-        cv_rect(x, y, 50, 28, rec_here && fa_sq_blink() ? FA_RED : bg);
-        if (i < len && s->n) {
-            fa_note_name(b, s->note[0]);
-            fa_ctext(x + 25, y + 6, &AF_M, b, fg);
-        } else {
-            fa_ctext(x + 25, y + 6, &AF_M, "-", FA_RGB(0x6A, 0x62, 0x58));
-        }
+    for (i = 0; i < NSTEP; i++) {
+        int32_t x = 61 + (int32_t)(i % 8u) * 15, y = 60 + (int32_t)(i / 8u) * 15;
+        uint16_t c = FA_RGB(0x2A, 0x25, 0x20);            /* empty */
+        if (i == now)
+            c = FA_OR;
+        else if (i < len && t->step[i].n)
+            c = FA_RED;                                   /* recorded */
+        else if (fa_sq_rec && i == fa_sq_cur && fa_sq_blink())
+            c = FA_CR;                                    /* the next slot of the take */
+        cv_rect(x, y, 13, 13, c);
     }
-    b[0] = 0;
     str_cpy(b, fa_sq_rec ? "REC" : song.playing ? "PLAY" : "STOP", 5);
     fa_ltext(20, 182, &AF_M, b, fa_sq_rec ? FA_RED : song.playing ? FA_OR : FA_MU);
     fmt_int(b, song.g[G_BPM]);
@@ -803,7 +790,7 @@ static uint32_t fa_sound_keys(void)
  * SELECT picks a line, ALGORITHM changes it (or opens MIDI CC / ABOUT); GLO goes back, then closes. The settings are
  * kept in the flash settings record (favorites.factory rows 7 to 9: no engine of this firmware uses them).
  * MIDI CLOCK (OFF by default: the internal clock, or USB / TRS) makes the ARP and the SEQ follow that input's MIDI clock. */
-#define FMINI_VERSION "v1.9.2"
+#define FMINI_VERSION "v1.10.0"
 #define FA_NPG 44u                                        /* the controls of the seven screens (FMG_PAGE: 8+8+8+4+4+4+8) */
 #define FA_NCC (FA_NPG + FA_AR_N)                         /* .. and the ARP pop-up's six lines */
 static uint8_t fa_gl;                                     /* 0 closed, 1 the list, 2 MIDI CC, 3 ABOUT */
@@ -1287,7 +1274,7 @@ static uint32_t fa_signature(void)
         h = (h ^ (uint8_t)fa_sv_name[i]) * 16777619u;
     h = (h ^ fa_sq ^ (uint32_t)fa_sq_rec << 1 ^ (uint32_t)fa_sq_cur << 2 ^ (uint32_t)song.playing << 8 ^
          (uint32_t)(song.playing ? t->seq_idx : 0u) << 9 ^ (uint32_t)fa_sq_blink() << 16) * 16777619u;
-    for (i = 0; i < 16u; i++)
+    for (i = 0; i < NSTEP; i++)
         h = (h ^ (uint32_t)(t->step[i].n ? t->step[i].note[0] : 0u)) * 16777619u;
     h = (h ^ fa_batt()) * 16777619u;                         /* the battery icon */
     return (h ^ t->preset) * 16777619u;

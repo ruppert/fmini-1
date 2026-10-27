@@ -551,13 +551,13 @@ int main(int argc, char **argv)
         fpress(B_PLAY);
         events_block(CTL);
         if (song.playing) { printf("stop\n"); return 1; }
-        fpress(B_REC);                                   /* a take of 16 ends by itself */
-        for (k = 0; k < 20u; k++) input_on(&trk[0], 50u + k, 100);
+        fpress(B_REC);                                   /* a take of 64 ends by itself */
+        for (k = 0; k < 70u; k++) input_on(&trk[0], 50u + k, 100);
         trk_all_off(&trk[0]);
-        if (fa_sq_rec || trk[0].p[P_SLEN] != 16 || trk[0].step[15].note[0] != 65) { printf("take of 16 (%d)\n", trk[0].p[P_SLEN]); return 1; }
+        if (fa_sq_rec || trk[0].p[P_SLEN] != 64 || trk[0].step[63].note[0] != 113) { printf("take of 64 (%d)\n", trk[0].p[P_SLEN]); return 1; }
         ui.force = 1; fa_draw(); dump(dir, 19);
         fhold(B_REC);                                    /* HOLD REC TO CLEAR: the steps go, REC is not toggled */
-        for (k = 0; k < 16u; k++)
+        for (k = 0; k < NSTEP; k++)
             if (trk[0].step[k].n) { printf("hold rec: step %u kept\n", k); return 1; }
         if (fa_sq_rec || !fa_sq) { printf("hold rec toggled\n"); return 1; }
         fpress(B_SEQ);

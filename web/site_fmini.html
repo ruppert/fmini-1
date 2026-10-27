@@ -360,15 +360,6 @@
         <a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener">FM-1-transporter</a></p>
 
       <details>
-        <summary data-t="stockTitle"></summary>
-        <p data-t="back"></p>
-        <p><a href="https://www.m-vave.com/download" target="_blank" rel="noopener">M-VAVE Downloads</a></p>
-        <p><label><span data-t="stockFile"></span><br><input id="stock-file" type="file" accept=".fwsc"></label></p>
-        <p><button id="stock-go" disabled data-t="stockGo"></button></p>
-        <p data-t="stockBackup"></p>
-        <p><label><input id="stock-recovery" type="checkbox"> <span data-t="stockRecovery"></span></label></p>
-      </details>
-      <details>
         <summary data-t="logT"></summary>
         <pre id="log"></pre>
       </details>
@@ -399,14 +390,6 @@ const TEXT = {
     direct: "Ligue o cabo USB direto no computador. Não precisa de Probe nem de Transporter.",
     brick: "Se a instalação falhar e o FM-1 não ligar mais, recuperá-lo exige um Transporter:",
     beta: "O FMini-1 é uma versão experimental. O autor não se responsabiliza se o seu FM-1 for danificado ou se comportar de forma estranha por causa deste firmware personalizado. Use por sua conta e risco.",
-    back: "Baixe o FM-1 V15 oficial na M-VAVE e escolha o FM-1.fwsc sem modificações. O navegador valida o arquivo localmente; ele não é enviado a nenhum servidor.",
-    stockTitle: "Voltar ao V15 oficial", stockFile: "FM-1.fwsc oficial", stockGo: "Fazer backup e voltar ao V15 oficial",
-    stockBackup: "Músicas, músicas salvas, bancos de sons, samples e ajustes atuais são salvos antes. Firmware antigo precisa de uma atualização do Felucca para fazer o backup completo.",
-    stockRecovery: "Retomar uma atualização interrompida: já salvei um backup completo neste computador",
-    stockValid: "V15 oficial verificado", stockConfirm: "O arquivo de backup completo foi salvo neste computador? Continuar vai voltar ao V15 oficial, que não abre as músicas do Felucca.",
-    stockNeedBackup: "Do modo de atualização não dá para exportar backup. Só marque retomar se você já salvou um backup completo.",
-    stockUnsupported: "Este firmware não suporta backup completo. Instale primeiro a versão atual.",
-    backup: "Salvando backup completo ", stockError: "Não foi possível validar o firmware oficial: ",
     nomidi: "Este navegador não consegue. Abra a página no Chrome ou no Edge.", loadfail: "Não foi possível carregar: ",
     start: "Iniciando", verify: "Verificando", loader: "Entrando no modo de atualização", write: "Gravando",
     reboot: "Reiniciando", done: "Pronto! O FM-1 agora é um FMini-1", stopped: "Interrompido. Desconecte e reconecte o USB e aperte Instalar de novo.",
@@ -439,14 +422,6 @@ const TEXT = {
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
     brick: "If an install fails and the FM-1 no longer starts, recovering it needs a Transporter:",
     beta: "FMini-1 is an experimental release. The author accepts no responsibility if your FM-1 is damaged or misbehaves because of this custom firmware. Use it at your own risk.",
-    back: "Get official FM-1 V15 from M-VAVE and select the unmodified FM-1.fwsc. The browser validates it locally; it is not sent to a server.",
-    stockTitle: "Return to official V15", stockFile: "Official FM-1.fwsc", stockGo: "Back up and return to official V15",
-    stockBackup: "Current music, saved music, sound banks, samples and settings are saved first. Older firmware needs a Felucca update for complete backups. To restore an archive later, reinstall Felucca and use the editor.",
-    stockRecovery: "Resume an interrupted update: I already saved a complete backup to this computer",
-    stockValid: "Official V15 verified", stockConfirm: "Has the complete backup file been saved to this computer? Continue to return to official V15. Official V15 cannot open Felucca music.",
-    stockNeedBackup: "An update loader cannot export a backup. Only select resume if you already saved a complete backup.",
-    stockUnsupported: "This Felucca does not support complete backups. Install the current Felucca first.",
-    backup: "Saving complete backup ", stockError: "Cannot validate official firmware: ",
     nomidi: "This browser cannot do it. Open the page in Chrome or Edge.", loadfail: "Could not load: ",
     start: "Starting", verify: "Verifying", loader: "Switching to update mode", write: "Writing",
     reboot: "Restarting", done: "Done", stopped: "Stopped. Replug the USB cable and press Install again.",
@@ -484,7 +459,7 @@ const SITE = {
     f2t: "Filtro ladder", f2d: "Ladder de 4 polos, 24 dB/oitava, com saturação em cada estágio e o atraso de realimentação do circuito do Minimoog. Com a ênfase a partir de 8 o filtro auto-oscila numa senoide pura que acompanha o teclado em 1 V/oitava. O corte é lido de −5 a +5, como no painel.",
     f3t: "Contornos", f3d: "Dois contornos (filtro e volume) com ataque, decaimento e sustentação. O ataque é exponencial, como o do circuito original. Glide, LFO e modulação completam a seção.",
     f4t: "100 presets", f4d: "Dez grupos de dez: uma vitrine de estilos, hard leads, soft leads, baixos, pads e cordas, metais, plucks, teclas, atmosferas e efeitos sonoros. Cerca de um quarto já vem com o arpejador ligado. Salve os seus em 32 posições de usuário.",
-    f5t: "Arpejador e sequenciador", f5d: "Um toque no ARP liga e desliga; segurar ativa o HOLD. O sequenciador grava até 16 notas (REC) e toca (PLAY). Os LEDs das teclas acendem junto com as notas.",
+    f5t: "Arpejador e sequenciador", f5d: "Um toque no ARP liga e desliga; segurar ativa o HOLD. O sequenciador grava até 64 notas (REC) e toca (PLAY). Os LEDs das teclas acendem junto com as notas.",
     f6t: "Efeitos por preset", f6d: "Reverb, delay, chorus e drive, cada preset com a sua própria combinação, para que baixos, leads e pads tenham ambientes bem diferentes.",
     h_screens: "As telas", l_screens: "O painel foi desenhado para a tela do FM-1, com knobs estriados, chaves vermelhas e azuis e gráficos de filtro e contornos. Escolha uma página:",
     views: [
@@ -498,7 +473,7 @@ const SITE = {
     ],
     pops: [
       { i: "arp", t: "Arpejador", d: "Modo, velocidade, oitavas, gate, HOLD e tempo. Toque no botão ARP para ligar; segure para o HOLD. O quadro fecha sozinho em 4 s." },
-      { i: "seq", t: "Sequenciador", d: "16 posições para notas. REC arma a gravação, PLAY toca e para, e o tempo se ajusta com o encoder." },
+      { i: "seq", t: "Sequenciador", d: "64 posições para notas. REC arma a gravação, PLAY toca e para, e o tempo se ajusta com o encoder." },
       { i: "save", t: "Salvar preset", d: "Escolha a posição U01–U32, escreva o nome com os encoders e aperte SAVE. Suas versões ficam junto dos 100 presets de fábrica." },
       { i: "fxrev", t: "FX · Editar reverb", d: "O botão EDIT abre quatro knobs: MIX, TYPE (room, hall, plate, spring e cloud, longo e denso), DECAY e TONE. Todos os reverbs são estéreo. Apertar FX de novo passa para o delay, o chorus e o drive." },
       { i: "fxdly", t: "FX · Editar delay", d: "MIX, TYPE (analog, digital, tape, ping-pong, multi-tap, slapback e reverse), TIME e FEEDBACK. O botão SCL marca o tempo (tap tempo). O chorus tem Stereo (inspirado no CE-2), Juno e Multi; o drive, Soft e Tube." },
@@ -512,11 +487,11 @@ const SITE = {
     ft3t: "Emulação perfeita", ft3d: "Três osciladores, mixer com saturação suave e filtro ladder de 24 dB/oitava com auto-oscilação, modelados no Minimoog Model D.",
     ft4t: "Efeitos", ft4d: "5 reverbs (Room, Hall, Plate, Spring, Cloud), 7 delays (Analog, Digital, Tape, Ping-Pong, Multi, Slap, Reverse), 3 chorus (Stereo, Juno, Multi) e drive (Soft, Tube).",
     ft5t: "MIDI CC para controladores", ft5d: "50 controles com CC próprio, que você pode trocar, e o FMini-1 aprende o CC que o controlador enviar. Entrada USB e TRS, filtro de canal, pitch bend e roda de modulação.",
-    ft6t: "Sequenciador de 16 notas", ft6d: "Grave até 16 notas (REC) e toque (PLAY).",
+    ft6t: "Sequenciador de 64 notas", ft6d: "Grave até 64 notas (REC) e toque (PLAY).",
     ft7t: "Arpegiador", ft7d: "Um toque liga e desliga, segurar ativa o HOLD. Cerca de um quarto dos presets já vem com o arpejador ligado.",
     ft8t: "Editor web", ft8d: "Edite sons e presets pelo navegador, ligado ao FM-1 por USB-MIDI.",
     ft9t: "Emulador online", ft9d: "Experimente o FMini-1 no navegador, sem instalar nada.",
-    h_install: "Instalar", l_install: "O instalador roda aqui mesmo, no navegador, e grava o firmware no FM-1 pelo cabo USB. Para voltar ao firmware oficial, pelo botão ou pelo M-UPGRADE, faça antes o backup: a restauração grava o firmware oficial e apaga os projetos e samples guardados no FM-1.",
+    h_install: "Instalar", l_install: "O instalador roda aqui mesmo, no navegador, e grava o firmware no FM-1 pelo cabo USB.",
   },
   en: {
     nav_f: "Sound", nav_s: "Screens", nav_ft: "Features", nav_ed: "Editor", nav_i: "Install",
@@ -528,7 +503,7 @@ const SITE = {
     f2t: "Ladder filter", f2d: "A four-pole ladder, 24 dB/octave, with saturation in every stage and the feedback lag of the Minimoog circuit. From emphasis 8 up it self-oscillates as a pure sine that follows the keyboard at 1 V/octave. Cutoff reads -5 to +5, as on the panel.",
     f3t: "Contours", f3d: "Two contours (filter and loudness) with attack, decay and sustain. The attack is exponential, like the original circuit. Glide, LFO and modulation complete the section.",
     f4t: "100 presets", f4d: "Ten groups of ten: a showcase of styles, hard leads, soft leads, basses, pads and strings, brass, plucks, keys, atmospheres and sound effects. About a quarter comes with the arpeggiator already on. Save your own in 32 user slots.",
-    f5t: "Arpeggiator and sequencer", f5d: "One tap on ARP turns it on and off; holding it sets HOLD. The sequencer records up to 16 notes (REC) and plays them (PLAY). The key LEDs light with the notes.",
+    f5t: "Arpeggiator and sequencer", f5d: "One tap on ARP turns it on and off; holding it sets HOLD. The sequencer records up to 64 notes (REC) and plays them (PLAY). The key LEDs light with the notes.",
     f6t: "Effects per preset", f6d: "Reverb, delay, chorus and drive, each preset with its own combination, so basses, leads and pads live in very different spaces.",
     h_screens: "The screens", l_screens: "The panel is drawn for the FM-1's screen, with fluted knobs, red and blue rocker switches and graphs of the filter and contours. Pick a page:",
     views: [
@@ -542,7 +517,7 @@ const SITE = {
     ],
     pops: [
       { i: "arp", t: "Arpeggiator", d: "Mode, rate, octaves, gate, HOLD and tempo. Tap the ARP button to turn it on; hold it for HOLD. The box closes by itself after 4 s." },
-      { i: "seq", t: "Sequencer", d: "16 slots for notes. REC arms recording, PLAY starts and stops, and the tempo is set with an encoder." },
+      { i: "seq", t: "Sequencer", d: "64 slots for notes. REC arms recording, PLAY starts and stops, and the tempo is set with an encoder." },
       { i: "save", t: "Save preset", d: "Pick the slot U01–U32, type the name with the encoders and press SAVE. Your versions sit next to the 100 factory presets." },
       { i: "fxrev", t: "FX · Edit reverb", d: "EDIT opens four knobs: MIX, TYPE (room, hall, plate, spring and cloud, long and dense), DECAY and TONE. Every reverb is stereo. Pressing FX again moves on to the delay, the chorus and the drive." },
       { i: "fxdly", t: "FX · Edit delay", d: "MIX, TYPE (analog, digital, tape, ping-pong, multi-tap, slapback and reverse), TIME and FEEDBACK. The SCL button taps the tempo. The chorus has Stereo (after the CE-2), Juno and Multi; the drive, Soft and Tube." },
@@ -556,11 +531,11 @@ const SITE = {
     ft3t: "Minimoog model", ft3d: "Three oscillators, a mixer that overloads softly and a 24 dB/oct ladder filter that self-oscillates, modelled on the Minimoog Model D.",
     ft4t: "Effects", ft4d: "5 reverbs (Room, Hall, Plate, Spring, Cloud), 7 delays (Analog, Digital, Tape, Ping-Pong, Multi, Slap, Reverse), 3 choruses (Stereo, Juno, Multi) and drive (Soft, Tube).",
     ft5t: "MIDI CC for controllers", ft5d: "50 controls with their own CC, which you can change, and the FMini-1 learns the CC your controller sends. USB and TRS input, channel filter, pitch bend and mod wheel.",
-    ft6t: "16-note sequencer", ft6d: "Record up to 16 notes (REC) and play them back (PLAY).",
+    ft6t: "64-note sequencer", ft6d: "Record up to 64 notes (REC) and play them back (PLAY).",
     ft7t: "Arpeggiator", ft7d: "One tap turns it on and off, holding it enables HOLD. About a quarter of the presets come with the arpeggiator on.",
     ft8t: "Web editor", ft8d: "Edit sounds and presets in the browser, connected to the FM-1 over USB-MIDI.",
     ft9t: "Online emulator", ft9d: "Try the FMini-1 in your browser, with nothing to install.",
-    h_install: "Install", l_install: "The installer runs right here, in the browser, and writes the firmware to the FM-1 over the USB cable. To return to the official firmware, through the button or through M-UPGRADE, back up first: restoring writes the official firmware and erases the projects and samples stored on the FM-1.",
+    h_install: "Install", l_install: "The installer runs right here, in the browser, and writes the firmware to the FM-1 over the USB cable.",
   },
 };
 for (const l in SITE) Object.assign(TEXT[l], SITE[l]);
@@ -677,10 +652,10 @@ const meta = /*META*/;
 document.querySelectorAll(".curver").forEach((e) => { e.textContent = "v" + meta.version; });
 document.querySelectorAll(".curver-b").forEach((e) => { e.textContent = "(v" + meta.version + ")"; });
 
-let writing = false, stock = null, stockFileEpoch = 0;
+let writing = false;
 let wake = null;
 const keepAwake = async (on) => { try { if (on && navigator.wakeLock) wake = await navigator.wakeLock.request("screen"); else if (wake) { await wake.release(); wake = null; } } catch (_) {} };
-const lockInstaller = (on) => { keepAwake(on); writing = on; $("go").disabled = on || !image; $("stock-go").disabled = on || !stock; $("stock-file").disabled = on; $("stock-recovery").disabled = on; };
+const lockInstaller = (on) => { keepAwake(on); writing = on; $("go").disabled = on || !image; };
 window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault(); e.returnValue = t("leave"); } });
 
 (async () => {
@@ -746,64 +721,6 @@ $("portgo").addEventListener("click", () => { const n = $("portsel").value; $("p
 $("portno").addEventListener("click", () => $("portpick").close());
 $("go").addEventListener("click", () => runInstall(null));
 
-$("stock-file").addEventListener("change", async () => {
-  const epoch = ++stockFileEpoch, file = $("stock-file").files[0]; stock = null; lockInstaller(false);
-  if (!file) return;
-  try {
-    if (file.size !== STOCK_V15_SIZE) throw new Error("FM-1 V15 / FM-1.fwsc");
-    const verified = await validateStockPackage(new Uint8Array(await file.arrayBuffer()));
-    if (epoch !== stockFileEpoch) return;
-    stock = verified; sayK("stockValid"); lockInstaller(false);
-  } catch (e) { if (epoch === stockFileEpoch) sayK("stockError", e.message); }
-});
-function saveArchive(archive) {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(archive)], {type:"application/json"}));
-  const a = document.createElement("a"); a.href = url; a.download = `Felucca-backup-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-function archiveInfo(a) {
-  let pos = a.indexOf(0); if (pos < 0) throw new Error("Invalid INFO");
-  const version = String.fromCharCode(...a.slice(0,pos)); pos++;
-  const engines = a[pos]; pos += 5;
-  for (let i = 0; i < engines; i++) { const end = a.indexOf(0,pos); if (end < 0) throw new Error("Invalid INFO"); pos = end + 1; }
-  const ext = a.slice(pos + 1);
-  const supported = /^FELUCCA /i.test(version) && ext[0] === 16 && ext[1] === 0x55 && ext[2] === 1 &&
-    ext[4] === 0x4d && ext[5] === 1 && ext[8] === 0x42 && ext[9] === 1 && (ext[10] & 1);
-  return {version,supported};
-}
-$("stock-go").addEventListener("click", async () => {
-  if (!stock || writing) return;
-  const selected = stock; lockInstaller(true);
-  let link = null;
-  try {
-    let midi;
-    try { midi = await navigator.requestMIDIAccess({sysex:true}); } catch (e) { sayK("denied"); return; }
-    const up = new Updater(midi, log);
-    const step = (k, n) => { log(`${k} ${n ?? ""}`); if (["start","verify","loader","write","reboot","done"].includes(k)) sayK(k); if (k === "reboot" || k === "done") stopCrawl(); if (k === "done") setBar(100, "done"); else if (k === "write") writeBar(n); else if (PHASES.includes(k)) setBar(k === "reboot" ? 100 : k === "loader" ? 6 : 0, k); };
-    const loader = await up.find(id => id.model === "ota-FM-1");
-    if (loader) {
-      loader.link.close();
-      if (!$("stock-recovery").checked) { sayK("stockNeedBackup"); return; }
-      if (!confirm(t("stockConfirm"))) return;
-      sayK(await up.resume(selected.image, step, selected.product) ? "done" : "stopped");
-    } else {
-      const device = await up.find(id => id.model === "FM-1");
-      if (!device) { sayK("notfound"); return; }
-      const input = device.link.input, output = device.link.output; device.link.close();
-      link = new BackupConnection(input, output);
-      const info = archiveInfo(await link.request([1,[]]));
-      if (!info.supported) { sayK("stockUnsupported"); return; }
-      const archive = await captureBackup((r,o) => link.request(r,o), info.version,
-        (done,total) => sayK("backup", `${Math.round(done / Math.max(1,total) * 100)}%`));
-      saveArchive(archive); link.close(); link = null;
-      if (!confirm(t("stockConfirm"))) return;
-      await up.install(selected.image, selected.product, step);
-    }
-  } catch (e) {
-    if (e.code && TEXT[lang][e.code]) sayK(e.code,e.detail || ""); else sayK("error",e.message);
-    log(String(e.stack || e));
-  } finally { if (link) link.close(); lockInstaller(false); }
-});
 
 /* ---- hero: the Minimoog goes into the FM-1's screen as the page scrolls (reduced motion: the finished picture) ---- */
 (() => {
