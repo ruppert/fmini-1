@@ -6,8 +6,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="FMini-1: a monophonic synth firmware for the M-VAVE FM-1. 3 oscillators, ladder filter, 100 presets, arpeggiator, sequencer, MIDI.">
-<title>FMini-1 — a monophonic synth for the M-VAVE FM-1</title>
+<meta name="description" content="FMini-1: a Minimoog emulation firmware for the M-Vave FM-1, mono and polyphonic. Analog Circuit Modelling, 3 oscillators, ladder filter, 100 presets, arpeggiator, sequencer, MIDI.">
+<title>FMini-1 — a Minimoog emulation for the M-Vave FM-1</title>
 <style>
   :root {
     --bg: #0d0c10; --surface: #15131a; --surface2: #1c1922; --line: #2a2631; --fg: #f4f0ea; --dim: #a29cab; --mute: #6f6a78;
@@ -427,7 +427,7 @@ const TEXT = {
     step1: "Conectar", step2: "Instalar", step3: "Tocar",
     s1: "Ligue o FM-1 ao computador com um cabo USB de dados.", s2: "Aperte Instalar e mantenha o cabo conectado até aparecer Pronto.", s3: "O FM-1 reinicia como FMini-1, com a tela de abertura.",
     ph_verify: "Verificar", ph_loader: "Modo de atualização", ph_write: "Gravar", ph_reboot: "Reiniciar", ph_done: "Pronto",
-    tagline: "Um sintetizador monofônico estilo Minimoog para o M-VAVE FM-1",
+    tagline: "Uma emulação do Minimoog para o M-VAVE FM-1 (mono/poli)",
     feat: "3 osciladores · filtro ladder · 100 presets · arpejador · MIDI",
     risk: "Use por sua conta e risco", logT: "Detalhes", fw: "Firmware",
   },
@@ -467,7 +467,7 @@ const TEXT = {
     step1: "接続", step2: "インストール", step3: "演奏",
     s1: "USB データケーブルで FM-1 をパソコンに接続します。", s2: "「インストール」を押し、「完了」と出るまでケーブルを抜かないでください。", s3: "FM-1 が再起動し、FMini-1 のスプラッシュ画面が表示されます。",
     ph_verify: "確認", ph_loader: "更新モード", ph_write: "書き込み", ph_reboot: "再起動", ph_done: "完了",
-    tagline: "M-VAVE FM-1 用 Minimoog スタイルのモノフォニックシンセ",
+    tagline: "M-VAVE FM-1 用 Minimoog エミュレーション（モノ／ポリ）",
     feat: "3 オシレーター · ラダーフィルター · 100 プリセット · アルペジエーター · MIDI",
     risk: "自己責任でお使いください", logT: "詳細", fw: "ファームウェア",
   },
@@ -507,7 +507,7 @@ const TEXT = {
     step1: "Connect", step2: "Install", step3: "Play",
     s1: "Plug the FM-1 into the computer with a USB data cable.", s2: "Press Install and keep the cable connected until it says Done.", s3: "The FM-1 restarts as FMini-1 with its splash screen.",
     ph_verify: "Verify", ph_loader: "Update mode", ph_write: "Write", ph_reboot: "Restart", ph_done: "Done",
-    tagline: "A Minimoog-style monophonic synth for the M-VAVE FM-1",
+    tagline: "A Minimoog emulation for the M-Vave FM-1 (mono/poly)",
     feat: "3 oscillators · ladder filter · 100 presets · arpeggiator · MIDI",
     risk: "Use at your own risk", logT: "Details", fw: "Firmware",
   },
@@ -516,7 +516,7 @@ const TEXT = {
 const SITE = {
   pt: {
     nav_f: "Som", nav_s: "Telas", nav_ft: "Features", nav_ed: "Editor", nav_i: "Instalar",
-    sub: "Um firmware aberto que transforma o M-VAVE FM-1 em um sintetizador monofônico modelado no circuito do Minimoog: três osciladores, filtro ladder, contornos, efeitos e tudo ao alcance dos botões do FM-1.",
+    sub: "Um firmware aberto que transforma o M-VAVE FM-1 em um sintetizador monofônico e polifônico. O FMini-1 usa a técnica de Analog Circuit Modelling, criada a partir dos esquemas reais do Minimoog para reproduzir com precisão o comportamento do instrumento original: três osciladores, filtro ladder, contornos, efeitos e tudo ao alcance dos botões do FM-1.",
     chip_f: "Filtro ladder", chip_p: "100 presets",
     cta_install: "Instalar agora", cta_screens: "Ver as telas",
     h_sound: "O som", l_sound: "Cada bloco do painel do Minimoog tem seu lugar na tela de 240 × 240 do FM-1, com quatro knobs físicos para tocar de verdade.",
@@ -560,7 +560,7 @@ const SITE = {
   },
   en: {
     nav_f: "Sound", nav_s: "Screens", nav_ft: "Features", nav_ed: "Editor", nav_i: "Install",
-    sub: "An open firmware that turns the M-VAVE FM-1 into a monophonic synth modelled after the Minimoog circuit: three oscillators, a ladder filter, contours and effects, all within reach of the FM-1's buttons.",
+    sub: "An open firmware that turns the M-VAVE FM-1 into a monophonic and polyphonic synth. FMini-1 uses Analog Circuit Modelling, a technique built from the actual Minimoog schematics to accurately reproduce the behaviour of the real instrument: three oscillators, a ladder filter, contours and effects, all within reach of the FM-1's buttons.",
     chip_f: "Ladder filter", chip_p: "100 presets",
     cta_install: "Install now", cta_screens: "See the screens",
     h_sound: "The sound", l_sound: "Each block of the Minimoog panel has its place on the FM-1's 240 × 240 screen, with four real knobs to play it for real.",
@@ -604,7 +604,7 @@ const SITE = {
   },
   ja: {
     nav_f: "サウンド", nav_s: "画面", nav_ft: "機能", nav_ed: "エディタ", nav_i: "インストール",
-    sub: "M-VAVE FM-1 を、Minimoog の回路をモデルにしたモノフォニック・シンセに変えるオープンなファームウェア。3 基のオシレーター、ラダーフィルター、コンター、エフェクトを FM-1 のボタンで操作できます。",
+    sub: "M-VAVE FM-1 を、モノフォニック／ポリフォニックのシンセに変えるオープンなファームウェア。FMini-1 は、実際の Minimoog の回路図から作られた「Analog Circuit Modelling」という技術で、本物の楽器の動作を正確に再現します。3 基のオシレーター、ラダーフィルター、コンター、エフェクトを FM-1 のボタンで操作できます。",
     chip_f: "ラダーフィルター", chip_p: "100 プリセット",
     cta_install: "今すぐインストール", cta_screens: "画面を見る",
     h_sound: "サウンド", l_sound: "Minimoog のパネルの各ブロックを FM-1 の 240 × 240 画面に再現。4 つの実際のノブで演奏できます。",
