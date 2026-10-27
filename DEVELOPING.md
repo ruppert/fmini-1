@@ -184,7 +184,7 @@ of meaning matters to users, add a marker byte there and convert on load.
 | `regress.c` + `golden.txt`, `cpu_baseline.txt`, `target_budget.*` | render hashes of every engine and preset (the 100 FMINI ones are current in the default build; the `FELUCCA_CPU2=0` build differs for 41, see CLAUDE.md); level, DC, voices; CPU: the host's instruction counter may be missing (it was, in the sandbox: the budget is then not checked), the **static loop-instruction count** of the render functions in the chip's disassembly is always checked (+10 %) |
 | the rest | storage, projects, MIDI, USB, update loader, FX, other engines (Felucca's) |
 
-Seven sections fail at 1.9.1 (as at 1.7.0); CLAUDE.md lists them and says which were confirmed on the untouched v1.6.1. `tests/hostsim.c`
+Seven sections fail at 1.9.2 (as at 1.7.0); CLAUDE.md lists them and says which were confirmed on the untouched v1.6.1. `tests/hostsim.c`
 renders any engine and preset to a WAV (`build/host/hostsim ENGINE PRESET MONO OUT.wav`, with `SECS`, `CHORD`, `NOTE`,
 `PSET=id:v`, `BENCH=1` and more: its header) and is the quickest way to listen to a change. For sound work, write the measurement
 first (a test with the number to hit), then the code.

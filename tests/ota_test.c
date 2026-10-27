@@ -208,7 +208,8 @@ int main(int argc, char **argv)
     rc = ota_session();
     printf("  %u requests\n", requests);
     bad += check("session commits (flash.bin exactly 0x93000)", rc == 0 && committed);
-    bad += check("headers + loader + confirm, no head reads", requests >= 10 && requests <= 30);
+    /* own loader: 19 requests; the official loader (V15, V16) is larger: 44 (it writes the head, which is no longer read) */
+    bad += check("headers + loader + confirm, no head reads", requests >= 10 && requests <= 60);
     {
         uint8_t *h = nor + 0xE0000, *p = committed_parm;
         bad += check("staged body == the package's loader", !memcmp(nor + 0xE0020, logical + ota_body_off(), 64));
