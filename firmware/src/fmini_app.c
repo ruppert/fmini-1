@@ -801,12 +801,14 @@ static uint32_t fa_sound_keys(void)
  * controller while the list is open is taken for the highlighted line), PITCH BEND (the range) and ABOUT (the splash
  * with the version).
  * SELECT picks a line, ALGORITHM changes it (or opens MIDI CC / ABOUT); GLO goes back, then closes. The settings are
- * kept in the flash settings record (favorites.factory rows 7 and 8: no engine of this firmware uses them). */
-#define FMINI_VERSION "v1.8.2"
+ * kept in the flash settings record (favorites.factory rows 7 to 9: no engine of this firmware uses them).
+ * MIDI TEMPO SYNC (off by default) makes the ARP and the SEQ follow the MIDI clock of the MIDI IN. */
+#define FMINI_VERSION "v1.9.0"
 #define FA_NPG 44u                                        /* the controls of the seven screens (FMG_PAGE: 8+8+8+4+4+4+8) */
 #define FA_NCC (FA_NPG + FA_AR_N)                         /* .. and the ARP pop-up's six lines */
 static uint8_t fa_gl;                                     /* 0 closed, 1 the list, 2 MIDI CC, 3 ABOUT */
-static uint8_t fa_gl_row;                                 /* 0 MIDI IN, 1 CHANNEL, 2 MIDI CC, 3 PITCH BEND, 4 ABOUT */
+static uint8_t fa_gl_row;                                 /* 0 MIDI IN, 1 CHANNEL, 2 MIDI CC, 3 MIDI TEMPO SYNC, 4 PITCH BEND, 5 ABOUT */
+static uint8_t fa_sync;                                   /* MIDI TEMPO SYNC: the ARP and the SEQ run on the MIDI clock (default off) */
 static uint8_t fa_cc_i;                                   /* the control highlighted in MIDI CC */
 static uint8_t fa_cc[FA_NCC];                             /* its CC, 0 = none */
 static uint8_t fa_cfg_dirty;
@@ -838,6 +840,7 @@ static void fa_cfg_load(void)
         fm_midi_src = (uint8_t)(src == 0u || src == 1u ? src : 3u);   /* (2 was Bluetooth) */
         fm_midi_ch = (uint8_t)(ch > 16u ? 0u : ch);
         fm_bend_mode = (uint8_t)(*fa_cfg_byte(4u + FA_NCC) & 3u);
+        fa_sync = *fa_cfg_byte(17u + FA_NCC) == 0x5Au;  /* (0x5A: on; an erased byte, 0xFF, is off) */
         /* (the FX settings are not read back: each factory patch carries its own, a saved one and the autosave theirs) */
         fm_bt = 0;
         for (i = 0; i < FA_NCC; i++) {
@@ -849,6 +852,7 @@ static void fa_cfg_load(void)
         fm_midi_ch = 0;
         fm_bend_mode = 0;
         fm_bt = 0;
+        fa_sync = 0;
         memcpy(fa_cc, FA_CC0, sizeof fa_cc);
     }
 }
@@ -866,6 +870,7 @@ static void fa_cfg_save(void)
     for (i = 0; i < FA_NCC; i++)
         *fa_cfg_byte(4u + i) = fa_cc[i];
     *fa_cfg_byte(4u + FA_NCC) = fm_bend_mode;
+    *fa_cfg_byte(17u + FA_NCC) = fa_sync ? 0x5Au : 0u;
     {
         static const uint8_t GID[4] = {G_RSIZE, G_DRREV, G_CRATE, G_DRLVL};
         for (i = 0; i < 4u; i++)
@@ -1010,6 +1015,12 @@ static void fa_cc_poll(void)
             }
 }
 
+/* MIDI TEMPO SYNC: the ARP and the SEQ follow the MIDI clock. The clock is the global CLK (INT / USB / TRS): MIDI IN MIDI
+ * takes the TRS clock, USB and ALL the USB one. Off: the internal clock */
+static void fa_sync_apply(void)
+{
+    song.g[G_CLOCK] = (int16_t)(!fa_sync ? 0 : fm_midi_src == 1u ? 2 : 1);
+}
 static void fa_gl_dialog(void)
 {
     char b[24];
@@ -1022,8 +1033,9 @@ static void fa_gl_dialog(void)
             str_cpy(b, "ALL", 4);
         fa_line(84, "MIDI CHANNEL", b, fa_gl_row == 1u);
         fa_line(106, "MIDI CC", ">", fa_gl_row == 2u);
-        fa_line(128, "PITCH BEND", FA_BEND[fm_bend_mode & 3u], fa_gl_row == 3u);
-        fa_line(150, "ABOUT", ">", fa_gl_row == 4u);
+        fa_line(128, "MIDI TEMPO SYNC", fa_sync ? "ON" : "OFF", fa_gl_row == 3u);
+        fa_line(150, "PITCH BEND", FA_BEND[fm_bend_mode & 3u], fa_gl_row == 4u);
+        fa_line(172, "ABOUT", ">", fa_gl_row == 5u);
         fa_ctext(120, 198, &AF_S, "SELECT  ALGO  GLO=BACK", FA_MU);
     } else {                                              /* MIDI CC: a window of six lines on the list */
         uint32_t top = fa_cc_i < 3u ? 0u : fa_cc_i - 3u, k;
@@ -1261,7 +1273,7 @@ static uint32_t fa_signature(void)
     h = (h ^ fa_gl ^ (uint32_t)fa_gl_row << 3 ^ (uint32_t)fa_cc_i << 6 ^ (uint32_t)fm_midi_src << 12 ^ (uint32_t)fm_bt << 17 ^ (uint32_t)fm_midi_ch << 14 ^ (uint32_t)fm_bend_mode << 19) * 16777619u;
     for (i = 0; i < FA_NCC; i++)
         h = (h ^ fa_cc[i]) * 16777619u;
-    h = (h ^ fa_tp) * 16777619u;
+    h = (h ^ fa_tp ^ (uint32_t)fa_sync << 1) * 16777619u;
     h = (h ^ fa_sv ^ (uint32_t)fa_ar << 4 ^ (uint32_t)fa_ar_row << 5 ^ (uint32_t)song.g[G_BPM] << 8) * 16777619u;
     h = (h ^ (uint32_t)song.g[G_RSIZE] ^ (uint32_t)song.g[G_DRREV] << 7 ^ (uint32_t)song.g[G_CRATE] << 14 ^ (uint32_t)song.g[G_DRLVL] << 21) * 16777619u;   /* FX: DECAY TIME RATE TONE */
     for (i = 0; i < 8u; i++)                                 /* the pop-ups' others, and which pop-up is open */
@@ -1605,6 +1617,8 @@ static void fa_input(void)
     song.sel = 0;
     fa_mono();
     fmg_glide_sync();                                       /* the patch's GLIDE switch and time -> the track's */
+    if (fa_sync)                                            /* MIDI TEMPO SYNC on: the clock is the MIDI IN's */
+        fa_sync_apply();
     fmg_force_page = (int8_t)fa_page;
     if (!fa_ar && !fa_sq)
         fa_tp = 0;                                          /* the TAP TEMPO pop-up lives over the ARP or SEQ pop-up alone */
@@ -1636,7 +1650,7 @@ static void fa_input(void)
         (void)panel_enc(EN_PRESET);
         if (fa_gl == 1u) {
             if ((s = panel_enc(EN_SELECT)) != 0)
-                fa_gl_row = (uint8_t)((fa_gl_row + 5u + (s > 0 ? 1u : 4u)) % 5u);
+                fa_gl_row = (uint8_t)((fa_gl_row + 6u + (s > 0 ? 1u : 5u)) % 6u);
             if ((s = panel_enc(EN_ALGO)) != 0) {
                 if (fa_gl_row == 0u) {
                     static const uint8_t SRC[3] = {0, 1, 3};
@@ -1648,14 +1662,21 @@ static void fa_input(void)
                     fm_midi_ch = (uint8_t)clamp((int32_t)fm_midi_ch + (s > 0 ? 1 : -1), 0, 16);
                     panic_req |= 1u;
                     fa_cfg_dirty = 1;
-                } else if (fa_gl_row == 3u) {
+                } else if (fa_gl_row == 2u) {
+                    fa_gl = 2u;
+                } else if (fa_gl_row == 3u) {               /* MIDI TEMPO SYNC: off / on */
+                    fa_sync = (uint8_t)!fa_sync;
+                    fa_sync_apply();
+                    panic_req |= 1u;                       /* the clock changes: no note may hang */
+                    fa_cfg_dirty = 1;
+                } else if (fa_gl_row == 4u) {
                     uint32_t ch;
                     fm_bend_mode = (uint8_t)clamp((int32_t)fm_bend_mode + (s > 0 ? 1 : -1), 0, 3);
                     for (ch = 0; ch < 16u; ch++)           /* the bend held now follows the new range */
                         midi_expression_channel(ch);
                     fa_cfg_dirty = 1;
                 } else
-                    fa_gl = fa_gl_row == 2u ? 2u : 3u;
+                    fa_gl = 3u;                            /* ABOUT */
             }
         } else if (fa_gl == 2u) {
             if ((s = panel_enc(EN_SELECT)) != 0)

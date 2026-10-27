@@ -572,21 +572,37 @@ int main(int argc, char **argv)
         fturn(EN_ALGO, -1); fturn(EN_ALGO, -1); fturn(EN_ALGO, -1);
         if (fm_midi_src != 0) { printf("src min\n"); return 1; }
         fturn(EN_SELECT, -1);
-        if (fa_gl_row != 4) { printf("rows wrap\n"); return 1; }
+        if (fa_gl_row != 5) { printf("rows wrap\n"); return 1; }
         /* GLO: PITCH BEND draws at once, ABOUT closes with either encoder */
-        fa_gl = 1; fa_gl_row = 3; fm_bend_mode = 0;
+        fa_gl = 1; fa_gl_row = 4; fm_bend_mode = 0;
         sig = fa_signature();
         fturn(EN_ALGO, 1);
         if (fm_bend_mode != 1 || fa_signature() == sig) { printf("bend redraw\n"); return 1; }
-        /* GLO order: MIDI IN, CHANNEL, MIDI CC (above PITCH BEND), PITCH BEND, ABOUT */
+        /* GLO order: MIDI IN, CHANNEL, MIDI CC, MIDI TEMPO SYNC, PITCH BEND, ABOUT */
         fa_gl = 1; fa_gl_row = 1; fturn(EN_SELECT, 1);
         if (fa_gl_row != 2) { printf("MIDI CC is row 2\n"); return 1; }
         ui.force = 1; fa_draw(); dump(dir, 40);
         fturn(EN_ALGO, 1);
         if (fa_gl != 2) { printf("MIDI CC opens\n"); return 1; }
         fa_gl = 1; fa_gl_row = 2; fturn(EN_SELECT, 1);
-        if (fa_gl_row != 3) { printf("PITCH BEND follows MIDI CC\n"); return 1; }
+        if (fa_gl_row != 3) { printf("MIDI TEMPO SYNC follows MIDI CC\n"); return 1; }
+        /* MIDI TEMPO SYNC: off by default; ALGORITHM turns it on: the CLK is the MIDI IN's clock (USB, or TRS for MIDI);
+         * off again: the internal clock */
+        if (fa_sync) { printf("tempo sync on at start\n"); return 1; }
+        fm_midi_src = 0; fa_gl = 1; fa_gl_row = 3;
+        fturn(EN_ALGO, 1);
+        if (!fa_sync || song.g[G_CLOCK] != 1) { printf("tempo sync on (clock %d)\n", song.g[G_CLOCK]); return 1; }
+        fm_midi_src = 1; fframe();
+        if (song.g[G_CLOCK] != 2) { printf("tempo sync follows MIDI (clock %d)\n", song.g[G_CLOCK]); return 1; }
+        fturn(EN_ALGO, 1);
+        if (fa_sync || song.g[G_CLOCK] != 0) { printf("tempo sync off (clock %d)\n", song.g[G_CLOCK]); return 1; }
+        /* the setting is kept in the settings record */
+        fa_sync = 1; fa_cfg_dirty = 1; fa_cfg_save(); fa_sync = 0; fa_cfg_load();
+        if (!fa_sync) { printf("tempo sync kept\n"); return 1; }
+        fa_sync = 0;
         fa_gl = 1; fa_gl_row = 4; fturn(EN_ALGO, 1);
+        if (fa_gl != 1 || fa_sync) { printf("pitch bend row\n"); return 1; }
+        fa_gl = 1; fa_gl_row = 5; fturn(EN_ALGO, 1);
         if (fa_gl != 3) { printf("ABOUT opens\n"); return 1; }
         fa_gl = 3; fturn(EN_ALGO, 1);
         if (fa_gl != 1) { printf("about ALGO\n"); return 1; }
