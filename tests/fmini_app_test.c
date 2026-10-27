@@ -489,12 +489,43 @@ int main(int argc, char **argv)
         if (!trk[0].p[P_AHOLD] || trk[0].p[P_AMODE] != 1) { printf("arp hold: hold %d mode %d\n", trk[0].p[P_AHOLD], trk[0].p[P_AMODE]); return 1; }
         fhold(B_ARP);
         if (trk[0].p[P_AHOLD]) { printf("arp hold off\n"); return 1; }
-        fframes(4500);
-        if (fa_ar) { printf("arp pop-up stays\n"); return 1; }
+        fframes(4500);                                   /* no timeout: the pop-up stays until it is closed */
+        if (!fa_ar) { printf("arp pop-up closed by itself\n"); return 1; }
+        fpress(B_HOME);                                  /* HOME closes it; the arpeggio stays on */
+        if (fa_ar || trk[0].p[P_AMODE] != 1) { printf("home closes arp (%d)\n", trk[0].p[P_AMODE]); return 1; }
+        fpress(B_ARP);                                   /* on, off the pop-up: the tap only opens it */
+        if (!fa_ar || trk[0].p[P_AMODE] != 1) { printf("arp tap opens (%d)\n", trk[0].p[P_AMODE]); return 1; }
+        fpress(B_ARP);                                   /* on the pop-up: the tap turns it off */
+        if (trk[0].p[P_AMODE] != 0 || !fa_ar) { printf("arp tap off on the pop-up\n"); return 1; }
+        fpress(B_ARP);
+        if (trk[0].p[P_AMODE] != 1) { printf("arp tap on\n"); return 1; }
+        {   /* TEMPO row: ALGORITHM opens TAP TEMPO; EDIT taps (about 120 BPM); another button closes it and does nothing else */
+            int8_t oc = song.octave;
+            int16_t bpm0 = song.g[G_BPM];
+            fa_ar_row = 5;
+            fturn(EN_ALGO, 1);
+            if (!fa_tp) { printf("tempo pop-up\n"); return 1; }
+            fpress(B_EDIT);
+            fframes(500);
+            fpress(B_EDIT);
+            if (song.g[G_BPM] < 110 || song.g[G_BPM] > 130) { printf("tap tempo %d\n", song.g[G_BPM]); return 1; }
+            fpress(B_OCTUP);
+            if (fa_tp || !fa_ar || song.octave != oc) { printf("tempo pop-up closes (%d)\n", fa_tp); return 1; }
+            fturn(EN_ALGO, 1);
+            if (!fa_tp) { printf("tempo pop-up again\n"); return 1; }
+            fturn(EN_SELECT, 1);                         /* SELECT closes it too */
+            if (fa_tp || !fa_ar) { printf("tempo pop-up select\n"); return 1; }
+            fa_ar_row = 0;
+            song.g[G_BPM] = bpm0;                        /* (the tests after this one play at the tempo they had) */
+        }
         trk[0].p[P_AMODE] = 0;
         /* the sequencer */
         fpress(B_SEQ);
         if (!fa_sq) { printf("seq pop-up\n"); return 1; }
+        fturn(EN_ALGO, 1);                               /* SEQ: ALGORITHM opens TAP TEMPO as well */
+        if (!fa_tp || !fa_sq) { printf("seq tempo pop-up\n"); return 1; }
+        fturn(EN_SELECT, 1);
+        if (fa_tp) { printf("seq tempo select\n"); return 1; }
         fpress(B_REC);
         if (!fa_sq_rec) { printf("rec\n"); return 1; }
         input_on(&trk[0], 60, 100); input_on(&trk[0], 64, 100); input_on(&trk[0], 67, 100);
@@ -525,6 +556,10 @@ int main(int argc, char **argv)
         trk_all_off(&trk[0]);
         if (fa_sq_rec || trk[0].p[P_SLEN] != 16 || trk[0].step[15].note[0] != 65) { printf("take of 16 (%d)\n", trk[0].p[P_SLEN]); return 1; }
         ui.force = 1; fa_draw(); dump(dir, 19);
+        fhold(B_REC);                                    /* HOLD REC TO CLEAR: the steps go, REC is not toggled */
+        for (k = 0; k < 16u; k++)
+            if (trk[0].step[k].n) { printf("hold rec: step %u kept\n", k); return 1; }
+        if (fa_sq_rec || !fa_sq) { printf("hold rec toggled\n"); return 1; }
         fpress(B_SEQ);
         if (fa_sq) { printf("seq close\n"); return 1; }
         /* the keys of a sounding note light */
