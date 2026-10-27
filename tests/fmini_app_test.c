@@ -586,22 +586,42 @@ int main(int argc, char **argv)
         if (fa_gl != 2) { printf("MIDI CC opens\n"); return 1; }
         fa_gl = 1; fa_gl_row = 2; fturn(EN_SELECT, 1);
         if (fa_gl_row != 3) { printf("MIDI TEMPO SYNC follows MIDI CC\n"); return 1; }
-        /* MIDI TEMPO SYNC: off by default; ALGORITHM turns it on: the CLK is the MIDI IN's clock (USB, or TRS for MIDI);
-         * off again: the internal clock */
-        if (fa_sync) { printf("tempo sync on at start\n"); return 1; }
-        fm_midi_src = 0; fa_gl = 1; fa_gl_row = 3;
+        /* MIDI CLOCK: OFF by default; ALGORITHM cycles OFF, USB, TRS (the global CLK); the setting is kept in the settings record */
+        if (fa_clk) { printf("clock on at start\n"); return 1; }
+        fa_gl = 1; fa_gl_row = 3;
         fturn(EN_ALGO, 1);
-        if (!fa_sync || song.g[G_CLOCK] != 1) { printf("tempo sync on (clock %d)\n", song.g[G_CLOCK]); return 1; }
-        fm_midi_src = 1; fframe();
-        if (song.g[G_CLOCK] != 2) { printf("tempo sync follows MIDI (clock %d)\n", song.g[G_CLOCK]); return 1; }
+        if (fa_clk != 1 || song.g[G_CLOCK] != 1) { printf("clock USB (%d)\n", song.g[G_CLOCK]); return 1; }
         fturn(EN_ALGO, 1);
-        if (fa_sync || song.g[G_CLOCK] != 0) { printf("tempo sync off (clock %d)\n", song.g[G_CLOCK]); return 1; }
-        /* the setting is kept in the settings record */
-        fa_sync = 1; fa_cfg_dirty = 1; fa_cfg_save(); fa_sync = 0; fa_cfg_load();
-        if (!fa_sync) { printf("tempo sync kept\n"); return 1; }
-        fa_sync = 0;
-        fa_gl = 1; fa_gl_row = 4; fturn(EN_ALGO, 1);
-        if (fa_gl != 1 || fa_sync) { printf("pitch bend row\n"); return 1; }
+        if (fa_clk != 2 || song.g[G_CLOCK] != 2) { printf("clock TRS (%d)\n", song.g[G_CLOCK]); return 1; }
+        fturn(EN_ALGO, 1);
+        if (fa_clk != 0 || song.g[G_CLOCK] != 0) { printf("clock OFF again (%d)\n", song.g[G_CLOCK]); return 1; }
+        fturn(EN_ALGO, -1);
+        if (fa_clk != 2 || song.g[G_CLOCK] != 2) { printf("clock back to TRS (%d)\n", song.g[G_CLOCK]); return 1; }
+        fa_cfg_dirty = 1; fa_cfg_save(); fa_clk = 0; fa_cfg_load();
+        if (fa_clk != 2) { printf("clock kept (%d)\n", fa_clk); return 1; }
+        fa_clk = 0; fa_gl = 1; fa_gl_row = 4; fturn(EN_ALGO, 1);
+        if (fa_gl != 1 || fa_clk) { printf("pitch bend row\n"); return 1; }
+        {   /* MIDI CLOCK: Start / Stop / Continue come from the chosen input only (the engine's clock, through events_block) */
+            song.playing = 0; fm1_ms = 9000;
+            fa_clk = 1; fa_clk_apply();
+            midi_enqueue(0xFu | 0xFAu << 8, 2u); events_block(CTL);
+            if (song.playing) { printf("USB clock takes no TRS start\n"); return 1; }
+            midi_enqueue(0xFu | 0xFAu << 8, 1u); events_block(CTL);
+            if (!song.playing) { printf("USB clock: start\n"); return 1; }
+            midi_enqueue(0xFu | 0xFCu << 8, 1u); events_block(CTL);
+            if (song.playing) { printf("USB clock: stop\n"); return 1; }
+            midi_enqueue(0xFu | 0xFBu << 8, 1u); events_block(CTL);
+            if (!song.playing) { printf("USB clock: continue\n"); return 1; }
+            midi_enqueue(0xFu | 0xFCu << 8, 1u); events_block(CTL);
+            fa_clk = 2; fa_clk_apply();
+            midi_enqueue(0xFu | 0xFAu << 8, 1u); events_block(CTL);
+            if (song.playing) { printf("TRS clock takes no USB start\n"); return 1; }
+            midi_enqueue(0xFu | 0xFAu << 8, 2u); events_block(CTL);
+            if (!song.playing) { printf("TRS clock: start\n"); return 1; }
+            midi_enqueue(0xFu | 0xFCu << 8, 2u); events_block(CTL);
+            if (song.playing) { printf("TRS clock: stop\n"); return 1; }
+            fa_clk = 0; fa_clk_apply();
+        }
         fa_gl = 1; fa_gl_row = 5; fturn(EN_ALGO, 1);
         if (fa_gl != 3) { printf("ABOUT opens\n"); return 1; }
         fa_gl = 3; fturn(EN_ALGO, 1);
