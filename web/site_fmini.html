@@ -12,7 +12,7 @@
   :root {
     --bg: #0d0c10; --surface: #15131a; --surface2: #1c1922; --line: #2a2631; --fg: #f4f0ea; --dim: #a29cab; --mute: #6f6a78;
     --or: #ff7a1a; --or2: #ff9a4d; --ok: #7bd88f; --bad: #ff7a6a;
-    --sans: "Inter", "Helvetica Neue", Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    --sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
@@ -427,54 +427,14 @@ const TEXT = {
     step1: "Conectar", step2: "Instalar", step3: "Tocar",
     s1: "Ligue o FM-1 ao computador com um cabo USB de dados.", s2: "Aperte Instalar e mantenha o cabo conectado até aparecer Pronto.", s3: "O FM-1 reinicia como FMini-1, com a tela de abertura.",
     ph_verify: "Verificar", ph_loader: "Modo de atualização", ph_write: "Gravar", ph_reboot: "Reiniciar", ph_done: "Pronto",
-    tagline: "Uma emulação do Minimoog para o M-VAVE FM-1 (mono/poli)",
+    tagline: "Emulação do Minimoog para o FM-1 (mono/poly)",
     feat: "3 osciladores · filtro ladder · 100 presets · arpejador · MIDI",
     risk: "Use por sua conta e risco", logT: "Detalhes", fw: "Firmware",
-  },
-  ja: {
-    intro: "FM-1 を USB で接続してください。（Chrome か Edge で使えます）",
-    warn: "書き込み中は USB を抜かないでください。",
-    install: "インストール", other: "English",
-    editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
-    direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
-    brick: "万一インストールに失敗して起動しなくなった場合は、復旧に Transporter が必要です:",
-    beta: "FMini-1 は実験版です。このカスタムファームウェアを使ったことで FM-1 が壊れたり不具合が起きたりしても、作者は一切の責任を負いません。自己責任でお使いください。",
-    back: "M-VAVEから公式FM-1 V15を取得し、未変更のFM-1.fwscを選んでください。ファイルはこのブラウザ内で検証し、サーバーへ送りません。",
-    stockTitle: "公式V15に戻す", stockFile: "公式FM-1.fwsc", stockGo: "バックアップして公式V15へ戻す",
-    stockBackup: "現在の曲・保存曲・音色バンク・サンプル・設定を先に保存します。全体バックアップ非対応版は、Feluccaを更新してから行ってください。復元はFeluccaを再インストールしてエディタから行います。",
-    stockRecovery: "更新中断の再開：全体バックアップはすでにパソコンへ保存済み",
-    stockValid: "公式V15を確認しました", stockConfirm: "全体バックアップファイルをパソコンに保存できましたか？ 続けると公式V15へ戻します。Feluccaの曲は公式V15では開けません。",
-    stockNeedBackup: "書き込みモードからはバックアップできません。保存済みバックアップがある場合だけ、更新中断の再開にチェックしてください。",
-    stockUnsupported: "このFeluccaは全体バックアップに未対応です。先に最新版をインストールしてください。",
-    backup: "全体バックアップ保存中 ", stockError: "公式ファイルを確認できません: ",
-    nomidi: "このブラウザでは使えません。Chrome か Edge で開いてください。", loadfail: "読み込めませんでした: ",
-    start: "開始します", verify: "確認中", loader: "書き込みモードに切り替え中", write: "書き込み中",
-    reboot: "再起動中", done: "完了しました", stopped: "途中で止まりました。USB を挿し直してもう一度押してください。",
-    error: "エラー: ",
-    denied: "MIDI（SysEx）の使用が許可されませんでした。アドレスバーのサイト設定で MIDI を許可して、もう一度押してください。",
-    notfound: "FM-1 が見つかりません。USB ケーブル（データ通信用か）を確かめ、MIDI を使う他のアプリを閉じてから、もう一度押してください。",
-    model: "接続されている機器は FM-1 ではありません。",
-    lost: "USB の接続が切れました。挿し直してもう一度押してください。",
-    noloader: "書き込みモードの FM-1 が見つかりません。USB を挿し直してもう一度押してください（終わるまで書き込みモードのままです）。",
-    noreturn: "FM-1 が戻ってきません。電源を入れ直してください。",
-    mismatch: "書き込みは終わりましたが、FM-1 が別のバージョンを報告しています: ",
-    badpkg: "インストールするファイルが壊れています。ページを再読み込みしてください。",
-    leave: "書き込み中です。ページを閉じないでください。",
-    pick_t: "どれが FM-1 ですか？", pick_d: "名前では FM-1 を見つけられませんでした。別のカスタムファームウェアは USB 名が異なることがあります。リストから FM-1 の MIDI デバイスを選んでください：", pick_b: "このデバイスでインストール", pick_c: "キャンセル",
-    busy_t: "インストール中：このページを閉じないでください！", busy_d: "「完了」と表示されるまで、タブやウィンドウを切り替えたり、ブラウザーを最小化したり、USB を抜いたり FM-1 の電源を切ったりしないでください。処理中に FM-1 の画面が消えたり再起動したりしますが正常です。",
-    license: "GPL-3.0、無保証。ソース:",
-    ready: "準備完了。FM-1 を接続して「インストール」を押してください。",
-    step1: "接続", step2: "インストール", step3: "演奏",
-    s1: "USB データケーブルで FM-1 をパソコンに接続します。", s2: "「インストール」を押し、「完了」と出るまでケーブルを抜かないでください。", s3: "FM-1 が再起動し、FMini-1 のスプラッシュ画面が表示されます。",
-    ph_verify: "確認", ph_loader: "更新モード", ph_write: "書き込み", ph_reboot: "再起動", ph_done: "完了",
-    tagline: "M-VAVE FM-1 用 Minimoog エミュレーション（モノ／ポリ）",
-    feat: "3 オシレーター · ラダーフィルター · 100 プリセット · アルペジエーター · MIDI",
-    risk: "自己責任でお使いください", logT: "詳細", fw: "ファームウェア",
   },
   en: {
     intro: "Connect the FM-1 by USB. (Works in Chrome or Edge.)",
     warn: "Do not unplug the USB cable while writing.",
-    install: "Install", other: "日本語",
+    install: "Install", other: "Português",
     editor: "Editor (after installing: edit sounds and sequences from the computer)",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
     brick: "If an install fails and the FM-1 no longer starts, recovering it needs a Transporter:",
@@ -560,7 +520,7 @@ const SITE = {
   },
   en: {
     nav_f: "Sound", nav_s: "Screens", nav_ft: "Features", nav_ed: "Editor", nav_i: "Install",
-    sub: "An open firmware that turns the M-VAVE FM-1 into a monophonic and polyphonic synth. FMini-1 uses Analog Circuit Modelling, a technique built from the actual Minimoog schematics to accurately reproduce the behaviour of the real instrument: three oscillators, a ladder filter, contours and effects, all within reach of the FM-1's buttons.",
+    sub: "An open firmware that turns the M-VAVE FM-1 into a monophonic and polyphonic synth. FMini-1 uses Analog Circuit Modelling, built from the actual Minimoog schematics to accurately reproduce the behaviour of the real instrument: three oscillators, a ladder filter, contours and effects, all within reach of the FM-1's buttons.",
     chip_f: "Ladder filter", chip_p: "100 presets",
     cta_install: "Install now", cta_screens: "See the screens",
     h_sound: "The sound", l_sound: "Each block of the Minimoog panel has its place on the FM-1's 240 × 240 screen, with four real knobs to play it for real.",
@@ -602,50 +562,6 @@ const SITE = {
     ft9t: "Online emulator", ft9d: "Try the FMini-1 in your browser, with nothing to install.",
     h_install: "Install", l_install: "The installer runs right here, in the browser, and writes the firmware to the FM-1 over the USB cable. You can go back to the original firmware at any time.",
   },
-  ja: {
-    nav_f: "サウンド", nav_s: "画面", nav_ft: "機能", nav_ed: "エディタ", nav_i: "インストール",
-    sub: "M-VAVE FM-1 を、モノフォニック／ポリフォニックのシンセに変えるオープンなファームウェア。FMini-1 は、実際の Minimoog の回路図から作られた「Analog Circuit Modelling」という技術で、本物の楽器の動作を正確に再現します。3 基のオシレーター、ラダーフィルター、コンター、エフェクトを FM-1 のボタンで操作できます。",
-    chip_f: "ラダーフィルター", chip_p: "100 プリセット",
-    cta_install: "今すぐインストール", cta_screens: "画面を見る",
-    h_sound: "サウンド", l_sound: "Minimoog のパネルの各ブロックを FM-1 の 240 × 240 画面に再現。4 つの実際のノブで演奏できます。",
-    f1t: "オシレーターバンク", f1d: "LO から 2' までのレンジ、個別の波形、オシレーター 2 と 3 それぞれのデチューン、アナログ VCO のようなわずかなピッチのゆらぎを備えた 3 基のオシレーター。",
-    f2t: "ラダーフィルター", f2d: "4 ポール、24 dB/oct のラダー。各段にサチュレーションがあり、Minimoog の回路と同じ帰還の遅れを再現。エンファシス 8 以上で純粋なサイン波として自己発振し、鍵盤に 1 V/oct で追従します。カットオフは実機のように −5 〜 +5 表示。",
-    f3t: "コンター", f3d: "アタック、ディケイ、サステインを持つ 2 つのコンター（フィルターと音量）。アタックは元の回路と同じ指数カーブ。グライド、LFO、モジュレーションも装備。",
-    f4t: "100 プリセット", f4d: "10 音ずつ 10 グループ：ショーケース、ハードリード、ソフトリード、ベース、パッド＆ストリングス、ブラス、プラック、鍵盤、アトモスフィア、効果音。約 4 分の 1 はアルペジエーターがオンの状態で始まります。32 のユーザー枠に保存できます。",
-    f5t: "アルペジエーターとシーケンサー", f5d: "ARP を 1 回押すとオン/オフ、長押しで HOLD。シーケンサーは最大 16 音を録音（REC）して再生（PLAY）。鍵盤の LED が音に合わせて点灯します。",
-    f6t: "プリセットごとのエフェクト", f6d: "リバーブ、ディレイ、コーラス、ドライブ。プリセットごとに異なる組み合わせで、ベース、リード、パッドがそれぞれ違う空間で鳴ります。",
-    h_screens: "画面", l_screens: "FM-1 の画面に合わせてデザインしたパネル。ローレット付きのノブ、赤と青のロッカースイッチ、フィルターとコンターのグラフを備えます。ページを選んでください。",
-    views: [
-      { t: "CTRL · コントローラー", d: "ホームページ。チューン、グライド、モジュレーション量、LFO の速さ。", l: ["4 つのノブ：TUNE、GLIDE、MOD MIX、LFO RATE", "スイッチ：MOD OSC、MOD FLT、GLIDE、LFO SQR"] },
-      { t: "OSC · オシレーターバンク", d: "3 基のオシレーターのオクターブレンジ、波形、デチューン。", l: ["レンジ：LO、32'、16'、8'、4'、2'", "画面のボックスに描かれた 6 種類の波形"] },
-      { t: "MIX · ミキサー", d: "各オシレーターとノイズのレベル。青いスイッチで各音源をオン/オフ。", l: ["OSC 1、OSC 2、OSC 3、NOISE", "各音源に個別のレベルとスイッチ"] },
-      { t: "FILT · フィルター", d: "カットオフ、エンファシス、コンター量、キーボードコントロールと、ラダーフィルターの特性グラフ。", l: ["CUTOFF、EMPHASIS、CONTOUR、KBD CTRL", "フィルターの特性と自己発振の周波数をグラフ表示"] },
-      { t: "F.ENV · フィルターコンター", d: "フィルターを開閉するコンターのアタック、ディケイ、サステイン、量。", l: ["ノブに合わせて動くエンベロープグラフ", "クラシックなプラック音に向く指数アタック"] },
-      { t: "A.ENV · ラウドネスコンター", d: "音量エンベロープ：アタック、ディケイ、サステイン、出力レベル。", l: ["ATTACK、DECAY、SUSTAIN、LEVEL", "短いパーカッションからゆっくりしたパッドまで"] },
-      { t: "FX · エフェクト", d: "リバーブ、ディレイ、コーラス、ドライブ。上段は各エフェクトのレベル（MIX、ドライブは GAIN）、下段の EDIT ボタンで 4 つのパラメーターを開きます。", l: ["プリセットごとにミックスと設定を保存", "ノブを 0 にするとエフェクトは完全にオフになり、処理も使いません"] },
-    ],
-    pops: [
-      { i: "arp", t: "アルペジエーター", d: "モード、レート、オクターブ、ゲート、HOLD、テンポ。ARP ボタンを押してオン、長押しで HOLD。4 秒後に自動で閉じます。" },
-      { i: "seq", t: "シーケンサー", d: "音符用の 16 スロット。REC で録音待機、PLAY で再生/停止、テンポはエンコーダーで調整。" },
-      { i: "save", t: "プリセット保存", d: "U01〜U32 の枠を選び、エンコーダーで名前を入力して SAVE。作った音色は 100 のファクトリー音色と並びます。" },
-      { i: "fxrev", t: "FX · リバーブ編集", d: "EDIT で 4 つのノブが開きます：MIX、TYPE（ルーム、ホール、プレート、スプリング、1 オクターブ上のシマー、長く密なクラウド）、DECAY、TONE。リバーブはすべてステレオ。FX をもう一度押すと、ディレイ、コーラス、ドライブへ進みます。" },
-      { i: "fxdly", t: "FX · ディレイ編集", d: "MIX、TYPE（アナログ、デジタル、テープ、ピンポン、マルチタップ、スラップバック、リバース）、TIME、FEEDBACK。SCL ボタンでタップテンポ。コーラスは Stereo（CE-2 風）、Juno、Multi、ドライブは Soft と Tube。" },
-      { i: "glo", t: "グローバル", d: "MIDI 入力（USB、MIDI、すべて）、チャンネル、ピッチベンド幅、MIDI コントロール一覧。" },
-      { i: "cc", t: "MIDI CC 一覧", d: "パネルの 50 のコントロールそれぞれに CC 番号。エンコーダーで変更、またはキーボードから CC を送って学習できます。" },
-      { i: "preset", t: "プリセット切替", d: "プリセットを変えると番号と名前が大きな文字で 1.5 秒表示され、消えます。" },
-    ],
-    l_feat: "主な機能の一覧です。",
-    ft1t: "100 のプリセットと 32 のユーザー枠", ft1d: "リードから効果音まで 100 のファクトリー音色と、自分の音色を保存できる 32 の枠（U01〜U32）。",
-    ft2t: "モノと 12 ボイス", ft2d: "Minimoog と同じモノフォニック、または 12 ボイスのポリフォニック。",
-    ft3t: "Minimoog のモデル", ft3d: "3 基のオシレーター、ソフトに歪むミキサー、自己発振する 24 dB/oct のラダーフィルターを Minimoog Model D に倣って再現。",
-    ft4t: "エフェクト", ft4d: "リバーブ 5 種（Room, Hall, Plate, Spring, Cloud）、ディレイ 7 種（Analog, Digital, Tape, Ping-Pong, Multi, Slap, Reverse）、コーラス 3 種（Stereo, Juno, Multi）、ドライブ（Soft, Tube）。",
-    ft5t: "コントローラー用 MIDI CC", ft5d: "50 のコントロールにそれぞれ変更できる CC を割り当て、コントローラーが送る CC も学習します。USB と TRS 入力、チャンネルフィルター、ピッチベンド、モジュレーションホイール。",
-    ft6t: "16 ノートのシーケンサー", ft6d: "最大 16 ノートを録音（REC）して再生（PLAY）。",
-    ft7t: "アルペジエーター", ft7d: "ワンタッチでオン/オフ、長押しで HOLD。プリセットの約 4 分の 1 はアルペジエーターがオンの状態です。",
-    ft8t: "Web エディタ", ft8d: "USB-MIDI でつないだ FM-1 の音色とプリセットをブラウザーで編集。",
-    ft9t: "オンラインエミュレーター", ft9d: "インストール不要、ブラウザーで FMini-1 を試せます。",
-    h_install: "インストール", l_install: "インストーラーはこのページ内、ブラウザー上で動き、USB ケーブル経由で FM-1 にファームウェアを書き込みます。いつでも元のファームウェアに戻せます。",
-  },
 };
 for (const l in SITE) Object.assign(TEXT[l], SITE[l]);
 const SITE2 = {
@@ -653,20 +569,16 @@ const SITE2 = {
         e_feat: "Features", h_feat: "Tudo o que o FMini-1 faz", e_install: "Instalar", h_install: "Instale direto do navegador" },
   en: { announce: "Free, open-source firmware for the M-VAVE FM-1", e_sound: "Sound", h_sound: "Three oscillators, a ladder filter and plenty of body", e_screens: "Screens", h_screens: "Every page, one section of the panel",
         e_feat: "Features", h_feat: "Everything the FMini-1 does", e_install: "Install", h_install: "Install straight from the browser" },
-  ja: { announce: "M-VAVE FM-1 用の無料オープンソース・ファームウェア", e_sound: "サウンド", h_sound: "3 基のオシレーター、ラダーフィルター、そして厚み", e_screens: "画面", h_screens: "1 ページが、パネルの 1 セクション",
-        e_feat: "機能", h_feat: "FMini-1 でできること", e_install: "インストール", h_install: "ブラウザーから直接インストール" },
 };
 for (const l in SITE2) Object.assign(TEXT[l], SITE2[l]);
 const SITE3 = {
   pt: { hero2_t: "Um clássico dentro do FM-1.", hero2_s: "Firmware gratuito. Instale direto do navegador e volte ao original quando quiser.", hint: "Role" },
   en: { hero2_t: "A classic, inside the FM-1.", hero2_s: "Free firmware. Install straight from the browser and go back to the original whenever you like.", hint: "Scroll" },
-  ja: { hero2_t: "名機を、FM-1 の中に。", hero2_s: "無料のファームウェア。ブラウザーから直接インストールでき、いつでも元に戻せます。", hint: "スクロール" },
 };
 for (const l in SITE3) Object.assign(TEXT[l], SITE3[l]);
 const SITE4 = {
   pt: { nav_try: "Testar no navegador", nav_try_s: "Testar", e_video: "Vídeo", h_video: "Veja o FMini-1 em ação", cr_made: "O FMini-1 foi feito por Guilherme Ruppert, com base no projeto", cr_made2: ", de Leo Kuroshita (Hügelton Instruments).", cr_ai: "Aviso sobre IA: este projeto foi realizado com o auxílio do Claude, um modelo de IA da Anthropic." },
   en: { nav_try: "Try in browser", nav_try_s: "Try", e_video: "Video", h_video: "See FMini-1 in action", cr_made: "FMini-1 was made by Guilherme Ruppert, based on the", cr_made2: " project by Leo Kuroshita (Hügelton Instruments).", cr_ai: "AI disclaimer: this project was developed with the assistance of Claude, an AI model by Anthropic." },
-  ja: { nav_try: "ブラウザで試す", nav_try_s: "試す", e_video: "ビデオ", h_video: "FMini-1 をチェック", cr_made: "FMini-1 は Guilherme Ruppert が制作しました。ベースは", cr_made2: "（Leo Kuroshita / Hügelton Instruments）です。", cr_ai: "AI に関する注記：このプロジェクトは Anthropic の AI モデル Claude の支援を受けて作成されました。" },
 };
 for (const l in SITE4) Object.assign(TEXT[l], SITE4[l]);
 
@@ -713,14 +625,14 @@ function renderSite() {
 }
 
 const nl = (navigator.language || "en").toLowerCase();
-let lang = nl.startsWith("pt") ? "pt" : nl.startsWith("ja") ? "ja" : "en";
-const LANGS = ["pt", "en", "ja"];
+let lang = nl.startsWith("pt") ? "pt" : "en";
+const LANGS = ["pt", "en"];
 const t = (k) => TEXT[lang][k];
 let lastKey = null, lastArg = "";
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach((e) => { e.textContent = t(e.dataset.t); });
-  $("lang").textContent = lang === "pt" ? "PT" : lang === "ja" ? "日本語" : "EN";
+  $("lang").textContent = lang === "pt" ? "PT" : "EN";
   if (lastKey) $("status").textContent = t(lastKey) + lastArg;
   renderSite();
 }
