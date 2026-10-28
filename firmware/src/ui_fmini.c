@@ -369,6 +369,7 @@ static void fmg_card_at(uint32_t pg, uint32_t i, int32_t vo, const char **label,
     v = vo >= 0 ? vo : (int32_t)fmg_byte(f->a);
     *ratio = v * 1000 / 127;
     if ((f->a == FG_F2 || f->a == FG_F3) && (fmg_byte(FG_SW2) & FT_DETFINE)) {
+        *ratio = v * 1000 / DET_MAX;                 /* the fine code's centre (90) sits at the dial's middle, like the CC */
         fmg_cents(val, fmini_det_fine((uint32_t)v));
         *unit = "ST";
     } else if (f->a == FG_F2 || f->a == FG_F3) {

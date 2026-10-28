@@ -450,6 +450,14 @@ int main(int argc, char **argv)
             fmg_turn(pg, f2, 1, EN_K1);
             if (!(fmini_patch[0][FG_SW2] & FT_DETFINE) || fmini_det(fmini_patch[0], FG_F2) != 10) { printf("DET first turn %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
             fmini_patch[0][FG_F2] = 90;
+            {   /* the dial: the fine centre (0 cents, code 90) is drawn at the middle, 5.0, as the coarse centre byte 64 was */
+                const char *lb = 0, *un = 0;
+                char val[16];
+                int32_t ratio = -1;
+                uint32_t ic = 0;
+                fmg_card_at(pg, f2, -1, &lb, val, &un, &ratio, &ic);
+                if (ratio != 500 || val[0] != '+' || val[1] != '0' || val[3] != '0') { printf("DET dial centre %d '%s'\n", (int)ratio, val); return 1; }
+            }
             fmg_turn(pg, f2, 40, EN_K1);                       /* +40 detents: a fast turn is still 40 */
             if (fmini_patch[0][FG_F2] != 130 || fmini_det(fmini_patch[0], FG_F2) != 400) { printf("DET 4 st %d\n", (int)fmini_patch[0][FG_F2]); return 1; }
             fmg_turn(pg, f2, 1, EN_K1);
