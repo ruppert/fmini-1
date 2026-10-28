@@ -6,6 +6,7 @@
 #include "ui_test.c"
 #include "../firmware/src/fmini_app.c"
 #include <stdio.h>
+extern int32_t midi_bend_target[NTRK];   /* (voice.c: the bend each part is moving to, Q8 semitones) */
 static void dump(const char *dir, int n)
 {
     char p[256];
@@ -408,14 +409,67 @@ int main(int argc, char **argv)
         fm_cc_pend[74 >> 5] |= 1u << (74 & 31);
         fa_cc_poll();
         if (TSEL->p[P_E0] == 10) { printf("CC74 did not reach the cutoff\n"); return 1; }
-        /* learn: in the MIDI CC list the next CC is taken for the highlighted line */
+        /* MIDI LEARN: in the MIDI CC list the next free CC is taken for the highlighted line (a CC that line did not own
+         * is taken from the line that had it); a reserved CC (CC1 the mod wheel) is refused */
         fa_gl = 2;
         fa_cc_i = 3;
-        fm_cc_rx[99 - 1] = 5;
-        fm_cc_pend[0] = 0;
+        fa_cc[5] = 80;
+        fm_cc_rx[80] = 5;
         fm_cc_pend[(80) >> 5] |= 1u << (80 & 31);
         fa_cc_poll();
-        if (fa_cc[3] != 80) { printf("learn: %u\n", fa_cc[3]); return 1; }
+        if (fa_cc[3] != 80 || fa_cc[5] != 0) { printf("learn: %u (line 5 %u)\n", fa_cc[3], fa_cc[5]); return 1; }
+        fm_cc_pend[(1) >> 5] |= 1u << (1 & 31);
+        fa_cc_poll();
+        if (fa_cc[3] == 1) { printf("learn took the mod wheel\n"); return 1; }
+        fa_gl = 0;
+        {   /* PITCH BEND and the MOD WHEEL (CC1) from USB and from TRS: the bend's target and the depth follow */
+            fm_midi_src = 3; fm_midi_ch = 0; fm_bend_mode = 0;
+            midi_enqueue(0xEu | 0xE0u << 8 | 0x00u << 16 | 0x40u << 24, 1u); events_block(CTL);      /* centre */
+            if (midi_bend_target[0] != 0) { printf("bend centre (USB) %d\n", midi_bend_target[0]); return 1; }
+            midi_enqueue(0xEu | 0xE0u << 8 | 0x7Fu << 16 | 0x7Fu << 24, 1u); events_block(CTL);      /* full up, USB */
+            if (midi_bend_target[0] != 512) { printf("bend up (USB) %d\n", midi_bend_target[0]); return 1; }
+            um_byte(0xE0); um_byte(0x00); um_byte(0x00); events_block(CTL);                           /* down, TRS */
+            if (midi_bend_target[0] != -512) { printf("bend down (TRS) %d\n", midi_bend_target[0]); return 1; }
+            midi_enqueue(0xEu | 0xE0u << 8 | 0x00u << 16 | 0x40u << 24, 2u); events_block(CTL);      /* centre, TRS */
+            if (midi_bend_target[0] != 0) { printf("bend centre (TRS) %d\n", midi_bend_target[0]); return 1; }
+            midi_enqueue(0xBu | 0xB0u << 8 | 1u << 16 | 127u << 24, 1u); events_block(CTL);          /* mod wheel 127, USB */
+            if (trk[0].mw != 127) { printf("mod wheel (USB) %u\n", trk[0].mw); return 1; }
+            um_byte(0xB0); um_byte(1); um_byte(0);                                                   /* mod wheel 0, TRS */
+            events_block(CTL);
+            if (trk[0].mw != 0) { printf("mod wheel (TRS) %u\n", trk[0].mw); return 1; }
+        }
+        {   /* DET 2 / 3: one detent is one step of the fine law (0.1 semitone, 0.05 from 4 to 6), no acceleration; the first
+             * turn moves the patch to the fine law (both detunes to their nearest step) */
+            uint32_t pg = 1, i, f2 = 0, k;
+            int32_t c2;
+            for (i = 0; i < fmg_count(pg); i++)
+                if (fmg_field(pg, i)->a == FG_F2) f2 = i;
+            fmini_patch[0][FG_SW2] &= (uint8_t)~FT_DETFINE;
+            fmini_patch[0][FG_F2] = 64; fmini_patch[0][FG_F3] = 64;
+            song.sel = 0;
+            fmg_turn(pg, f2, 1, EN_K1);
+            if (!(fmini_patch[0][FG_SW2] & FT_DETFINE) || fmini_det(fmini_patch[0], FG_F2) != 10) { printf("DET first turn %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
+            fmini_patch[0][FG_F2] = 90;
+            fmg_turn(pg, f2, 40, EN_K1);                       /* +40 detents: a fast turn is still 40 */
+            if (fmini_patch[0][FG_F2] != 130 || fmini_det(fmini_patch[0], FG_F2) != 400) { printf("DET 4 st %d\n", (int)fmini_patch[0][FG_F2]); return 1; }
+            fmg_turn(pg, f2, 1, EN_K1);
+            if (fmini_det(fmini_patch[0], FG_F2) != 405) { printf("DET 4.05 %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
+            fmini_patch[0][FG_F2] = 170;
+            fmg_turn(pg, f2, 1, EN_K1);
+            if (fmini_det(fmini_patch[0], FG_F2) != 610) { printf("DET 6.10 %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
+            fmg_turn(pg, f2, -1000, EN_K1);
+            if (fmini_patch[0][FG_F2] != 0 || fmini_det(fmini_patch[0], FG_F2) != -700) { printf("DET floor %d\n", (int)fmini_patch[0][FG_F2]); return 1; }
+            fmini_patch[0][FG_F2] = 90; fmini_patch[0][FG_F3] = 90;
+            c2 = fmini_det(fmini_patch[0], FG_F3);
+            if (c2 != 0) { printf("DET 3 centre %d\n", (int)c2); return 1; }
+            /* the coarse law (a patch from before 1.10) is untouched by the engine: byte 64 = 0, 11 cents a step */
+            fmini_patch[0][FG_SW2] &= (uint8_t)~FT_DETFINE;
+            fmini_patch[0][FG_F2] = 127;
+            if (fmini_det(fmini_patch[0], FG_F2) != 693) { printf("coarse law %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
+            for (k = 0; k < 1; k++) (void)k;
+            fmini_patch[0][FG_F2] = 64; fmini_patch[0][FG_F3] = 64;
+        }
+        fa_gl = 0;
         /* the filter: USB 1, MIDI 2, BT 3 */
         fm_midi_src = 0; fm_midi_ch = 0;
         fm_bt = 1;

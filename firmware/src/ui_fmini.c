@@ -74,22 +74,53 @@ static const fmgf_t *fmg_field(uint32_t pg, uint32_t i) { return &FMG_PAGE[pg % 
 /* the control under the page's cursor */
 static uint32_t fmg_curi(uint32_t pg) { return fmg_cur[pg % FMG_NPG] % fmg_count(pg); }
 
-/* byte b of the selected track's patch = v: the track's own patch now (SLOT OWN), one undo per gesture */
-static void fmg_write(uint32_t b, uint32_t v)
+/* the selected track's patch p becomes the track's own patch now (SLOT OWN), one undo per gesture; b: the byte it changed */
+static void fmg_commit(const uint8_t *p, uint32_t b)
 {
     uint32_t tr = song.sel % NTRK;
     track_t *t = TSEL;
-    uint8_t p[FG_SIZE];
-    if (b >= FG_NUM || fmini_patch[tr][b] == v)
+    if (!memcmp(p, fmini_patch[tr], FG_SIZE))
         return;
     edit_undo_take(t, 0x2000u | b, UNDO_SOUND);
-    memcpy(p, fmini_patch[tr], FG_SIZE);
-    p[b] = (uint8_t)v;
     fmini_set_patch(tr, p);
     fmini_own_ok &= (uint8_t)~(1u << tr);
     fmini_slot[tr] = FMINI_OWN;
     t->p[P_E7] = FMINI_OWN;
     motion_undo_done(t);
+}
+/* byte b of the selected track's patch = v */
+static void fmg_write(uint32_t b, uint32_t v)
+{
+    uint32_t tr = song.sel % NTRK;
+    uint8_t p[FG_SIZE];
+    if (b >= FG_NUM || fmini_patch[tr][b] == v)
+        return;
+    memcpy(p, fmini_patch[tr], FG_SIZE);
+    p[b] = (uint8_t)v;
+    fmg_commit(p, b);
+}
+/* DET 2 / 3 (FG_F2, FG_F3): one detent is one step of the fine law (0.1 semitone, 0.05 from 4 to 6): no acceleration. The
+ * first change moves the patch to the fine law: both detunes go to their nearest step, FT_DETFINE set */
+static void fmg_det_turn(uint32_t b, int32_t s)
+{
+    uint32_t tr = song.sel % NTRK;
+    uint8_t p[FG_SIZE];
+    memcpy(p, fmini_patch[tr], FG_SIZE);
+    if (!(p[FG_SW2] & FT_DETFINE)) {
+        p[FG_F2] = (uint8_t)fmini_det_code(fmini_det_coarse(p[FG_F2]));
+        p[FG_F3] = (uint8_t)fmini_det_code(fmini_det_coarse(p[FG_F3]));
+        p[FG_SW2] |= FT_DETFINE;
+    }
+    p[b] = (uint8_t)clamp((int32_t)p[b] + s, 0, DET_MAX);
+    fmg_commit(p, b);
+}
+/* a CC (0..127) for DET 2 / 3: the coarse byte as it is, the fine code scaled over the same 0..127 */
+static void fmg_det_cc(uint32_t b, uint32_t v)
+{
+    uint32_t tr = song.sel % NTRK;
+    if (fmini_patch[tr][FG_SW2] & FT_DETFINE)
+        v = v * DET_MAX / 127u;
+    fmg_write(b, v);
 }
 static uint32_t fmg_byte(uint32_t b) { return fmini_patch[song.sel % NTRK][b % FG_SIZE]; }
 static uint8_t fmg_shadow[3];                                    /* a send's value while its switch is off (REV DLY CHO) */
@@ -195,6 +226,10 @@ static void fmg_turn(uint32_t pg, uint32_t i, int32_t s, uint32_t role)
         break;
     }
     default:                                                      /* FK_BYTE, FK_GLIDE */
+        if (f->a == FG_F2 || f->a == FG_F3) {                     /* DET 2 / 3: a detent a step, no acceleration */
+            fmg_det_turn(f->a, s);
+            break;
+        }
         fmg_write(f->a, (uint32_t)clamp((int32_t)fmg_byte(f->a) + fmg_acc(role, s, 127), 0, 127));
         if (f->kind == FK_GLIDE) {                       /* the knob is the GLIDE: any time above 0 switches it on, 0 off */
             uint32_t sw2 = fmg_byte(FG_SW2), want = fmg_byte(f->a) ? (sw2 | FT_GLIDE) : (sw2 & ~(uint32_t)FT_GLIDE);
@@ -245,6 +280,18 @@ static void fmg_range(uint32_t pg, uint32_t i, int32_t *lo, int32_t *hi)
 }
 
 /* tenths with a sign: "+1.5" */
+/* signed cents as semitones with two decimals: +4.05 */
+static void fmg_cents(char *s, int32_t c)
+{
+    int32_t a = c < 0 ? -c : c;
+    *s++ = c < 0 ? '-' : '+';
+    fmt_int(s, a / 100);
+    s += str_len(s);
+    *s++ = '.';
+    *s++ = (char)('0' + (a / 10) % 10);
+    *s++ = (char)('0' + a % 10);
+    *s = 0;
+}
 static void fmg_tenths(char *s, int32_t x)
 {
     if (x < 0) {
@@ -321,7 +368,10 @@ static void fmg_card_at(uint32_t pg, uint32_t i, int32_t vo, const char **label,
     }
     v = vo >= 0 ? vo : (int32_t)fmg_byte(f->a);
     *ratio = v * 1000 / 127;
-    if (f->a == FG_F2 || f->a == FG_F3) {
+    if ((f->a == FG_F2 || f->a == FG_F3) && (fmg_byte(FG_SW2) & FT_DETFINE)) {
+        fmg_cents(val, fmini_det_fine((uint32_t)v));
+        *unit = "ST";
+    } else if (f->a == FG_F2 || f->a == FG_F3) {
         fmg_tenths(val, (v - 64) * 70 / 63);
         *unit = "ST";
     } else if (f->a == FG_TUNE) {

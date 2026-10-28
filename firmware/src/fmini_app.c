@@ -676,6 +676,8 @@ static uint8_t fa_sq_rec;                                 /* REC armed */
 static uint8_t fa_sq_cur;                                 /* the slot the next note goes into */
 static uint8_t fa_sq_fresh;                               /* armed, nothing played yet: the old take is still there */
 static uint32_t fa_sq_blink(void) { return fa_sq_rec ? (fm1_ms >> 8) & 1u : 0u; }
+static uint32_t fa_sq_title_until;                        /* SEQ opened: the word SEQUENCER shows over the grid for 0.5 s */
+static int fa_sq_title_on(void) { return fa_sq_title_until && (int32_t)(fm1_ms - fa_sq_title_until) < 0; }
 static uint8_t fa_rec_down, fa_rec_done;                  /* REC held: the tap is due on release; HOLD REC TO CLEAR done */
 static uint32_t fa_rec_t0;
 
@@ -744,14 +746,20 @@ static void fa_seq_note(track_t *t, uint32_t note)
 
 /* 64 squares, 8 by 8: dark gray = empty, red = recorded, orange = the step that plays now; while REC is armed the
  * next square blinks cream */
+/* the SEQUENCER pop-up: the full height of the screen, the width of the other pop-ups. 64 squares, 8 by 8, rounded:
+ * dark gray = empty, red = recorded, orange = the step that plays now; while REC is armed the next square blinks cream */
+#define SQ_PITCH 23
+#define SQ_SIZE 18
 static void fa_seq_dialog(void)
 {
     const track_t *t = TSEL;
     uint32_t i, len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), now = song.playing ? t->seq_idx % len : 99u;
+    const uint16_t bg = FA_RGB(0x1B, 0x19, 0x17);
     char b[16];
-    fa_frame("SEQUENCER");
+    cv_rect(10, 0, 220, 240, FA_OR);
+    cv_rect(12, 2, 216, 236, bg);
     for (i = 0; i < NSTEP; i++) {
-        int32_t x = 61 + (int32_t)(i % 8u) * 15, y = 60 + (int32_t)(i / 8u) * 15;
+        int32_t x = 31 + (int32_t)(i % 8u) * SQ_PITCH, y = 10 + (int32_t)(i / 8u) * SQ_PITCH;
         uint16_t c = FA_RGB(0x2A, 0x25, 0x20);            /* empty */
         if (i == now)
             c = FA_OR;
@@ -759,14 +767,19 @@ static void fa_seq_dialog(void)
             c = FA_RED;                                   /* recorded */
         else if (fa_sq_rec && i == fa_sq_cur && fa_sq_blink())
             c = FA_CR;                                    /* the next slot of the take */
-        cv_rect(x, y, 13, 13, c);
+        cv_rrect(x, y, SQ_SIZE, SQ_SIZE, 4, c, bg);
     }
     str_cpy(b, fa_sq_rec ? "REC" : song.playing ? "PLAY" : "STOP", 5);
-    fa_ltext(20, 182, &AF_M, b, fa_sq_rec ? FA_RED : song.playing ? FA_OR : FA_MU);
+    fa_ltext(20, 200, &AF_M, b, fa_sq_rec ? FA_RED : song.playing ? FA_OR : FA_MU);
     fmt_int(b, song.g[G_BPM]);
-    fa_rtext(220, 182, &AF_M, b, FA_CR);
-    fa_ctext(120, 184, &AF_X, "HOLD REC TO CLEAR", FA_MU);
-    fa_ctext(120, 198, &AF_S, "REC  PLAY  ALGO=TEMPO  SEQ=CLOSE", FA_MU);
+    fa_rtext(220, 200, &AF_M, b, FA_CR);
+    fa_ctext(120, 214, &AF_X, "HOLD REC TO CLEAR", FA_MU);
+    fa_ctext(120, 225, &AF_X, "REC  PLAY  ALGO=TEMPO  SEQ=CLOSE", FA_MU);
+    if (fa_sq_title_on()) {                               /* SEQ just opened: the word, for 0.5 s */
+        cv_rect(60, 96, 120, 26, FA_OR);
+        cv_rect(62, 98, 116, 22, bg);
+        fa_ctext(120, 102, &AF_M, "SEQUENCER", FA_OR);
+    }
 }
 
 /* the keys of the notes that sound (the arpeggio, the sequence, MIDI): lit like the keys held */
@@ -790,7 +803,7 @@ static uint32_t fa_sound_keys(void)
  * SELECT picks a line, ALGORITHM changes it (or opens MIDI CC / ABOUT); GLO goes back, then closes. The settings are
  * kept in the flash settings record (favorites.factory rows 7 to 9: no engine of this firmware uses them).
  * MIDI CLOCK (OFF by default: the internal clock, or USB / TRS) makes the ARP and the SEQ follow that input's MIDI clock. */
-#define FMINI_VERSION "v1.10.0"
+#define FMINI_VERSION "v1.11.0"
 #define FA_NPG 44u                                        /* the controls of the seven screens (FMG_PAGE: 8+8+8+4+4+4+8) */
 #define FA_NCC (FA_NPG + FA_AR_N)                         /* .. and the ARP pop-up's six lines */
 static uint8_t fa_gl;                                     /* 0 closed, 1 the list, 2 MIDI CC, 3 ABOUT */
@@ -961,7 +974,10 @@ static void fa_ctl_apply(uint32_t n, uint32_t v)
         fmg_glide_sync();
         break;
     case FK_BYTE:
-        fmg_write(f->a, v);
+        if (f->a == FG_F2 || f->a == FG_F3)
+            fmg_det_cc(f->a, v);
+        else
+            fmg_write(f->a, v);
         break;
     case FK_GLB: {
         const param_desc_t *d = &GP[f->a];
@@ -990,8 +1006,11 @@ static void fa_cc_poll(void)
                                                             * never ended for CC 31, 63, 95 and 127: fm_cc_rx was read past its 128 bytes) */
             if ((pend[w] >> b) & 1u) {
                 uint32_t cc = w * 32u + b, n, v = fm_cc_rx[cc];
-                if (fa_gl == 2u) {
+                if (fa_gl == 2u) {                         /* the list: no control moves; MIDI LEARN: the CC is the highlighted line's */
                     if (ml_free_cc(cc)) {
+                        for (n = 0; n < FA_NCC; n++)       /* (a CC has one control: the line that had it is OFF) */
+                            if (fa_cc[n] == cc)
+                                fa_cc[n] = 0;
                         fa_cc[fa_cc_i] = (uint8_t)cc;
                         fa_cfg_dirty = 1;
                     }
@@ -1027,15 +1046,11 @@ static void fa_gl_dialog(void)
         fa_line(150, "PITCH BEND", FA_BEND[fm_bend_mode & 3u], fa_gl_row == 4u);
         fa_line(172, "ABOUT", ">", fa_gl_row == 5u);
         fa_ctext(120, 198, &AF_S, "SELECT  ALGO  GLO=BACK", FA_MU);
-    } else {                                              /* MIDI CC: a window of six lines on the list */
+    } else {                                              /* MIDI CC: a window of six lines on the list, a scroll bar */
         uint32_t top = fa_cc_i < 3u ? 0u : fa_cc_i - 3u, k;
         if (top + 6u > FA_NCC)
             top = FA_NCC - 6u;
-        str_cpy(b, "MIDI CC  ", 10);
-        fmt_int(b + 9, (int32_t)fa_cc_i + 1);
-        str_cpy(b + str_len(b), "/", 2);
-        fmt_int(b + str_len(b), FA_NCC);
-        fa_frame(b);
+        fa_frame("MIDI CC");
         for (k = 0; k < 6u; k++) {
             uint32_t n = top + k;
             const char *tag;
@@ -1048,12 +1063,21 @@ static void fa_gl_dialog(void)
             else
                 str_cpy(cc, "OFF", 4);
             if (hot)
-                cv_rect(16, y - 4, 208, 20, FA_RGB(0x2E, 0x28, 0x22));
+                cv_rect(16, y - 4, 204, 20, FA_RGB(0x2E, 0x28, 0x22));
             fa_ltext(20, y + 3, &AF_X, tag, FA_MU);
             fa_ltext(54, y, &AF_M, nm, hot ? FA_OR : FA_CR);
-            fa_rtext(218, y, &AF_M, cc, hot ? FA_OR : FA_CR);
+            fa_rtext(214, y, &AF_M, cc, hot ? FA_OR : FA_CR);
         }
-        fa_ctext(120, 190, &AF_S, "ALGO = CC   OR SEND A CC", FA_MU);
+        {   /* the scroll bar: the track of the list, the thumb the six lines in view */
+            const int32_t ty = 54, th = 130;
+            int32_t thumb = (int32_t)(6u * (uint32_t)th / FA_NCC), at;
+            if (thumb < 12)
+                thumb = 12;
+            at = (FA_NCC > 6u) ? (int32_t)top * (th - thumb) / (int32_t)(FA_NCC - 6u) : 0;
+            cv_rect(223, ty, 3, th, FA_RGB(0x2A, 0x25, 0x20));
+            cv_rect(223, ty + at, 3, thumb, FA_CR);
+        }
+        fa_ctext(120, 190, &AF_S, "MIDI LEARN: SEND A CC   ALGO = CC", FA_OR);
     }
 }
 
@@ -1272,7 +1296,7 @@ static uint32_t fa_signature(void)
     h = (h ^ fa_sv_slot ^ (uint32_t)fa_sv_pos << 8 ^ (uint32_t)t->user << 16 ^ (uint32_t)fa_msg_on() << 24) * 16777619u;
     for (i = 0; i < 12u; i++)
         h = (h ^ (uint8_t)fa_sv_name[i]) * 16777619u;
-    h = (h ^ fa_sq ^ (uint32_t)fa_sq_rec << 1 ^ (uint32_t)fa_sq_cur << 2 ^ (uint32_t)song.playing << 8 ^
+    h = (h ^ fa_sq ^ (uint32_t)fa_sq_rec << 1 ^ (uint32_t)fa_sq_cur << 2 ^ (uint32_t)song.playing << 8 ^ (uint32_t)fa_sq_title_on() << 7 ^
          (uint32_t)(song.playing ? t->seq_idx : 0u) << 9 ^ (uint32_t)fa_sq_blink() << 16) * 16777619u;
     for (i = 0; i < NSTEP; i++)
         h = (h ^ (uint32_t)(t->step[i].n ? t->step[i].note[0] : 0u)) * 16777619u;
@@ -1528,6 +1552,8 @@ static void fa_buttons(uint32_t pressed)
         fa_sq = (uint8_t)!fa_sq;
         if (!fa_sq)
             fa_sq_rec = 0;
+        else
+            fa_sq_title_until = fm1_ms + 500u;
     }
     if ((pressed >> panel.btn[B_SAVE]) & 1u) {            /* SAVE: open the dialog; again: write */
         fa_ar = 0;
@@ -1772,6 +1798,8 @@ static void fa_leds(void)
     }
     for (k = 0; k < NB; k++)
         led_put(nd, panel.btn[k], 1);                       /* every button's glow */
+    for (k = 0; k < 27u; k++)
+        led_put(nd, 14u + k, 1);                            /* every key's glow too: the keys lit when held or sounding stand over it */
     {
         static const uint8_t PG_LED[FA_NPAGE] = {B_LFO, B_SCL, B_SCL, B_EDIT, B_ENV, B_ENV, B_FX};
         led_put(nl, panel.btn[PG_LED[fa_page]], 1);          /* the page's button */
@@ -1820,6 +1848,7 @@ static void fa_init(void)
     }
     song.sel = 0;
     fa_cfg_load();
+    ui_idle |= 1u;                                           /* the idle light show (ui_input.c idle_leds): on, after a minute with no input */
     fa_primed = 0;
     fa_last_sl = -2;
     fa_last_user = 0;

@@ -63,7 +63,7 @@ BUILDING.md has the SDK clone). If a download is refused by the network allowlis
   build/felucca.dis tests/target_budget.txt`; for goldens run `build/host/regress` against a scratch copy with `GOLDEN_UPDATE=1`
   and merge only the lines you mean to change.
 
-## The test suite today (1.10.0): what fails and is not yours
+## The test suite today (1.11.0): what fails and is not yours
 
 Seven sections fail at 1.9.2, the same seven as at 1.7.0 (the 1.7.1 rename changed no render hash and no instruction; 1.7.2 touched the editor only; 1.7.3 moved the 100 FMINI goldens on purpose and no other). Four were
 confirmed on the untouched v1.6.1 with identical output: `fm4` (the DIGITAL conversion) and the three `regress` sections (the golden

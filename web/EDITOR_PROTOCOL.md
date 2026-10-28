@@ -1034,9 +1034,15 @@ the factory patch its SLOT names, as loading it does). rc: 0 ok,
 1 arguments (length, target, index), 2 the track is not on the FMINI engine. A `PUT` sanitizes every byte into its range, makes
 the patch the track's own (SLOT OWN, or the factory patch it equals unchanged), as an edit on the panel does, and does not
 write flash. The patch bytes: R1..R3 (0..2) range 0 LO .. 5 2'; W1..W3 (3..5) wave 0 TRI, SHARK, SAW, SQR, PLS W, PLS N;
-F2, F3 (6, 7) 64 = 0, +-7 semitones; L1..L3, LN (8..11) levels; SW1 (12) bits 1 OSC 1, 2 OSC 2, 4 OSC 3, 8 NOISE,
-16 PINK, 32 MOD OSC, 64 MOD FLT; SW2 (13) bits 1 GLIDE, 2 LFO SQR; TUNE (14) 64 = A 440; MMIX (15) MOD MIX; KBD (16);
-GLID (17) the kept glide time. While the GLIDE switch is on `P_GLIDE` (38) holds the same time (a `PUT` does not copy it:
+F2, F3 (6, 7) 64 = 0, +-7 semitones (the coarse law, 11 cents a step); L1..L3, LN (8..11) levels; SW1 (12) bits 1 OSC 1, 2 OSC 2, 4 OSC 3, 8 NOISE,
+16 PINK, 32 MOD OSC, 64 MOD FLT; SW2 (13) bits 1 GLIDE, 2 LFO SQR, 4 DET FINE; TUNE (14) 64 = A 440; MMIX (15) MOD MIX; KBD (16);
+GLID (17) the kept glide time.
+
+**1.10.0 (DET FINE, SW2 value 4):** when SW2 has the value 4 set, F2 and F3 are a fine code 0..180 (90 = 0, a step is 0.1 semitone up to
+4, 0.05 from 4 to 6, 0.1 from 6 to 7; signed cents: `fmini_det_fine` in eng_fmini.c). Value 4 clear is the coarse law above, so a
+patch saved before 1.10 sounds as it did. The panel sets value 4 on its first DET turn (both detunes go to their nearest step); a CC
+scales the fine code over 0..127. An editor that reads F2 / F3 as the coarse law shows the fine code wrong: check SW2 value 4 first.
+The sanitiser allows F2 / F3 up to 180 and SW2 up to 7. While the GLIDE switch is on `P_GLIDE` (38) holds the same time (a `PUT` does not copy it:
 set both, as the page does).
 
 **1.6.1 (INFO `48 01 01`, after `47 01 32`):** the keys' octave. `FMINI_GET` of target 0 ends with the octave + 4 (1..7) after the SLOT,
