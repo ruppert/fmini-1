@@ -631,29 +631,35 @@ int main(int argc, char **argv)
         fpress(B_PLAY);
         events_block(CTL);
         if (song.playing) { printf("stop\n"); return 1; }
-        {   /* SEQ held: the settings pop-up (MODE, RATE, GATE, TEMPO) as the ARP's; a tap on SEQ closes it, then opens the grid */
+        {   /* SEQ: outside the sequencer a press (not the release) opens the grid, a hold does nothing more; inside it a hold
+             * opens the settings pop-up (MODE, RATE, GATE, TEMPO), a tap closes the grid, and a press on the settings goes back */
             int16_t dv0 = trk[0].p[P_SDIV], g0 = trk[0].p[P_SGATE], md0 = trk[0].p[P_SMODE], bpm0 = song.g[G_BPM];
-            fhold(B_SEQ);
+            fa_sq = 0; fa_sc = 0; fa_tp = 0; fa_sq_rec = 0;
+            fhold(B_SEQ);                                 /* outside: the grid, the hold adds nothing */
+            if (!fa_sq || fa_sc) { printf("seq opens by hold outside %d %d\n", fa_sq, fa_sc); return 1; }
+            fa_sq = 0;
+            fpress(B_SEQ);                                /* a press outside: the grid */
+            if (!fa_sq || fa_sc) { printf("seq opens %d %d\n", fa_sq, fa_sc); return 1; }
+            fa_sq_title_until = 0;
+            fhold(B_SEQ);                                 /* inside: the hold opens the settings pop-up */
             if (!fa_sc || fa_sq) { printf("seq hold %d %d\n", fa_sc, fa_sq); return 1; }
             fa_sc_row = 0;
-            fturn(EN_ALGO, 1);                           /* MODE: FWD -> BWD */
+            fturn(EN_ALGO, 1);                            /* MODE: FWD -> BWD */
             if (trk[0].p[P_SMODE] != SM_BWD) { printf("seq mode %d\n", trk[0].p[P_SMODE]); return 1; }
             fturn(EN_SELECT, 1);
-            fturn(EN_ALGO, 1);                           /* RATE: one step up */
+            fturn(EN_ALGO, 1);                            /* RATE: one step up */
             if (trk[0].p[P_SDIV] == dv0) { printf("seq rate\n"); return 1; }
             fturn(EN_SELECT, 1);
-            fturn(EN_ALGO, 1);                           /* GATE */
+            fturn(EN_ALGO, 1);                            /* GATE */
             if (trk[0].p[P_SGATE] == g0) { printf("seq gate\n"); return 1; }
-            fturn(EN_SELECT, 1);                         /* TEMPO: ALGORITHM opens TAP TEMPO, and the pop-up stays */
+            fturn(EN_SELECT, 1);                          /* TEMPO: ALGORITHM opens TAP TEMPO, and the pop-up stays */
             fturn(EN_ALGO, 1);
             if (!fa_tp || !fa_sc) { printf("seq tempo pop-up\n"); return 1; }
-            fpress(B_OCTUP);                             /* another button closes TAP TEMPO only */
+            fpress(B_OCTUP);                              /* another button closes TAP TEMPO only */
             if (fa_tp || !fa_sc) { printf("seq tempo closes\n"); return 1; }
-            fpress(B_SEQ);                               /* SEQ again: the settings pop-up closes, the grid stays shut */
-            if (fa_sc || fa_sq) { printf("seq settings close (%d %d)\n", fa_sc, fa_sq); return 1; }
-            fpress(B_SEQ);                               /* a tap: the grid */
-            if (!fa_sq || fa_sc) { printf("seq grid\n"); return 1; }
-            fpress(B_SEQ);
+            fpress(B_SEQ);                                /* a press on the settings: back to the grid */
+            if (fa_sc || !fa_sq) { printf("seq back to grid (%d %d)\n", fa_sc, fa_sq); return 1; }
+            fpress(B_SEQ);                                /* a tap inside the grid: it closes */
             if (fa_sq) { printf("seq grid closes\n"); return 1; }
             trk[0].p[P_SDIV] = dv0; trk[0].p[P_SGATE] = g0; trk[0].p[P_SMODE] = md0; song.g[G_BPM] = bpm0;
         }

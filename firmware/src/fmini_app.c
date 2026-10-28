@@ -1615,38 +1615,39 @@ static void fa_buttons(uint32_t pressed)
     }
     if ((pressed >> panel.btn[B_PLAY]) & 1u)              /* PLAY / STOP the sequence */
         transport_req = (song.playing || transport_req == 1u) ? 2u : 1u;
-    {   /* SEQ: a tap opens / closes the sequence pop-up (on the settings pop-up: closes that); held (450 ms, as ARP's
-         * HOLD) the settings pop-up. The tap is decided on release, so the hold is no tap */
+    {   /* SEQ. Outside the sequencer, a press (not the release) opens its grid, with the word SEQUENCER for 0.5 s, and
+         * holding does nothing more. Inside the grid: a tap (decided on release) closes it, and a hold (450 ms) opens the
+         * settings pop-up (MODE, RATE, GATE, TEMPO). On the settings pop-up, a press goes back to the grid */
         uint32_t down = (fm1_in.buttons >> panel.btn[B_SEQ]) & 1u;
         if ((pressed >> panel.btn[B_SEQ]) & 1u) {
             fa_seq_down = 1;
-            fa_seq_done = 0;
+            fa_seq_done = 1;                              /* (set below when a hold or a tap is still to come) */
             fa_seq_t0 = fm1_ms;
+            if (fa_sc) {                                  /* the settings pop-up: back to the grid */
+                fa_sc = 0;
+                fa_sq = 1;
+                fa_sq_title_until = 0;
+            } else if (!fa_sq) {                          /* outside the sequencer: its grid opens now */
+                fa_sv = 0;
+                fa_ar = 0;
+                fa_gl_close();
+                fa_sq = 1;
+                fa_sq_title_until = fm1_ms + 500u;
+            } else {                                      /* inside the grid: a tap closes it, a hold opens the settings */
+                fa_seq_done = 0;
+            }
         }
         if (fa_seq_down) {
             if (!down) {
                 fa_seq_down = 0;
-                if (!fa_seq_done) {                       /* the tap */
-                    fa_sv = 0;
-                    fa_ar = 0;
-                    fa_gl_close();
-                    if (fa_sc) {
-                        fa_sc = 0;
-                    } else {
-                        fa_sq = (uint8_t)!fa_sq;
-                        if (!fa_sq)
-                            fa_sq_rec = 0;
-                        else
-                            fa_sq_title_until = fm1_ms + 500u;
-                    }
+                if (!fa_seq_done) {                       /* the tap inside the grid: it closes */
+                    fa_sq = 0;
+                    fa_sq_rec = 0;
                 }
-            } else if (!fa_seq_done && (uint32_t)(fm1_ms - fa_seq_t0) >= 450u) {   /* the hold */
+            } else if (!fa_seq_done && (uint32_t)(fm1_ms - fa_seq_t0) >= 450u) {   /* the hold inside the grid */
                 fa_seq_done = 1;
-                fa_sv = 0;
-                fa_ar = 0;
                 fa_sq = 0;
                 fa_sq_rec = 0;
-                fa_gl_close();
                 fa_sc = 1;
                 fa_sc_row = 0;
             }
