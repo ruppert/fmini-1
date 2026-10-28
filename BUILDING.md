@@ -82,14 +82,6 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`, `c
 `FELUCCA_USB_LAYOUT` (`0` to `3`, default `0`) picks other USB descriptor layouts for testing; see
 `firmware/src/usb.c`.
 
-## Samples
-
-The CC0 instrument samples that the SAMPLE engine uses are in `assets/samples-cc0/`
-(Versilian Studios, see `ATTRIBUTION.txt` there). `tools/fetch_cc0.py` downloads them
-again from the source repositories. Without that folder the build still works, with no
-instrument sets in the SAMPLE engine and no PIANO in SLICE (the PIANO set's middle C): they play a plain sine
-at the note's pitch instead, and the screen says NO SAMPLE.
-
 ## Browser emulator
 
 ```

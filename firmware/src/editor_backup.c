@@ -2,13 +2,11 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Complete musical archive: no raw addresses are accepted. Small objects are staged
  * in main-loop RAM and fully validated before the existing A/B commit path writes.
- * Sample restore uses SMP_BEGIN/WRITE/END and its existing CRC/header-last commit.
- * A disconnected sample restore can lose that sample; the exported file is retained.
  * Id 8 (the FM6 patch bank of 1.0..1.0.2) is listed empty since 1.0.3; a PUT of it from an older archive moves its
  * patches into the user presets restored before it (ids 6, 7), as the first boot after the update does (up_fm6.c).
  * Id 9 is the user presets' FM6 patches (up_fm6.c), appended in 1.0.3.
  */
-static const uint8_t ED_BK_IDS[13] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 32, 33, 34};
+static const uint8_t ED_BK_IDS[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};   /* (1.13: the sample slots, 32..34, are gone) */
 #define ED_BK_N ((uint32_t)sizeof ED_BK_IDS)
 #define ED_BK_MAX ((uint32_t)sizeof proj_wire_u.raw)
 #define ED_BK_RAW (proj_wire_u.raw)  /* reuse the existing serialized main-loop scratch */
@@ -49,13 +47,6 @@ static const uint8_t *ed_bk_object(uint32_t id, uint32_t *len)
     if (id == 9u) {                                 /* the user presets' FM6 patches */
         if (upf_valid(&upf)) *len = sizeof upf;
         return (const uint8_t *)&upf;
-    }
-    if (id >= 32u && id < 32u + SMP_USER_SLOTS) {
-        uint32_t k = id - 32u;
-        const smp_user_hdr_t *h = (const smp_user_hdr_t *)smp_user_xip(k);
-        if (usr_nz[k] && h->magic == SMP_USER_MAGIC && h->data_len <= SMP_USER_SIZE - SMP_USER_DATA)
-            *len = SMP_USER_DATA + h->data_len;
-        return smp_user_xip(k);
     }
     return 0;
 }

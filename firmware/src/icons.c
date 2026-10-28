@@ -204,14 +204,6 @@ static uint32_t param_icon(const param_desc_t *d, int32_t v)
         return ICON_NOISE;                    /* NOISE's MODE is the source; its CLK the register clock */
     if (d == &NOISE_CLK)
         return ICON_RATE;
-#if FELUCCA_SLICE
-    if (d->names == N_SLC_DIV)
-        return ICON_SLICE;                    /* SLICE: DIV is the slicing, MODE the gate, REV the direction */
-    if (d->names == N_SLC_MODE)
-        return ICON_GATE;
-    if (d->names == N_SLC_REV)
-        return ICON_ORDER;
-#endif
     return icon_for_label(d->label);
 }
 
@@ -248,8 +240,6 @@ static uint32_t engine_icon(const char *name)
 #endif
         {"PHASE", ICON_PHASE}, {"LOFI", ICON_BITS},
         {"SAMPLE", ICON_SAMPLE}, {"VOICE", ICON_MOUTH}, {"TRIO", ICON_TRIO}, {"WHEEL", ICON_DRAWBAR},
-        {"SLICE", ICON_SLICE},
-        {"GRAIN", ICON_GRAIN},
         {"PHYS", ICON_PHYS},
         {"DRUM", ICON_DRUM},
         {"NOISE", ICON_NOISE},

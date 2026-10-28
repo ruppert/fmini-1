@@ -867,7 +867,7 @@ static uint32_t fa_sound_keys(void)
  * SELECT picks a line, ALGORITHM changes it (or opens MIDI CC / ABOUT); GLO goes back, then closes. The settings are
  * kept in the flash settings record (favorites.factory rows 7 to 9: no engine of this firmware uses them).
  * MIDI CLOCK (OFF by default: the internal clock, or USB / TRS) makes the ARP and the SEQ follow that input's MIDI clock. */
-#define FMINI_VERSION "v1.12.0"
+#define FMINI_VERSION "v1.13.0"
 #define FA_NPG 44u                                        /* the controls of the seven screens (FMG_PAGE: 8+8+8+4+4+4+8) */
 #define FA_NCC (FA_NPG + FA_AR_N)                         /* .. and the ARP pop-up's six lines */
 static uint8_t fa_gl;                                     /* 0 closed, 1 the list, 2 MIDI CC, 3 ABOUT */

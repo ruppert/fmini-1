@@ -392,7 +392,7 @@ static uint32_t large_kind(void)
         return home_tracks() ? LK_LABEL : LK_TALL;      /* a list page; the rows' names in M: draw_home_tracks) */
     g = cur_page()->graph;
     return g == GR_BROWSE || g == GR_SLOTS || g == GR_USER || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
-           g == GR_SLICES || g == GR_EVENTS ? LK_LABEL : LK_TALL;
+           g == GR_EVENTS ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height */
 static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : CARD_H; }
@@ -433,13 +433,6 @@ static int page_visible(uint32_t i)
         return TSEL->eng_req % NENGINES == ENGI_FM6;
     if (PAGES[i].graph >= GR_FMG0 && PAGES[i].graph <= GR_FMG6)      /* FMINI's panel (ui_fmini.c) */
         return TSEL->eng_req % NENGINES == ENGI_FMINI;
-#if FELUCCA_SLICE
-    if (PAGES[i].graph == GR_SLICES)
-        return ENGINES[TSEL->eng_req % NENGINES] == &ENG_SLICE;
-#else
-    if (PAGES[i].graph == GR_SLICES)
-        return 0;
-#endif
     return !(PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] >= P_FM1_ATK &&
              PAGES[i].id[0] <= P_FM4_LEVEL) || (FELUCCA_FM4 && TSEL->eng_req % NENGINES == ENGI_DIGITAL);
 }
@@ -467,9 +460,6 @@ static void ui_say(const char *a, const char *b)
 static void ui_message(const char *s) { ui_say(s, ""); }
 /* a message led by an icon: its first byte (ui_draw.c draw_head draws the icon, then the words) */
 #define MSG_NOFILE "\x01"                      /* the no-file icon (ICON_X_NOFILE) */
-/* a missing sample (ui_input.c sample_notice): NO SAMPLE (SAMPLE NOT FOUND, the SLICES page's, is 4 px too wide
- * for the header's 130 px after the icon) */
-#define MSG_NO_SAMPLE MSG_NOFILE "NO SAMPLE"
 
 static int chain_busy(void) { return chain.running || chain.armed; }
 /* Main loop only, with interrupts enabled. PLAY may be consumed between reads;
@@ -1291,26 +1281,20 @@ static int param_kept(uint32_t i)
            (i >= P_SLCR && i <= P_SLDEPTH) || i == P_CHRD || i == P_VOIC || i == P_SQNT;
 }
 
-/* a retired preset kept as an alias, so stored preset numbers stay valid: SAMPLE 1, once TRANH, is PIANO
- * (tools/gen_samples.py SMP_SET_ORIG). It loads as the original; browsing skips it. -> the preset k stands for.
- * (SAMPLE 4, once PERC, is past SMP_NPRESETS: apply_preset_to loads it as DRUM) */
+/* the presets of engine e that browsing shows before preset k (k = npresets: all of them); no preset is an alias now
+ * (SAMPLE's were retired, 1.13) */
 static uint32_t preset_orig(const engine_t *e, uint32_t k)
 {
-    return e->presets == SMP_PRESET_TABLE && k < SMP_NSETS ? SMP_SET_ORIG[k] : k;
+    (void)e;
+    return k;
 }
-
-/* the presets of engine e that browsing shows before preset k (k = npresets: all of them) */
 static uint32_t preset_rank(const engine_t *e, uint32_t k)
 {
-    uint32_t i, n = 0;
-    if (e->presets != SMP_PRESET_TABLE)
-        return k;
-    for (i = 0; i < k; i++)
-        n += preset_orig(e, i) == i;
-    return n;
+    (void)e;
+    return k;
 }
 
-#define preset_shown(e) (ENGINES[e]->npresets - (ENGINES[e]->presets == SMP_PRESET_TABLE ? SMP_NALIAS : 0u))
+#define preset_shown(e) (ENGINES[e]->npresets)
 
 #if !FELUCCA_FM4
 /* DIGITAL (engine 1, retired): t's sound = p, values as DIGITAL has them, converted to FM6 with a patch of its own
@@ -1788,7 +1772,6 @@ static void track_select(uint32_t i)
     ui.force = 1;
 }
 
-#include "ui_slice.c"                             /* EDIT > SLICES: SLICE's slices by hand (an action page too) */
 #include "ui_events.c"                            /* SEQ > AUTOMATION: locks, events, CHANCE, RATCH as a list (an action page) */
 #include "midi_learn.c"                           /* MIDI LEARN (1.5): GLO + D4, a knob, a CC */
 
@@ -1812,8 +1795,6 @@ static uint32_t act_cols(void)                   /* the columns that are actions
         return 2u;                               /* LOAD */
     if (pg->graph == GR_USER)
         return 14u;                              /* LOAD ERASE SAVE */
-    if (pg->graph == GR_SLICES)
-        return slice_page_ok() ? 12u : 0u;       /* SPLIT JOIN (a SLICE track only) */
     if (pg->graph == GR_SLOTS)
         return 14u;                              /* PROJECT: ERASE (1.5.5, #199) LOAD SAVE */
     if (pg->scope == SC_GLOBAL)
@@ -1846,8 +1827,6 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
         return "LOAD";
     if (cur_page()->graph == GR_USER)
         return UP_GO[(c + 2u) % 3u];
-    if (cur_page()->graph == GR_SLICES)
-        return c == 3u ? "JOIN" : "SPLIT";
     if (cur_page()->graph == GR_SLOTS && (c & 3u) == 1u)
         return "ERASE";
     return id == G_CLRSEQ ? "CLEAR" : id == G_INITSND ? "INIT" : id == G_LOAD ? "LOAD" : "SAVE";
@@ -1870,10 +1849,6 @@ static int act_ready(void)
         return pat_last[s] != pat_pick() + 1u || steps_sig(TSEL) != pat_sig[s];
     if (cur_page()->graph == GR_USER)
         return c == 3u ? !song.playing : up_used(ui.uslot) && (c == 1u || !song.playing);
-#if FELUCCA_SLICE
-    if (cur_page()->graph == GR_SLICES)
-        return slice_act_ready(c);
-#endif
     if (cur_page()->graph == GR_SLOTS && c == 1u)       /* PROJECT ERASE: a used slot, stopped */
         return !song.playing && project_used((uint32_t)song.g[G_SLOT] - 1u);
     id = cur_page()->id[c & 3u];

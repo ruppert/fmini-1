@@ -17,9 +17,6 @@
 #define NTRK NPART               /* tracks (the formats and the protocol count these): every track is a part */
 #define NSTEP 64
 #define HALF_FRAMES 128          /* I2S half buffer: 2.9 ms at 44.1 kHz (a key waits 0..1 half, then plays 1 half later) */
-#ifndef FELUCCA_SLICE
-#define FELUCCA_SLICE 1          /* the SLICE engine (eng_slice.c), engine 13; FELUCCA_SLICE=0 builds without it */
-#endif
 #ifndef FELUCCA_FM4
 #define FELUCCA_FM4 0            /* the DIGITAL engine (eng_digital.c, four-operator FM): kept in the tree, not built
                                   * by default; replaced by FM6, its sounds convert (fm4_convert.c) */
@@ -32,9 +29,9 @@
                                             * second core (mod.c, voice.c SPREAD, eng_formant.c): one each with two cores,
                                             * one for all with one, as up to 1.6 */
 #define C1_PI(t) ((uint32_t)((t) - trk) % C1_NP)   /* a part's copy */
-#define NENGINES (14 + FELUCCA_SLICE)   /* SLICE (13) and FMINI (13 + FELUCCA_SLICE: 14) come last: the other engines keep their numbers */
+#define NENGINES 15              /* 0..14; FMINI (14) comes last. SAMPLE (4), GRAIN (8) and SLICE (13) are retired (1.13): their numbers stay, silent */
 #define ENGI_DIGITAL 1u          /* reserved without FELUCCA_FM4: never selectable (eng_ok), its sounds load as FM6 */
-#define NENG_SHOWN (NENGINES - !FELUCCA_FM4)   /* the engines one can pick: PRESETS, the EDIT layer, the editor,
+#define NENG_SHOWN (11 + FELUCCA_FM4)   /* the engines one can pick: PRESETS, the EDIT layer, the editor,
                                                 * in the display order of engines.c ENGINE_ORDER */
 #define UP_SLOTS 32u             /* user presets (upreset.c) */
 
@@ -177,7 +174,9 @@ static int drum_from_phys(uint32_t engine, int16_t *e)
  * values become the kit's, the rest of the sound (mix, sends, matrix, ..) stays. 1 = it was one (its engine is
  * ENGI_DRUM now); projects (project.c proj_perc), user presets (upreset.c up_migrate), factory preset 4 and
  * favourites (ui.c, settings_persist.c). Idempotent */
-#define ENGI_SAMPLE 4u
+#define ENGI_SAMPLE 4u           /* retired (1.13): its number only, for the PERC conversion and the favourites */
+#define ENGI_GRAIN 8u           /* retired (1.13) */
+#define ENGI_SLICE 13u          /* retired (1.13) */
 #define SMP_SET_PERC 4u
 #define DRUM_KIT_E {0, 64, 70, 64, 64, 100, 0, 0}   /* {KIT STD, TUNE, TONE, DECY, SNAP, ACC, KICK PUNCH, DRV} */
 static int drum_from_perc(uint32_t engine, int16_t *e)

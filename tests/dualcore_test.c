@@ -141,12 +141,7 @@ int main(void)
     sc[n++] = (scen_t){"GRAIN NOISE VOICE LOFI", {8, 11, 5, 3}, {1, 4, 7, 10}, 0};
     sc[n++] = (scen_t){"TRIO WHEEL PHASE FM6", {6, 7, 2, ENGI_FM6}, {1, 4, 7, 10}, 0};
     sc[n++] = (scen_t){"PHYS morph + DRUM GRAIN ANALOG", {ENGI_PHYS, ENGI_DRUM, 8, 0}, {2, 1, 3, 5}, 1};
-#if FELUCCA_SLICE
-    sc[n++] = (scen_t){"SAMPLE SLICE GRAIN PHASE", {ENGI_SAMPLE, 13, 8, 2}, {2, 1, 3, 5}, 0};
-    sc[n++] = (scen_t){"SLICE FM6 SAMPLE DRUM", {13, ENGI_FM6, ENGI_SAMPLE, ENGI_DRUM}, {0, 2, 3, 4}, 0};
-#else
-    sc[n++] = (scen_t){"SAMPLE FM6 GRAIN PHASE", {ENGI_SAMPLE, ENGI_FM6, 8, 2}, {2, 1, 3, 5}, 0};
-#endif
+    sc[n++] = (scen_t){"LOFI FM6 VOICE PHASE", {3u /* LOFI */, ENGI_FM6, 5, 2}, {2, 1, 3, 5}, 0};
     for (i = 0; i < n; i++) {
         uint64_t ref;
         uint32_t m, bad = 0, quiet = 0, taken = 0, took = 0;

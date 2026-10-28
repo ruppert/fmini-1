@@ -67,6 +67,18 @@ insert effect with a dry / wet mix, Discussions #78 #177), then `TYPE` (101, ANA
 P_COUNT and P_E0 from `INFO` keeps working. Projects stay FUN10 (3840 bytes, 111 at byte 66; 16 bytes to spare). See
 "1.5: the INSERT" and "1.5: filter TYPE, ENV SYNC" below.
 
+**1.13 (SAMPLE, GRAIN and SLICE retired; the parameters of 1.12 kept):** the three engines are gone from the firmware.
+Their numbers stay (4, 8, 13: the protocol and the stores never reorder); a track or a record that still names one is
+silent and is never offered (`ENGINES[]` has a stub with no presets, its `NAME` is `-`, `INFO` lists `-`). Their
+sounds are not converted. The sample slots (`SMP_BEGIN`, `SMP_WRITE`, `SMP_END`, `SMP_ERASE`, command ids 11..14) get no
+reply; `SMP_INFO` (15) answers 0 slots and 0 KiB, so the editor shows no Samples tab. Backup ids 32..34 (the slots) are
+gone from `BACKUP_LIST`. The flash that held the slots (0xA0000..0xDBFFF) is free. The `SMP_BEGIN` .. `SMP_INFO` rows
+below describe 1.5..1.12.
+
+**1.12 (SEQ MODE: P_COUNT 112, P_E0 104):** `MODE` (id 103, before the engine parameters) is the sequencer's direction:
+0 FWD, 1 BWD, 2 PING. It moved the engine parameters from 103..110 to 104..111. Projects stay FUN10 (3840 bytes); the
+12 bytes before the FM6 patches are spare, room for three more. Take P_COUNT and P_E0 from `INFO`.
+
 ## Framing
 
 A request is `F0 7D 46 4C <cmd> <args...> F7`:
@@ -239,7 +251,7 @@ reply.
 unused mask bits in the last group must be zero. Oversized or incomplete transfers
 are rejected; SMP_WRITE decodes at most 256 bytes, SMP_END exactly 480 bytes.
 
-**User sample slot** (80 KiB each, SAMPLE engine sets USR1..USR3; reference uploader
+**User sample slot** (1.5..1.12; retired in 1.13. 80 KiB each, SAMPLE engine sets USR1..USR3; reference uploader
 `tools/fm1_sample_upload.py`, slot builder `sampleio.user_slot`; the editor's port of it is
 checked byte for byte by `web/test_web.mjs`): header at 0, ADPCM data at 512.
 

@@ -24,11 +24,9 @@ static uint8_t eng_mem_owner[NPART];       /* engine index + 1 whose state is in
 #include "../engines/src/eng_analog.c"   /* Felucca-Engines (MIT): ANALOG LOFI TRIO WHEEL NOISE */
 #include "eng_phase.c"
 #include "../engines/src/eng_lofi.c"
-#include "eng_sample.c"
 #include "eng_formant.c"
 #include "../engines/src/eng_trio.c"
 #include "../engines/src/eng_wheel.c"
-#include "eng_grain.c"
 #include "eng_phys.c"           /* PHYS: DaisySP physical models (phys_dsp.c, MIT) */
 #include "eng_drum.c"           /* DRUM: the 8-lane kit (drum_voice.c) */
 #include "../engines/src/eng_noise.c"
@@ -38,9 +36,24 @@ static uint8_t eng_mem_owner[NPART];       /* engine index + 1 whose state is in
 #if FELUCCA_FM4
 #include "eng_digital.c"        /* DIGITAL: four-operator FM (retired; FELUCCA_FM4=1 builds it) */
 #endif
-#if FELUCCA_SLICE
-#include "eng_slice.c"
-#endif
+
+/* the retired engines (SAMPLE 4, GRAIN 8, SLICE 13; 1.13): their numbers stay (projects, presets and the protocol
+ * hold them), their code is gone. A track that still has one is silent and is never offered (eng_ok): no presets,
+ * no memory, no sound. Like DIGITAL's stub (fm4_convert.c), the number is never picked again. */
+static void retired_note_on(struct track *t, voice_t *v) { (void)t; (void)v; }
+static void retired_render(struct track *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
+{
+    (void)t; (void)v; (void)out; (void)n; (void)m;
+}
+static const engine_t ENG_RETIRED = {
+    .name = "-",
+    .page_title = {"-", "-"},
+    .edit = {{"-", F_INT, 0, 0, 0, 0, 0}, {"-", F_INT, 0, 0, 0, 0, 0}, {"-", F_INT, 0, 0, 0, 0, 0}, {"-", F_INT, 0, 0, 0, 0, 0},
+             {"-", F_INT, 0, 0, 0, 0, 0}, {"-", F_INT, 0, 0, 0, 0, 0}, {"-", F_INT, 0, 0, 0, 0, 0}, {"-", F_INT, 0, 0, 0, 0, 0}},
+    .note_on = retired_note_on,
+    .render = retired_render,
+    .knob = {P_E4, P_E5, P_E6, P_REL},
+};
 
 /* the editor protocol, user presets and projects store these indices: append, never reorder */
 static const engine_t *const ENGINES[NENGINES] = {
@@ -52,19 +65,17 @@ static const engine_t *const ENGINES[NENGINES] = {
 #endif
     &ENG_PHASE,                  /* 2 */
     &ENG_LOFI,                   /* 3 */
-    &ENG_SAMPLE,                 /* 4 */
+    &ENG_RETIRED,                /* 4: SAMPLE (retired 1.13: its sounds are silent, not offered) */
     &ENG_FORMANT,                /* 5 VOICE (eng_formant.c: "voice" is a sounding note in voice.c) */
     &ENG_TRIO,                   /* 6 */
     &ENG_WHEEL,                  /* 7 */
-    &ENG_GRAIN,                  /* 8 */
+    &ENG_RETIRED,                /* 8: GRAIN (retired 1.13) */
     &ENG_PHYS,                   /* 9 (ENGI_PHYS) */
     &ENG_DRUM,                   /* 10 (ENGI_DRUM) */
     &ENG_NOISE,                  /* 11 */
     &ENG_FM6,                    /* 12 (ENGI_FM6) */
-#if FELUCCA_SLICE
-    &ENG_SLICE,                  /* 13 (FELUCCA_SLICE=0 builds without it) */
-#endif
-    &ENG_FMINI,                   /* 14 (ENGI_FMINI: 13 without SLICE) */
+    &ENG_RETIRED,                /* 13: SLICE (retired 1.13) */
+    &ENG_FMINI,                  /* 14 (ENGI_FMINI) */
 };
 
 /* a track's engine number as an index (the audio paths: a compare, cheaper than % NENGINES; a bad number: 0) */
@@ -89,27 +100,6 @@ static void eng_mem_claim(const track_t *t)
     eng_mem_owner[p] = (uint8_t)(e + 1u);
 }
 
-/* the sample source a track's sound plays that has no data (SAMPLE's SET, GRAIN's SRC, SLICE's SRC: an empty or
- * invalid user slot, a set or PIANO this build lacks): its name (it plays a sine: eng_sample.c smp_sine), 0 = none;
- * *code a small number for it (1.., per engine and source) so the UI says it once (ui_input.c sample_notice) */
-static uint8_t snd_said[NTRK];   /* per track: the code last said, 0 = none (a project load clears them: said again) */
-static const char *snd_missing(const track_t *t, uint32_t *code)
-{
-    const engine_t *e = ENGINES[eng_idx(t->eng_req)];
-    uint32_t si = (uint32_t)t->p[P_E0] % SMP_NALL;
-#if FELUCCA_SLICE
-    if (e == &ENG_SLICE) {
-        si = slc_src_of(t->p);
-        *code = 64u + si;
-        return slc_get(si) ? 0 : N_SLC_SRC[si];
-    }
-#endif
-    if (e != &ENG_SAMPLE && e != &ENG_GRAIN)
-        return 0;
-    *code = (e == &ENG_GRAIN ? 32u : 1u) + si % 32u;
-    return smp_set_missing(si) ? SMP_ALL_NAMES[si] : 0;
-}
-
 /* the order the engines are shown in (PRESETS browsing and its ENG knob, the EDIT layer's keys, the editor's list):
  * engine indices, never DIGITAL's reserved 1 (with FELUCCA_FM4 it follows FM6). The indices stay as they are (the
  * stores and the protocol hold them); only this table orders them */
@@ -120,17 +110,17 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
 #if FELUCCA_FM4
     1,                           /* DIGITAL */
 #endif
-    2, 3, 4, 5, 6, 7, 8, 9,      /* PHASE LOFI SAMPLE VOICE TRIO WHEEL GRAIN PHYS */
+    2, 3, 5, 6, 7, 9,            /* PHASE LOFI VOICE TRIO WHEEL PHYS */
     11,                          /* NOISE */
-#if FELUCCA_SLICE
-    13,                          /* SLICE */
-#endif
     10,                          /* DRUM */
 };
 
 /* the engines one can pick (engine 1 only with FELUCCA_FM4), in ENGINE_ORDER: eng_ok(e), the n-th of them
  * eng_vis(n), e's place among them eng_rank(e), the next / previous one eng_step(e, dir) (wraps) */
-static int eng_ok(uint32_t e) { return e < NENGINES && (FELUCCA_FM4 || e != ENGI_DIGITAL); }
+static int eng_ok(uint32_t e)
+{
+    return e < NENGINES && (FELUCCA_FM4 || e != ENGI_DIGITAL) && e != ENGI_SAMPLE && e != ENGI_GRAIN && e != ENGI_SLICE;
+}
 static uint32_t eng_vis(uint32_t n) { return ENGINE_ORDER[n % NENG_SHOWN]; }
 static uint32_t eng_rank(uint32_t e)
 {
@@ -171,7 +161,7 @@ static const struct {
      {1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
     {"SUB", {36, 0, 0, 0, 0, 0, 0, 36, 0, 0, 34, 0, 0, 0, 0, 0},                   /* 8 low, held */
      {1, T_, T_, T_, 0, 0, 0, 0, 0, 0, 0, T_, T_, T_, 0, 0}},
-    /* SLICE (eng_slice.c): note = C4 + slice */
+    /* SLICE (retired 1.13: these stay, the factory patterns keep their numbers) */
     {"CHOP", {60, 61, 62, 67, 64, 65, 60, 69, 68, 70, 62, 67, 72, 72, 74, 64},     /* 9 16 slices re-ordered */
      {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0}},
     {"STUTTER", {60, 60, 61, 61, 62, 0, 63, 63, 64, 65, 65, 0, 66, 66, 66, 67},    /* 10 8 slices, repeats */

@@ -15,7 +15,7 @@
  * The patch holds the rest (ranges, waves, tuning, mixer, switches, keyboard tracking, TUNE). Edited with the FMINI
  * pages (ui_fmini.c). State per voice: s[0..3] the ladder, s[4] the feedback's lag pole (all Q8), s[7] the contour (stage << 24 |
  * level, Q23); the noise is the part's (fmini_nbuf: one source, made once a block). */
-#define ENGI_FMINI (13u + FELUCCA_SLICE)   /* engines.c ENGINES[] (append-only: after SLICE) */
+#define ENGI_FMINI 14u          /* engines.c ENGINES[] (append-only) */
 #if FELUCCA_FMINI_ONLY
 #define FMINI_POLY 12             /* FMini-1: POLY mode plays 12 voices */
 #else
