@@ -483,7 +483,7 @@ static void rec_note(track_t *t, uint32_t note, uint32_t vel)
     int32_t off = rec_nudge(t->seq_pos >= cur ? 0 : next ? -(int32_t)(cur - t->seq_pos) : (int32_t)t->seq_pos, period);
     step_t *s;
     if (next)
-        idx = (idx + 1u) % len;
+        idx = seq_next_in((uint32_t)t->p[P_SMODE], idx, len, &(int8_t){t->seq_dir});   /* (the step after, in the order) */
     s = &t->step[idx];
     /* the step's notes play later in this pass (it is the next one, not played early yet, or the one playing whose
      * nudge has not come yet): what sounds now must not play again there (rskip) */
@@ -831,7 +831,7 @@ static void seq_start(void)
     chain_start();
     for (i = 0; i < NTRK; i++) {                   /* every track from its step 0, together */
         track_t *t = &trk[i];
-        t->seq_idx = (uint16_t)(t->p[P_SLEN] - 1);
+        t->seq_idx = (uint16_t)seq_before_first((uint32_t)t->p[P_SMODE], (uint32_t)t->p[P_SLEN], &t->seq_dir);
         t->seq_pos = 0x7FFFFFFF;                   /* step 0 fires on the first block */
         t->rskip_n = 0;
         t->rh_n = 0;
@@ -926,7 +926,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     uint32_t vel = (s->flags & SF_ACCENT) ? 127u : (s->vel ? s->vel : 96u);
     uint32_t slide_in = t->seq_hold && t->seq_n && !(skip & SEQ_REP);
     uint32_t len = t->p[P_SLEN] ? (uint32_t)t->p[P_SLEN] : 1u;
-    uint32_t next_tie = seq_steps(t)[(idx + 1u) % len].time == ST_TIE;
+    uint32_t next_tie = seq_steps(t)[seq_next_in((uint32_t)t->p[P_SMODE], idx, len, &(int8_t){t->seq_dir})].time == ST_TIE;
     uint32_t hits = step_ratchet(s);
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
     uint32_t m = 0, sk = 0;
@@ -1119,7 +1119,7 @@ static __attribute__((noinline)) void seq_nd_due(track_t *t, uint32_t period, ui
         seq_play(t, t->seq_idx, period);
     }
     if (t->nd_early != ND_NONE && t->seq_pos >= t->nd_early - 1u && t->seq_pos != 0x7FFFFFFFu + n) {
-        uint32_t nx = (t->seq_idx + 1u) % len;
+        uint32_t nx = seq_next_in((uint32_t)t->p[P_SMODE], t->seq_idx, len, &(int8_t){t->seq_dir});
         t->nd_early = ND_NONE;
         t->nd_fired = (uint8_t)(nx + 1u);
         seq_play(t, nx, period);
@@ -1130,7 +1130,7 @@ static __attribute__((noinline)) void seq_nd_due(track_t *t, uint32_t period, ui
  * next step's early play (not inlined, as seq_nd_due) */
 static __attribute__((noinline)) void seq_nd_start(track_t *t, uint32_t period, uint32_t len)
 {
-    uint32_t nx = (t->seq_idx + 1u) % len;
+    uint32_t nx = seq_next_in((uint32_t)t->p[P_SMODE], t->seq_idx, len, &(int8_t){t->seq_dir});
     int32_t d;
     t->nd_early = ND_NONE;
     if (t->nd_fired == t->seq_idx + 1u) {
@@ -1155,7 +1155,7 @@ static __attribute__((noinline)) void seq_nd_start(track_t *t, uint32_t period, 
  * recorded note held ties into it (not inlined: once a step, off the audio ISR's loop) */
 static __attribute__((noinline)) void seq_enter(track_t *t, uint32_t top, uint32_t len)
 {
-    if (!t->seq_idx)
+    if (t->seq_idx == seq_first_of((uint32_t)t->p[P_SMODE], len))
         t->cond_loop = (uint8_t)(top || t->cond_loop + 1u >= COND_LOOPS ? 0u : t->cond_loop + 1u);
     rec_hold(t, t->seq_idx, len);
 }
@@ -1183,7 +1183,7 @@ static void seq_tick(track_t *t, uint32_t n)
             break;
         top = t->seq_pos >= 0x7FFFFFFFu;            /* (PLAY, a SONG section: its first step) */
         t->seq_pos = top ? (chain.running ? chain.carry : 0u) : t->seq_pos - cur_len;
-        t->seq_idx = (uint16_t)((t->seq_idx + 1u) % len);
+        t->seq_idx = (uint16_t)seq_next_in((uint32_t)t->p[P_SMODE], t->seq_idx, len, &t->seq_dir);
         seq_enter(t, top, len);
         if (t->p[P_SQNT] && !t->nd_fired)
             seq_play_on(t, period);                 /* QUANTIZE ON: every step on its start, as before 1.2 */

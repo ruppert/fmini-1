@@ -572,6 +572,32 @@ int main(int argc, char **argv)
             fa_ar_row = 0;
             song.g[G_BPM] = bpm0;                        /* (the tests after this one play at the tempo they had) */
         }
+        {   /* TAP TEMPO smooths: the first two taps set the tempo, then the mean beat of the last five taps (32 ms of each
+             * press is in the gaps: a gap of 480 ms is a tap 512 ms after the last one) */
+            int16_t bpm0 = song.g[G_BPM];
+            fa_ar_row = 5;
+            song.g[G_BPM] = 120;
+            fturn(EN_ALGO, 1);                           /* opens TAP TEMPO: its measurement starts over */
+            song.g[G_BPM] = 120;
+            fpress(B_EDIT);                              /* the first tap sets no tempo */
+            if (song.g[G_BPM] != 120) { printf("tap first %d\n", song.g[G_BPM]); return 1; }
+            fframes(480); fpress(B_EDIT);                /* two taps: one beat of 512 ms */
+            if (song.g[G_BPM] < 116 || song.g[G_BPM] > 118) { printf("tap two %d\n", song.g[G_BPM]); return 1; }
+            for (i = 0; i < 3; i++) { fframes(480); fpress(B_EDIT); }
+            if (song.g[G_BPM] < 116 || song.g[G_BPM] > 118) { printf("tap steady %d\n", song.g[G_BPM]); return 1; }
+            fframes(288); fpress(B_EDIT);                /* a hurried tap, 320 ms after the last: the mean moves a little (not to 187) */
+            if (song.g[G_BPM] < 128 || song.g[G_BPM] > 131) { printf("tap jitter %d\n", song.g[G_BPM]); return 1; }
+            fframes(80); fpress(B_EDIT);                 /* a bounce, 112 ms after the last: no tap */
+            if (song.g[G_BPM] < 128 || song.g[G_BPM] > 131 || !fa_tp) { printf("tap bounce %d\n", song.g[G_BPM]); return 1; }
+            fframes(2000); fpress(B_EDIT);               /* a pause: a new measurement, no tempo yet */
+            if (song.g[G_BPM] < 128 || song.g[G_BPM] > 131) { printf("tap pause %d\n", song.g[G_BPM]); return 1; }
+            fframes(480); fpress(B_EDIT);
+            if (song.g[G_BPM] < 116 || song.g[G_BPM] > 118) { printf("tap again %d\n", song.g[G_BPM]); return 1; }
+            fpress(B_OCTUP);                             /* another button closes it */
+            if (fa_tp) { printf("tap close\n"); return 1; }
+            song.g[G_BPM] = bpm0;
+            fa_ar_row = 0;
+        }
         trk[0].p[P_AMODE] = 0;
         /* the sequencer */
         fpress(B_SEQ);
@@ -605,6 +631,65 @@ int main(int argc, char **argv)
         fpress(B_PLAY);
         events_block(CTL);
         if (song.playing) { printf("stop\n"); return 1; }
+        {   /* SEQ held: the settings pop-up (MODE, RATE, GATE, TEMPO) as the ARP's; a tap on SEQ closes it, then opens the grid */
+            int16_t dv0 = trk[0].p[P_SDIV], g0 = trk[0].p[P_SGATE], md0 = trk[0].p[P_SMODE], bpm0 = song.g[G_BPM];
+            fhold(B_SEQ);
+            if (!fa_sc || fa_sq) { printf("seq hold %d %d\n", fa_sc, fa_sq); return 1; }
+            fa_sc_row = 0;
+            fturn(EN_ALGO, 1);                           /* MODE: FWD -> BWD */
+            if (trk[0].p[P_SMODE] != SM_BWD) { printf("seq mode %d\n", trk[0].p[P_SMODE]); return 1; }
+            fturn(EN_SELECT, 1);
+            fturn(EN_ALGO, 1);                           /* RATE: one step up */
+            if (trk[0].p[P_SDIV] == dv0) { printf("seq rate\n"); return 1; }
+            fturn(EN_SELECT, 1);
+            fturn(EN_ALGO, 1);                           /* GATE */
+            if (trk[0].p[P_SGATE] == g0) { printf("seq gate\n"); return 1; }
+            fturn(EN_SELECT, 1);                         /* TEMPO: ALGORITHM opens TAP TEMPO, and the pop-up stays */
+            fturn(EN_ALGO, 1);
+            if (!fa_tp || !fa_sc) { printf("seq tempo pop-up\n"); return 1; }
+            fpress(B_OCTUP);                             /* another button closes TAP TEMPO only */
+            if (fa_tp || !fa_sc) { printf("seq tempo closes\n"); return 1; }
+            fpress(B_SEQ);                               /* SEQ again: the settings pop-up closes, the grid stays shut */
+            if (fa_sc || fa_sq) { printf("seq settings close (%d %d)\n", fa_sc, fa_sq); return 1; }
+            fpress(B_SEQ);                               /* a tap: the grid */
+            if (!fa_sq || fa_sc) { printf("seq grid\n"); return 1; }
+            fpress(B_SEQ);
+            if (fa_sq) { printf("seq grid closes\n"); return 1; }
+            trk[0].p[P_SDIV] = dv0; trk[0].p[P_SGATE] = g0; trk[0].p[P_SMODE] = md0; song.g[G_BPM] = bpm0;
+        }
+        {   /* SEQ MODE: the order the steps play (core.h seq_next_in): FWD 0 1 2 3 0 .., BWD 3 2 1 0 3 .., PING 0 1 2 3 2 1 0 1 */
+            static const uint32_t WANT[3][8] = {{0, 1, 2, 3, 0, 1, 2, 3}, {3, 2, 1, 0, 3, 2, 1, 0}, {0, 1, 2, 3, 2, 1, 0, 1}};
+            uint32_t m, j;
+            for (m = 0; m < 3; m++) {
+                int8_t dir = 0;
+                uint32_t idx = seq_before_first(m, 4, &dir);
+                for (j = 0; j < 8; j++) {
+                    idx = seq_next_in(m, idx, 4, &dir);
+                    if (idx != WANT[m][j]) { printf("seq order mode %u step %u: %u\n", m, j, idx); return 1; }
+                }
+            }
+        }
+        {   /* the sequence plays BWD: the three steps from the last down, as the clock runs */
+            uint32_t prev, n = 0, bad = 0;
+            int32_t o[2 * CTL];
+            trk[0].p[P_SMODE] = SM_BWD;
+            fpress(B_PLAY);
+            for (i = 0; i < 400; i++) { events_block(CTL); mix_block(o, CTL); }
+            prev = trk[0].seq_idx;
+            for (i = 0; i < 4000; i++) {
+                mix_block(o, CTL);
+                if (trk[0].seq_idx != prev) {
+                    if (trk[0].seq_idx != (prev + 2u) % 3u)
+                        bad++;
+                    prev = trk[0].seq_idx;
+                    n++;
+                }
+            }
+            fpress(B_PLAY);
+            events_block(CTL);
+            trk[0].p[P_SMODE] = SM_FWD;
+            if (song.playing || n < 4 || bad) { printf("seq bwd: %u steps, %u out of order\n", n, bad); return 1; }
+        }
         fpress(B_REC);                                   /* a take of 64 ends by itself */
         for (k = 0; k < 70u; k++) input_on(&trk[0], 50u + k, 100);
         trk_all_off(&trk[0]);

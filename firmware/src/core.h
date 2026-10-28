@@ -77,6 +77,7 @@ enum {                          /* per-track parameters */
     P_ITYPE, P_IA, P_IB, P_IC, P_IMIX,         /* 1.5 (#78, #177): the INSERT, its TYPE, three values and MIX (fx.c) */
     P_FTYPE,                                   /* 1.5 (#104): ANALOG's filter TYPE, LP (as before) / BP / HP (eng_analog.c) */
     P_ESYNC,                                   /* 1.5 (#175): ENV SYNC: ATK DEC REL as note values of the tempo (voice.c) */
+    P_SMODE,                                   /* 1.12: the SEQ's MODE, FWD / BWD / PING: the order its steps play (seq.c seq_next_in) */
     P_E0, P_E1, P_E2, P_E3, P_E4, P_E5, P_E6, P_E7,
     P_COUNT
 };
@@ -99,6 +100,47 @@ enum {                          /* global parameters */
                                  * the import of an old project reads them: proj_drums_to_part) */
     G_COUNT
 };
+
+/* P_SMODE: the order the SEQ's steps play (params.c N_SMODE; append-only). FWD as before; BWD from the last step down;
+ * PING up to the last step and down again (the ends once each) */
+enum { SM_FWD, SM_BWD, SM_PING };
+/* the step after step i (of len) in the order mode plays. dir is the way PING goes (+1 up, -1 down): read from the
+ * track, and written back by the advance (seq_tick); a look-ahead passes a copy */
+static inline uint32_t seq_next_in(uint32_t mode, uint32_t i, uint32_t len, int8_t *dir)
+{
+    int32_t n;
+    if (len < 2u)
+        return 0u;
+    i %= len;
+    if (mode == SM_PING) {
+        int32_t d = *dir ? *dir : 1;                /* (a track never run: up) */
+        n = (int32_t)i + d;
+        if (n < 0 || n >= (int32_t)len) {
+            d = -d;
+            n = (int32_t)i + d;
+        }
+        *dir = (int8_t)d;
+        return (uint32_t)n;
+    }
+    return mode == SM_BWD ? (i + len - 1u) % len : (i + 1u) % len;
+}
+/* the first step the order plays, and the step before it when the sequence starts (the first advance plays that one) */
+static inline uint32_t seq_first_of(uint32_t mode, uint32_t len) { return mode == SM_BWD && len > 0u ? len - 1u : 0u; }
+static inline uint32_t seq_before_first(uint32_t mode, uint32_t len, int8_t *dir)
+{
+    *dir = -1;
+    if (mode == SM_BWD)
+        return 0u;
+    if (mode == SM_PING)
+        return len > 1u ? 1u : 0u;
+    return len ? len - 1u : 0u;
+}
+/* the step i is the last one of the order's pass: the step after it is the first one (song_chain.c: a section's end) */
+static inline uint32_t seq_at_end(uint32_t mode, uint32_t i, uint32_t len, int8_t dir)
+{
+    int8_t d = dir;
+    return seq_next_in(mode, i, len, &d) == seq_first_of(mode, len);
+}
 
 /* stored parameters of an older layout -> today's P_* order. A store keeps np = the P_COUNT it was
  * written with; common parameters are only ever added just before P_E0, so the first np - 8 are
@@ -318,9 +360,10 @@ typedef struct track {
     uint8_t lfo_wrap;            /* the LFO's phase wrapped this block: its S&H is drawn after the parts (voice.c) */
     uint32_t esync_k[3];         /* ATK's step, DEC's and REL's coefficient (Q16) this block (voice.c esync_coef) */
     uint8_t spread_on;           /* SPREAD this block (fx.c mix_part, voice.c track_render) */
-    uint8_t rsv_sz[1];           /* (sizeof(track_t) a multiple of 16: below) */
+    int8_t seq_dir;              /* the way the SEQ's order goes: +1 up, -1 down (PING; seq.c seq_next_in) */
 #else
-    uint8_t rsv_sz[14];          /* (sizeof(track_t) a multiple of 16: below) */
+    int8_t seq_dir;              /* the way the SEQ's order goes: +1 up, -1 down (PING; seq.c seq_next_in) */
+    uint8_t rsv_sz[13];          /* (sizeof(track_t) a multiple of 16: below) */
 #endif
     int16_t armp, aholdp;        /* P_AMODE / P_AHOLD as last seen by the ISR */
     /* engine switch (voice.c engine_block): the old engine's voices fade out, then it switches */

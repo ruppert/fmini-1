@@ -128,7 +128,7 @@ static __attribute__((noinline)) void chain_apply(void)
             t->p[P_SSWING] = 0;
             t->p[P_SQNT] = 1;
         }
-        t->seq_idx = (uint16_t)(t->p[P_SLEN] - 1);
+        t->seq_idx = (uint16_t)seq_before_first((uint32_t)t->p[P_SMODE], (uint32_t)t->p[P_SLEN], &t->seq_dir);
         t->seq_pos = 0x7FFFFFFFu;
         t->rh_n = t->rskip_n = 0;
     }
@@ -168,7 +168,7 @@ static void chain_tick(uint32_t n)
 {
     const track_t *t = &trk[chain.clk % NTRK];
     uint32_t length;
-    if (!chain.running || t->seq_pos >= 0x7FFFFFFFu || t->seq_idx + 1u != (uint32_t)t->p[P_SLEN])
+    if (!chain.running || t->seq_pos >= 0x7FFFFFFFu || !seq_at_end((uint32_t)t->p[P_SMODE], t->seq_idx, (uint32_t)t->p[P_SLEN], t->seq_dir))
         return;
     length = step_samples(t, div_samples((uint32_t)t->p[P_SDIV]), t->seq_idx);
     if (t->seq_pos + n < length)

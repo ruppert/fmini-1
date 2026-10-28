@@ -665,6 +665,15 @@ static void fa_ar_dialog(void)
 /* the ARP button: a tap turns it on / off (on another screen, while it is on, a tap only opens the pop-up); held HOLD on / off.
  * The pop-up stays open until it is closed: no timeout */
 static uint8_t fa_arp_down, fa_arp_done, fa_ar_last = 1;
+/* SEQ held (as ARP's HOLD): the sequencer's settings pop-up, MODE RATE GATE TEMPO (the TEMPO row: TAP TEMPO). A tap on
+ * the SEQ button is the sequence pop-up as before (the grid); the hold is decided on release (fa_seq_done: it was one) */
+static uint8_t fa_sc;                                     /* 1: the settings pop-up is open */
+static uint8_t fa_sc_row;                                 /* 0 MODE, 1 RATE, 2 GATE, 3 TEMPO */
+#define FA_SC_N 4u
+static const uint8_t FA_SC_ID[3] = {P_SMODE, P_SDIV, P_SGATE};
+static const char *const FA_SC_LB[FA_SC_N] = {"MODE", "RATE", "GATE", "TEMPO"};
+static uint8_t fa_seq_down, fa_seq_done;
+static uint32_t fa_seq_t0;
 static uint32_t fa_arp_t0;
 
 /* ----------------------------------------------------------- SEQ --- */
@@ -694,17 +703,42 @@ static void fa_seq_clear(void)
 /* TAP TEMPO (over the ARP or SEQ pop-up): the BPM in big type, EDIT taps it (the EDIT lamp blinks at the tempo);
  * ALGORITHM turns the tempo; SELECT, a knob or any other button closes it (and that press does nothing else) */
 static uint8_t fa_tp;                                     /* 1: the TAP TEMPO pop-up is open */
-static uint32_t fa_tp_last;                               /* the time of the last tap */
+#define FA_TP_N 5u                                        /* the taps averaged: the last five (four beats) */
+static uint32_t fa_tp_ts[FA_TP_N];                        /* the times of the taps of this measurement, the last one last */
+static uint32_t fa_tp_n;                                  /* their number (0 at the start: the first tap sets no tempo) */
+static void fa_tp_begin(void)
+{
+    fa_tp = 1;
+    fa_tp_n = 0;
+}
 static void fa_tp_turn(int32_t s)
 {
     song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + fmg_acc(EN_ALGO, s, 200), GP[G_BPM].min, GP[G_BPM].max);
 }
+/* the tempo is the mean beat of the taps of this measurement: from the first two taps on, the span of the last five
+ * (or fewer) over its beats, so one early or late tap moves it little. A tap less than 250 ms after the last is a
+ * bounce (no tap); one more than 1500 ms after it starts a new measurement (40..240 BPM is what counts) */
 static void fa_tp_tap(void)
 {
-    uint32_t now = fm1_ms, dt = now - fa_tp_last;
-    fa_tp_last = now;
-    if (dt >= 250u && dt <= 1500u)                        /* 40..240 BPM: the time between two taps is a beat */
-        song.g[G_BPM] = (int16_t)clamp((int32_t)((60000u + dt / 2u) / dt), GP[G_BPM].min, GP[G_BPM].max);
+    uint32_t now = fm1_ms, span, beats, k;
+    if (fa_tp_n) {
+        uint32_t dt = now - fa_tp_ts[fa_tp_n - 1u];
+        if (dt < 250u)
+            return;
+        if (dt > 1500u)
+            fa_tp_n = 0;
+    }
+    if (fa_tp_n == FA_TP_N) {                             /* full: the oldest tap goes */
+        for (k = 1; k < FA_TP_N; k++)
+            fa_tp_ts[k - 1u] = fa_tp_ts[k];
+        fa_tp_n--;
+    }
+    fa_tp_ts[fa_tp_n++] = now;
+    if (fa_tp_n < 2u)
+        return;
+    span = now - fa_tp_ts[0];
+    beats = fa_tp_n - 1u;                                 /* the intervals: each one a beat */
+    song.g[G_BPM] = (int16_t)clamp((int32_t)((60000u * beats + span / 2u) / span), GP[G_BPM].min, GP[G_BPM].max);
 }
 static void fa_tp_draw(void)
 {
@@ -716,6 +750,36 @@ static void fa_tp_draw(void)
     fa_ctext(120, 108, &AF_S, "BPM", FA_MU);
     fa_ctext(120, 136, &AF_S, "TAP TEMPO: button EDIT", FA_CR);
     fa_ctext(120, 153, &AF_X, "ALGO=TEMPO  OTHER KEY=CLOSE", FA_MU);
+}
+/* the SEQ settings pop-up: ALGORITHM turns the line SELECT picked; the TEMPO line opens TAP TEMPO (as the ARP's) */
+static void fa_sc_turn(uint32_t row, int32_t s)
+{
+    track_t *t = TSEL;
+    if (row < 3u) {
+        const param_desc_t *d = track_desc(t, FA_SC_ID[row]);
+        int16_t *vp = &t->p[FA_SC_ID[row]];
+        *vp = (int16_t)param_turn(d, *vp, s);
+        motion_capture(t, FA_SC_ID[row], *vp);
+        ml_knob(t, FA_SC_ID[row]);
+    } else {
+        fa_tp_turn(s);
+    }
+}
+static void fa_sc_dialog(void)
+{
+    const track_t *t = TSEL;
+    uint32_t i;
+    fa_frame("SEQUENCER");
+    for (i = 0; i < FA_SC_N; i++) {
+        char val[16];
+        const char *un;
+        if (i < 3u)
+            param_format(track_desc(t, FA_SC_ID[i]), t->p[FA_SC_ID[i]], val, &un);
+        else
+            fmt_int(val, song.g[G_BPM]);
+        fa_line(70 + (int32_t)i * 28, FA_SC_LB[i], val, i == fa_sc_row);
+    }
+    fa_ctext(120, 196, &AF_S, "SELECT  ALGO  K1-K3  SEQ=CLOSE", FA_MU);
 }
 
 static void fa_seq_note(track_t *t, uint32_t note)
@@ -803,7 +867,7 @@ static uint32_t fa_sound_keys(void)
  * SELECT picks a line, ALGORITHM changes it (or opens MIDI CC / ABOUT); GLO goes back, then closes. The settings are
  * kept in the flash settings record (favorites.factory rows 7 to 9: no engine of this firmware uses them).
  * MIDI CLOCK (OFF by default: the internal clock, or USB / TRS) makes the ARP and the SEQ follow that input's MIDI clock. */
-#define FMINI_VERSION "v1.11.0"
+#define FMINI_VERSION "v1.12.0"
 #define FA_NPG 44u                                        /* the controls of the seven screens (FMG_PAGE: 8+8+8+4+4+4+8) */
 #define FA_NCC (FA_NPG + FA_AR_N)                         /* .. and the ARP pop-up's six lines */
 static uint8_t fa_gl;                                     /* 0 closed, 1 the list, 2 MIDI CC, 3 ABOUT */
@@ -894,6 +958,7 @@ static void fa_arp_show(void)
     fa_sq = 0;
     fa_sq_rec = 0;
     fa_gl_close();
+    fa_sc = 0;
     fa_ar = 1;
 }
 
@@ -1252,6 +1317,8 @@ static void fa_scene(void)
     }
     if (fa_gl == 1u || fa_gl == 2u)
         fa_gl_dialog();
+    else if (fa_sc)
+        fa_sc_dialog();
     else if (fa_sq)
         fa_seq_dialog();
     else if (fa_ar)
@@ -1297,7 +1364,7 @@ static uint32_t fa_signature(void)
     for (i = 0; i < 12u; i++)
         h = (h ^ (uint8_t)fa_sv_name[i]) * 16777619u;
     h = (h ^ fa_sq ^ (uint32_t)fa_sq_rec << 1 ^ (uint32_t)fa_sq_cur << 2 ^ (uint32_t)song.playing << 8 ^ (uint32_t)fa_sq_title_on() << 7 ^
-         (uint32_t)(song.playing ? t->seq_idx : 0u) << 9 ^ (uint32_t)fa_sq_blink() << 16) * 16777619u;
+         (uint32_t)(song.playing ? t->seq_idx : 0u) << 9 ^ (uint32_t)fa_sq_blink() << 16 ^ (uint32_t)fa_sc << 20 ^ (uint32_t)fa_sc_row << 21) * 16777619u;
     for (i = 0; i < NSTEP; i++)
         h = (h ^ (uint32_t)(t->step[i].n ? t->step[i].note[0] : 0u)) * 16777619u;
     h = (h ^ fa_batt()) * 16777619u;                         /* the battery icon */
@@ -1354,6 +1421,7 @@ static void fa_home(void)
 {
     fa_sv = 0;
     fa_ar = 0;
+    fa_sc = 0;
     fa_sq = 0;
     fa_sq_rec = 0;
     fa_gl_close();
@@ -1475,6 +1543,7 @@ static void fa_buttons(uint32_t pressed)
     if ((pressed >> panel.btn[B_GLO]) & 1u) {             /* GLO: the global pop-up; inside a list, one level back */
         fa_sv = 0;
         fa_ar = 0;
+        fa_sc = 0;
         fa_sq = 0;
         fa_sq_rec = 0;
         if (!fa_gl)
@@ -1533,6 +1602,7 @@ static void fa_buttons(uint32_t pressed)
                         fa_sq_fresh = 1;
                         fa_sv = 0;
                         fa_ar = 0;
+                        fa_sc = 0;
                         fa_gl_close();
                         fa_sq = 1;
                     }
@@ -1545,18 +1615,46 @@ static void fa_buttons(uint32_t pressed)
     }
     if ((pressed >> panel.btn[B_PLAY]) & 1u)              /* PLAY / STOP the sequence */
         transport_req = (song.playing || transport_req == 1u) ? 2u : 1u;
-    if ((pressed >> panel.btn[B_SEQ]) & 1u) {             /* SEQ: the sequencer pop-up */
-        fa_sv = 0;
-        fa_ar = 0;
-        fa_gl_close();
-        fa_sq = (uint8_t)!fa_sq;
-        if (!fa_sq)
-            fa_sq_rec = 0;
-        else
-            fa_sq_title_until = fm1_ms + 500u;
+    {   /* SEQ: a tap opens / closes the sequence pop-up (on the settings pop-up: closes that); held (450 ms, as ARP's
+         * HOLD) the settings pop-up. The tap is decided on release, so the hold is no tap */
+        uint32_t down = (fm1_in.buttons >> panel.btn[B_SEQ]) & 1u;
+        if ((pressed >> panel.btn[B_SEQ]) & 1u) {
+            fa_seq_down = 1;
+            fa_seq_done = 0;
+            fa_seq_t0 = fm1_ms;
+        }
+        if (fa_seq_down) {
+            if (!down) {
+                fa_seq_down = 0;
+                if (!fa_seq_done) {                       /* the tap */
+                    fa_sv = 0;
+                    fa_ar = 0;
+                    fa_gl_close();
+                    if (fa_sc) {
+                        fa_sc = 0;
+                    } else {
+                        fa_sq = (uint8_t)!fa_sq;
+                        if (!fa_sq)
+                            fa_sq_rec = 0;
+                        else
+                            fa_sq_title_until = fm1_ms + 500u;
+                    }
+                }
+            } else if (!fa_seq_done && (uint32_t)(fm1_ms - fa_seq_t0) >= 450u) {   /* the hold */
+                fa_seq_done = 1;
+                fa_sv = 0;
+                fa_ar = 0;
+                fa_sq = 0;
+                fa_sq_rec = 0;
+                fa_gl_close();
+                fa_sc = 1;
+                fa_sc_row = 0;
+            }
+        }
     }
     if ((pressed >> panel.btn[B_SAVE]) & 1u) {            /* SAVE: open the dialog; again: write */
         fa_ar = 0;
+        fa_sc = 0;
         fa_sq = 0;
         fa_sq_rec = 0;
         fa_gl_close();
@@ -1575,6 +1673,7 @@ static void fa_buttons(uint32_t pressed)
             if (PG_BTN[i] == B_FX && fa_page == 6u) {     /* FX again: round the four pop-ups, then back to the page */
                 fa_sv = 0;
                 fa_ar = 0;
+                fa_sc = 0;
                 fa_sq = 0;
                 fa_sq_rec = 0;
                 fa_gl_close();
@@ -1586,6 +1685,7 @@ static void fa_buttons(uint32_t pressed)
             fmg_fx = 0;
             fa_sv = 0;                                    /* a page button cancels the dialog */
             fa_ar = 0;
+            fa_sc = 0;
             fa_sq = 0;
             fa_sq_rec = 0;
             fa_gl_close();
@@ -1635,7 +1735,7 @@ static void fa_input(void)
     fmg_glide_sync();                                       /* the patch's GLIDE switch and time -> the track's */
     fa_clk_apply();                                         /* MIDI CLOCK: the setting is the global CLK */
     fmg_force_page = (int8_t)fa_page;
-    if (!fa_ar && !fa_sq)
+    if (!fa_ar && !fa_sq && !fa_sc)
         fa_tp = 0;                                          /* the TAP TEMPO pop-up lives over the ARP or SEQ pop-up alone */
     fa_buttons(pressed);
     if ((s = panel_enc(EN_PRESET)) != 0 && !fa_gl)
@@ -1725,10 +1825,25 @@ static void fa_input(void)
             fa_tp = 0;
         return;
     }
+    if (fa_sc) {                                          /* the SEQ settings pop-up (as the ARP's): SELECT picks a line, ALGORITHM turns it */
+        if ((s = panel_enc(EN_SELECT)) != 0)
+            fa_sc_row = (uint8_t)((fa_sc_row + FA_SC_N + (s > 0 ? 1u : FA_SC_N - 1u)) % FA_SC_N);
+        if ((s = panel_enc(EN_ALGO)) != 0) {
+            fa_sc_turn(fa_sc_row, s);
+            if (fa_sc_row == 3u)                          /* TEMPO: the TAP TEMPO pop-up opens */
+                fa_tp_begin();
+        }
+        for (k = 0; k < 3u; k++)
+            if ((s = panel_enc(EN_K1 + k)) != 0) {
+                fa_sc_turn(k, s);
+                fa_sc_row = (uint8_t)k;
+            }
+        return;
+    }
     if (fa_sq) {                                          /* the SEQ pop-up: ALGORITHM is the tempo (its own pop-up opens with it) */
         if ((s = panel_enc(EN_ALGO)) != 0) {
             fa_tp_turn(s);
-            fa_tp = 1;
+            fa_tp_begin();
         }
         (void)panel_enc(EN_SELECT);
         for (k = 0; k < 4u; k++)
@@ -1741,7 +1856,7 @@ static void fa_input(void)
         if ((s = panel_enc(EN_ALGO)) != 0) {
             fa_ar_turn(fa_ar_row, s);
             if (fa_ar_row == 5u)                          /* TEMPO: the TAP TEMPO pop-up opens */
-                fa_tp = 1;
+                fa_tp_begin();
         }
         for (k = 0; k < 4u; k++)
             if ((s = panel_enc(EN_K1 + k)) != 0) {
@@ -1806,7 +1921,7 @@ static void fa_leds(void)
         led_put(nl, panel.btn[B_HOME], fa_page == 0u);        /* CTRL is HOME's: both light */
     }
     led_put(nl, panel.btn[B_ARP], TSEL->p[P_AMODE] != 0);
-    led_put(nl, panel.btn[B_SEQ], fa_sq != 0u);
+    led_put(nl, panel.btn[B_SEQ], fa_sq != 0u || fa_sc != 0u);
     led_put(nl, panel.btn[B_REC], fa_sq_rec != 0u);
     if (fa_tp)                                              /* TAP TEMPO: EDIT blinks at the tempo */
         led_put(nl, panel.btn[B_EDIT], (fm1_ms % (60000u / (uint32_t)song.g[G_BPM])) < (60000u / (uint32_t)song.g[G_BPM]) / 3u);
