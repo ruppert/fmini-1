@@ -76,7 +76,11 @@ static int ed_fmini_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
         for (i = 0; i < FG_SIZE; i++)
             ed_b(pk[i]);
         if (a[0] == ED_FMINI_TRACK) {
-            ed_b((uint32_t)clamp(trk[a[1]].p[P_E7], 0, 127));
+            {   /* the SLOT (0..255 factory-or-INIT, 256 = OWN): two 7-bit bytes, low first (protocol 3) */
+                uint32_t sl = (uint32_t)clamp(trk[a[1]].p[P_E7], 0, 16383);
+                ed_b(sl & 0x7Fu);
+                ed_b((sl >> 7) & 0x7Fu);
+            }
             ed_b((uint32_t)(clamp(song.octave, -3, 3) + 4));
         }
     }

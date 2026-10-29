@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Guilherme Ruppert (FMini-1 fork) */
+#ifndef FMINI_BANK_C
+#define FMINI_BANK_C
 /* FMini-1 preset bank (1.14.0): 256 slots. Slots 0..99 start as the factory patches, 100..255 as INIT (one sawtooth
  * on oscillator 1, no filter envelope, no effects). A slot that was saved holds its own record (fmini_rec.c); a slot
  * never saved reads its factory record. The records live in 16 storage objects (OBJ_PRESET0..15), 16 slots each; each
@@ -189,6 +191,18 @@ static void fb_boot(void)
 }
 #endif
 
+/* the patch of slot s (any of the 256) into dst: its record's, the factory's if the record is damaged */
+static void fmini_slot_patch(uint32_t s, uint8_t *dst)
+{
+    uint8_t rec[FB_SLOT];
+    uint32_t n = fb_read(s, rec), l = 0;
+    const uint8_t *d = 0;
+    if (fr_find(rec, n, FR_PATCH, &d, &l) && l == FG_SIZE)
+        memcpy(dst, d, FG_SIZE);
+    else
+        memcpy(dst, FMINI_FACTORY[s < FMINI_NFACTORY ? s : 0], FG_SIZE);
+}
+
 /* the RAM list at boot: every slot's name, from its record (saved, or the factory's) */
 static void fb_names_init(void)
 {
@@ -202,3 +216,5 @@ static void fb_names_init(void)
             fb_set_name(k, d, l);
     }
 }
+
+#endif /* FMINI_BANK_C */

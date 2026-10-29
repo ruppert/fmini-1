@@ -44,6 +44,8 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
 #include "../firmware/src/menu_items.c"
 static void panel_setup(void) {}
 #include "../firmware/src/upreset.c"
+#include "../firmware/src/fmini_rec.c"
+#include "../firmware/src/fmini_bank.c"
 #include "../firmware/src/project.c"
 
 static uint32_t flash_ok = 1;
@@ -489,8 +491,8 @@ static int fmini_patches(void)
     fmini_poll();
     bad += check("  .. the main loop keeps it", fmini_patch[1][FG_L1] == 77);
     n = request(ED_FMINI_GET, a, 2);
-    bad += check("FMINI_GET track 2: as put, then SLOT", n == 5u + 3u + FG_SIZE + 3u && host_wire[7] == 0 &&
-                 host_wire[8 + FG_L1] == 77 && host_wire[8 + FG_SIZE] == FMINI_OWN);
+    bad += check("FMINI_GET track 2: as put, then SLOT (two 7-bit bytes) and the octave", n == 5u + 3u + FG_SIZE + 4u && host_wire[7] == 0 &&
+                 host_wire[8 + FG_L1] == 77 && host_wire[8 + FG_SIZE] == (FMINI_OWN & 0x7Fu) && host_wire[9 + FG_SIZE] == (FMINI_OWN >> 7));
     memcpy(a + 2, FMINI_FACTORY[5], FG_SIZE);
     request(ED_FMINI_PUT, a, sizeof a);
     bad += check("FMINI_PUT of a factory patch unchanged: SLOT shows it (F6)", trk[1].p[P_E7] == 5 && fmini_slot[1] == 5u);
@@ -536,7 +538,7 @@ static int fmini_patches(void)
     n = request(ED_FMINI_PUT, a, 3u + FG_SIZE);
     bad += check("FMINI_PUT with the octave byte: rc 0, song.octave -1", host_wire[7] == 0 && song.octave == -1);
     n = request(ED_FMINI_GET, a, 2);
-    bad += check("FMINI_GET track 1 ends with the octave + 4", n == 5u + 3u + FG_SIZE + 3u && host_wire[8 + FG_SIZE + 1] == 3);
+    bad += check("FMINI_GET track 1 ends with the octave + 4", n == 5u + 3u + FG_SIZE + 4u && host_wire[8 + FG_SIZE + 2] == 3);
     song.octave = 2; song.g[G_BPM] = 99; song.g[G_RSIZE] = 50; song.g[G_RTYPE] = 3;
     up_store(9, "KEPT");
     {   /* (the host build is not FMINI-only: its records keep no tempo / octave / FX, so put them in as the FMini-1 stores them) */

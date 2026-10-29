@@ -23,7 +23,8 @@
 #endif
 #define FG_SIZE 32u
 #define FMINI_NFACTORY 100u
-#define FMINI_OWN FMINI_NFACTORY
+#define FMINI_NSLOT 256u                  /* 1.14.0: the slots (0..99 factory, 100..255 INIT: fmini_bank.c) */
+#define FMINI_OWN FMINI_NSLOT
 #define FMINI_PACKED 128u          /* the slot of an FM6 patch in a project / a user preset (eng_fm6.c) */
 
 enum {                           /* the patch's bytes */
@@ -76,7 +77,7 @@ static int32_t fmini_det(const uint8_t *g, uint32_t i)   /* the cents of DET byt
 
 static uint8_t fmini_patch[NTRK][FG_SIZE];        /* the tracks' patches (main loop writes, then fmini_pgen) */
 static volatile uint8_t fmini_pgen[NTRK];         /* +1 after each write of fmini_patch[t] */
-static uint8_t fmini_slot[NTRK];                  /* the SLOT value last loaded (main loop); 0xFF = none */
+static uint16_t fmini_slot[NTRK];                 /* the SLOT value last loaded (main loop); 0xFFFF = none (1.14.0: 256 = OWN) */
 static uint8_t fmini_own[NTRK][FG_SIZE];          /* the own patch while SLOT shows a factory one (fmini_poll) */
 static uint8_t fmini_own_ok;                      /* bit tr: fmini_own[tr] holds it */
 static struct {                                  /* the patch as the audio ISR sees it (taken at a block's start) */
@@ -133,12 +134,16 @@ static void fmini_set_patch(uint32_t tr, const uint8_t *v)
     fmini_pgen[tr]++;
 }
 
-/* SLOT value s < FMINI_NFACTORY: that factory patch into track tr */
+static void fmini_slot_patch(uint32_t s, uint8_t *dst);   /* fmini_bank.c: the patch of a slot's record */
+
+/* SLOT value s < FMINI_NSLOT: that slot's patch into track tr */
 static void fmini_load_slot(uint32_t tr, uint32_t s)
 {
-    s %= FMINI_NFACTORY;
-    fmini_set_patch(tr, FMINI_FACTORY[s]);
-    fmini_slot[tr % NTRK] = (uint8_t)s;
+    uint8_t p[FG_SIZE];
+    s %= FMINI_NSLOT;
+    fmini_slot_patch(s, p);
+    fmini_set_patch(tr, p);
+    fmini_slot[tr % NTRK] = (uint16_t)s;
 }
 
 /* track tr's patch was just put in as its own (a project, a user preset, the editor): SLOT shows the factory patch it
@@ -150,14 +155,20 @@ static void fmini_adopt(uint32_t tr)
     uint32_t k, f = s >= 0 && s < (int32_t)FMINI_NFACTORY ? (uint32_t)s : 0u;
     tr %= NTRK;
     fmini_own_ok &= (uint8_t)~(1u << tr);
-    if (t->eng_req == ENGI_FMINI) {
+    if (t->eng_req == ENGI_FMINI && s >= (int32_t)FMINI_NFACTORY && s < (int32_t)FMINI_NSLOT) {
+        uint8_t p[FG_SIZE];                       /* an INIT slot (or a saved one): it stays that slot if its patch is the same */
+        fmini_slot_patch((uint32_t)s, p);
+        if (memcmp(p, fmini_patch[tr], FG_SIZE))
+            s = (int32_t)FMINI_OWN;
+        t->p[P_E7] = (int16_t)s;
+    } else if (t->eng_req == ENGI_FMINI) {
         for (k = 0; k < FMINI_NFACTORY; k++)
             if (!memcmp(FMINI_FACTORY[(f + k) % FMINI_NFACTORY], fmini_patch[tr], FG_SIZE))
                 break;
         s = k < FMINI_NFACTORY ? (int32_t)((f + k) % FMINI_NFACTORY) : (int32_t)FMINI_OWN;
         t->p[P_E7] = (int16_t)s;
     }
-    fmini_slot[tr] = (uint8_t)s;
+    fmini_slot[tr] = (uint16_t)s;
 }
 
 /* a factory sound load put a SLOT value in (a preset, an engine change): its patch (OWN: the patch stays) */
@@ -166,7 +177,7 @@ static void fmini_track_loaded(const track_t *t)
     uint32_t tr = (uint32_t)(t - trk);
     if (tr < NTRK && t->eng_req == ENGI_FMINI) {
         fmini_own_ok &= (uint8_t)~(1u << tr);
-        if (t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NFACTORY)
+        if (t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NSLOT)
             fmini_load_slot(tr, (uint32_t)t->p[P_E7]);
         else
             fmini_adopt(tr);
@@ -178,7 +189,7 @@ static void fmini_init(void)                      /* power-on: every track F1 */
     uint32_t tr;
     for (tr = 0; tr < NTRK; tr++) {
         fmini_set_patch(tr, FMINI_FACTORY[0]);
-        fmini_slot[tr] = 0xFFu;
+        fmini_slot[tr] = 0xFFFFu;
     }
 }
 
@@ -192,7 +203,7 @@ static void fmini_poll(void)
         if (trk[tr].eng_req != ENGI_FMINI || s == fmini_slot[tr])
             continue;
         bit = 1u << tr;
-        if (s < 0 || s >= (int32_t)FMINI_NFACTORY) {                                /* OWN */
+        if (s < 0 || s >= (int32_t)FMINI_NSLOT) {                                   /* OWN */
             if (fmini_own_ok & bit)
                 fmini_set_patch(tr, fmini_own[tr]);
             fmini_own_ok &= (uint8_t)~bit;

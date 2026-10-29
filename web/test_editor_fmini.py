@@ -135,7 +135,7 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(300)
     g = fa(82, [0, 0])
     check("OSC 1 WAVE: the firmware's patch byte (FMINI_GET) is PLS N", g[2] == 0 and g[3 + 3] == 5)
-    check("  .. SLOT is OWN now (100)", g[3 + 32] == 100)
+    check("  .. SLOT is OWN now (256: two 7-bit bytes, protocol 3)", g[3 + 32] + 128 * g[3 + 33] == 256)
     pg.click("#tabs button:has-text('CTRL')")
     pg.locator(".sw", has_text="MOD OSC").click()
     pg.wait_for_timeout(300)
@@ -156,7 +156,7 @@ with sync_playwright() as pw:
     pg.locator(".seg", has_text="OCTAVE").locator("button", has_text="+1").click()
     pg.wait_for_timeout(300)
     g = fa(82, [0, 0])
-    check("OCTAVE +1: the device's octave (last byte of FMINI_GET) is 5 = +1 + 4", g[36] == 5 and pg.evaluate("__fmini.S.oct") == 1)
+    check("OCTAVE +1: the device's octave (last byte of FMINI_GET) is 5 = +1 + 4", g[37] == 5 and len(g) == 38 and pg.evaluate("__fmini.S.oct") == 1)
     pg.locator(".seg", has_text="OCTAVE").locator("button", has_text="+1").click()   # (stays: it is a choice, not a toggle)
 
     # FX enum

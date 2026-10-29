@@ -555,7 +555,7 @@ async function pull(force) {
   if (S.slot < S.names.length && !pending.size) cur = S.slot;
   if (S.canPatch) {
     const r = await req(CMD.FMINI_GET, [0, 0]);
-    if (r[2] === 0) { S.patch = r.slice(3, 3 + FG.SIZE); if (S.extras && r.length > 36) S.oct = r[36] - 4; }
+    if (r[2] === 0) { S.patch = r.slice(3, 3 + FG.SIZE); if (S.extras && r.length > 37) S.oct = r[37] - 4; }   /* (protocol 3: the SLOT is two bytes, r[35..36]) */
   }
   if (force) abReset();
   refreshAll();

@@ -4,6 +4,8 @@
 #define UI_TEST_NO_MAIN 1
 #define FELUCCA_FMINI_ONLY 1
 #include "ui_test.c"
+#include "../firmware/src/fmini_rec.c"
+#include "../firmware/src/fmini_bank.c"
 #include "../firmware/src/fmini_app.c"
 #include <stdio.h>
 

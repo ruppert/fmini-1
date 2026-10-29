@@ -859,7 +859,8 @@ static struct {
     uint8_t what;                /* UNDO_SOUND | UNDO_PAT: what the loads since the copy changed (undo_swap) */
     uint8_t eng, preset, user, patn;
     uint8_t fm6_slot;            /* the track's FM6 patch and its SLOT (eng_fm6.c): an edited or a project's */
-    uint8_t fmini[FG_SIZE], fmini_slot;   /* the same for FMINI (eng_fmini.c) */
+    uint8_t fmini[FG_SIZE];
+    uint16_t fmini_slot;                  /* the same for FMINI (eng_fmini.c) */
     uint8_t fm6[FP_SIZE + 1u];   /* patch is the track's own, not a factory one */
     int16_t p[P_COUNT];
     step_t step[NSTEP];

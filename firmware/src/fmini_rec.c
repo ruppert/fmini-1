@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Guilherme Ruppert (FMini-1 fork) */
+#ifndef FMINI_REC_C
+#define FMINI_REC_C
 /* FMini-1 preset records (1.14.0): a record is a run of blocks, each (tag, len, data), len 0..255. A reader skips the
  * tags it does not know, so a parameter added later is one new tag and an older firmware still reads the rest. The
  * tags are stored: a number is never reused for another meaning. No sequencer notes (SEQ) are stored here.
@@ -53,3 +55,5 @@ static int fr_valid(const uint8_t *buf, uint32_t n)
     }
     return 1;
 }
+
+#endif /* FMINI_REC_C */
