@@ -109,6 +109,8 @@
 #include "storage.c"
 #endif
 #include "upreset.c"             /* user presets (RAM mirror; flash with FELUCCA_FLASH) */
+#include "fmini_rec.c"           /* FMini-1 preset records: tagged blocks (1.14.0) */
+#include "fmini_bank.c"          /* FMini-1 256-slot preset bank: factory / INIT records, the RAM name list (1.14.0) */
 #include "project.c"
 #if FELUCCA_OTA
 #include "ota.c"
