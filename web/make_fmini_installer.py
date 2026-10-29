@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # FMini-1: the official site, one self-contained page (site_fmini.html: the Minimoog-styled site with the screens, the presets,
 # MIDI and the Felucca installer's logic; the firmware package and every picture are embedded).
-#   web/make_fmini_installer.py build/felucca.fwsc OUT.html [VERSION]
+#   web/make_fmini_installer.py build/fmini-1-fm1-<version>.fwsc OUT.html [VERSION]
 # Serve it over https or http://localhost (Web MIDI with SysEx needs a secure context), in Chrome / Edge.
 import base64
 import json

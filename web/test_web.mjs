@@ -11,7 +11,7 @@
 // - fm1ota.js: a full install and an unplug during the write against a simulated FM-1
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import vm from "node:vm";
@@ -1622,7 +1622,7 @@ function samplesMatch() {
 
 /* ------------------------------------------------------- packages: JS == Python --- */
 async function packages() {
-  const pkg = join(FW_ROOT, "build/felucca.fwsc");
+  const pkg = readdirSync(join(FW_ROOT, "build")).filter(f => /^fmini-1-fm1-.*\.fwsc$/.test(f)).map(f => join(FW_ROOT, "build", f))[0];
   if (!existsSync(pkg)) {
     console.log("packages: skipped (run ./build.sh first)");
     return;
