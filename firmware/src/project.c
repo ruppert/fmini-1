@@ -877,6 +877,12 @@ static void project_capture(project_t *p)
         if (trk[i].eng_req == ENGI_FMINI) {               /* FMINI: its patch in the slot of the FM6 one (the track plays one */
             memset(p->fm6[i], 0, FM6_PACKED);           /* engine at a time); FM6's own is the init voice then */
             memcpy(p->fm6[i], fmini_patch[i], FG_SIZE);
+            {   /* FMINI's SLOT (0..OWN, 1.14.0: 200) is 8 bits: the low 7 in the parameter byte, the high bit in the patch's
+                 * spare byte, marked 0x40 (a 1.13 project has 0 there: its SLOT 100 was OWN, see the load) */
+                int32_t sl = clamp(trk[i].p[P_E7], 0, FMINI_OWN);
+                p->t[i].p[P_E7] = (int16_t)(sl & 0x7F);
+                p->fm6[i][FG_SIZE] = (uint8_t)(0x40u | ((uint32_t)sl >> 7 & 1u));
+            }
         } else {
             fm6_pack(fm6_patch[i], p->fm6[i]);
         }
@@ -1093,6 +1099,12 @@ static int project_restore_runtime(const project_t *input)
         for (i = 0; i < P_COUNT; i++) {                 /* every value back inside its range (param_fit) */
             const param_desc_t *d = param_desc_of(e, i);
             t->p[i] = (int16_t)param_fit(d, s->p[i]);
+        }
+        if (e == ENGI_FMINI) {                          /* SLOT: the save's two parts (project_capture); a 1.13 project: OWN was 100 */
+            uint8_t mk = p->fm6[k][FG_SIZE];
+            int32_t lo = s->p[P_E7] & 0x7F;
+            int32_t sl = (mk & 0x40u) ? (lo | (int32_t)(mk & 1u) << 7) : (lo == 100 ? (int32_t)FMINI_OWN : lo);
+            t->p[P_E7] = (int16_t)param_fit(param_desc_of(e, P_E7), sl);
         }
         t->preset = (uint8_t)(ENGINES[e]->npresets ? (s->preset >= PROJ_DEF_KEEP ? 0u : s->preset) % ENGINES[e]->npresets : 0u);
         memcpy(t->step, s->step, sizeof t->step);

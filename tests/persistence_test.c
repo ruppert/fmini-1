@@ -656,7 +656,8 @@ int main(void)
         for (i = 0; i < P_COUNT; i++) {
             uint32_t e;
             for (e = 0; e < NENGINES; e++)
-                if (param_desc_of(e, i)->min < -64 || param_desc_of(e, i)->max > 127) {
+                if ((param_desc_of(e, i)->min < -64 || param_desc_of(e, i)->max > 127) &&
+                    !(e == ENGI_FMINI && i == P_E7)) {          /* (FMINI's SLOT: 8 bits, see project_capture) */
                     printf("param %u engine %u: range %d..%d does not fit FUN7's byte\n", i, e,
                            param_desc_of(e, i)->min, param_desc_of(e, i)->max);
                     bad++;

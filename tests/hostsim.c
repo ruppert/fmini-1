@@ -31,7 +31,9 @@ static struct { volatile uint32_t notes, buttons; } fm1_in;
 #include "../firmware/src/core.h"
 #include "../firmware/src/engines.c"
 #include "../firmware/src/fmini_rec.c"
+#if !FELUCCA_FLASH                           /* (the flash build, the emulator: fmini_bank.c after storage.c, felucca_web.c) */
 #include "../firmware/src/fmini_bank.c"
+#endif
 #include "../firmware/src/params.c"
 #include "../firmware/src/mod.c"
 #include "../firmware/src/voice.c"

@@ -205,6 +205,7 @@ static uint32_t fl_jedec_ram(void) { return 0x856014u; }             /* the FM-1
 static void fl_plain_window_init(void) {}
 #define FL_FAR(fn) (fn)
 #include "../../firmware/src/storage.c"
+#include "../../firmware/src/fmini_bank.c"   /* after storage.c (its flash save and load) */
 #include "../../firmware/src/upreset.c"
 #include "../../firmware/src/project.c"
 
