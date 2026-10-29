@@ -76,7 +76,8 @@ tables lack the FMINI engine, percent values, the DIGITAL conversion). Do not ch
 sets a flag and does not name the failing section: to find one, copy the script, change `run()` to print the section on a non-zero
 exit, and read the log. A test that prints nothing and fails is a `return 1` with no message: run the binary alone.
 `web/test_editor_fmini.py` can fail once when the machine is busy; run it alone before believing it. A new failure outside this
-list is yours.
+list is yours. The known sections are marked in `tests/run_tests.sh` (`known "..."`: they print `KNOWN FAIL` and do not set
+the suite's failure flag) and in the `KNOWN` list of `web/test_web.mjs`: they still run, so a change to their output stays visible.
 
 ## Before saying a change is done
 

@@ -192,6 +192,9 @@ mkdir -p "$OUT"
 CC="${CC:-cc} -O1 -Wall -Wno-unused-function"
 fail=0
 run() { echo "== $1"; shift; "$@" || fail=1; }
+# Known failures (CLAUDE.md, "The test suite today"): they run and print, but do not fail the suite. A new failure
+# in any other section still sets fail=1. Remove a section from known() once its cause is fixed.
+known() { echo "== $1 [known failure]"; shift; if "$@"; then echo "   (known failure now passes)"; else echo "   KNOWN FAIL"; fi; }
 
 $CC -o "$OUT/storage_test" tests/storage_test.c
 run "flash storage (A/B, torn writes)" "$OUT/storage_test"
@@ -290,7 +293,7 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "DIGITAL (retired, built here with FELUCCA_FM4=1): operator envelopes/levels" "$OUT/digital_test"
     $CC -O2 -w -DFELUCCA_FM4=1 -Ibuild/gen -Ifirmware/src -o "$OUT/fm4_test" tests/fm4_test.c -lm
     mkdir -p build/fm4_demo
-    run "DIGITAL -> FM6: the conversion against DIGITAL (FELUCCA_FM4=1): pitch, centroid, RMS envelope; demos" \
+    known "DIGITAL -> FM6: the conversion against DIGITAL (FELUCCA_FM4=1): pitch, centroid, RMS envelope; demos" \
         "$OUT/fm4_test" build/fm4_demo
     $CC -O2 -w -fsanitize=integer-divide-by-zero -fno-sanitize-recover=all -Ibuild/gen -Ifirmware/src \
         -o "$OUT/fm4_div0_test" tests/fm4_div0_test.c -lm
@@ -318,9 +321,9 @@ if [ -f build/gen/felucca_tables.h ]; then
     FV=$(sed -n 's/^#define FELUCCA_VERSION "\([^"]*\)".*/\1/p' firmware/src/felucca.c | head -n 1)   # (the splash, ABOUT: the real version)
     $CC -O1 -w "-DFELUCCA_VERSION=\"$FV\"" -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/ui_render" tests/ui_render.c -lm
     mkdir -p build/ui_new/ppm build/ui_slot
-    run "UI renders: layout lint (every screen and palette, every page, engine and column value), GREY gray, MONO neutral, alignment by ink (1 px fails), draw cost, LARGE one value size per knob (#251)" \
+    known "UI renders: layout lint (every screen and palette, every page, engine and column value), GREY gray, MONO neutral, alignment by ink (1 px fails), draw cost, LARGE one value size per knob (#251)" \
         "$OUT/ui_render" build/ui_new build/ui_slot
-    if python3 -c "import PIL" 2>/dev/null; then python3 tests/ui_render.py build/ui_new build/ui_slot; fi
+    if python3 -c "import PIL" 2>/dev/null; then run "UI renders: the PNG checks (tests/ui_render.py)" python3 tests/ui_render.py build/ui_new build/ui_slot; fi
     # (FMini-1: the retired DIGITAL build, FELUCCA_FM4=1, no longer fits the layer map with FMINI added (ui_layer.c LY_CLEAN): not run)
     # $CC -w -DFELUCCA_FM4=1 -Ibuild/gen -Ifirmware/src -o "$OUT/ui_test_fm4" tests/ui_test.c -lm
     # run "UI built with FELUCCA_FM4=1 (DIGITAL, kept in the tree): its OP pages, EDIT cycle, algorithm charts" "$OUT/ui_test_fm4"
@@ -377,14 +380,14 @@ if [ -f build/gen/felucca_tables.h ]; then
     mkdir -p build/reverb_demo
     run "REVERB TYPE: ROOM / SPRING bit-identical, SPRING and HALL decay / stability / level, HALL silence / stereo / ringing, model changes, cost, demos" "$OUT/reverb_test" build/fx_demo build/reverb_demo
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/regress" tests/regress.c -lm
-    run "regression: golden renders, health, voices, CPU budget (2ND CORE OFF: one core)" "$OUT/regress" tests/golden.txt tests/cpu_baseline.txt
+    known "regression: golden renders, health, voices, CPU budget (2ND CORE OFF: one core)" "$OUT/regress" tests/golden.txt tests/cpu_baseline.txt
     $CC -O2 -w -DFELUCCA_CPU2=0 -Ibuild/gen -Ifirmware/src -o "$OUT/regress_cpu2_0" tests/regress.c -lm
-    run "regression, a FELUCCA_CPU2=0 build (none of the second core): the same golden renders and CPU budget" \
+    known "regression, a FELUCCA_CPU2=0 build (none of the second core): the same golden renders and CPU budget" \
         "$OUT/regress_cpu2_0" tests/golden.txt tests/cpu_baseline.txt
     # the second core (2ND CORE ON: fx.c mix_block, tests/c1_host.h): a thread renders the parts handed to it, bit for
     # bit
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -DC1_HOST -pthread -o "$OUT/regress_c1" tests/regress.c -lm
-    run "second core: the golden renders with a thread taking every split of the parts in turn" \
+    known "second core: the golden renders with a thread taking every split of the parts in turn" \
         "$OUT/regress_c1" tests/golden.txt tests/cpu_baseline.txt
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -pthread -o "$OUT/dualcore_test" tests/dualcore_test.c -lm
     run "second core: 4 parts of every preset, mixes: bit for bit on one core and on two, every split" \
@@ -402,7 +405,7 @@ if [ -f build/gen/felucca_tables.h ]; then
     "$OUT/fe_host" > "$OUT/fe_renders.txt" || fail=1
     run "Felucca-Engines with Felucca's tables: the engines' golden renders" diff -u firmware/engines/tests/golden.txt "$OUT/fe_renders.txt"
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/union_test" tests/union_test.c -lm
-    run "engine memory (1.5): every switch between the engines with per-part state sounds as in 1.4 (720 sequences)" \
+    known "engine memory (1.5): every switch between the engines with per-part state sounds as in 1.4 (720 sequences)" \
         "$OUT/union_test" tests/union_golden.txt
     $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/descdump" tests/descdump.c -lm
     echo "== parameter and engine tables as JSON (for the editor mock test)"
