@@ -408,7 +408,7 @@ static void fa_fader(uint32_t pg, uint32_t i, int32_t cx, int hot)
     fmg_card_at(pg, i, -1, &lb, val, &un, &ratio, &ic);
     fw = (ratio < 0 ? 0 : ratio) * 42 / 1000;
     if (hot)
-        cv_frame(x - 6, y - 4, 56, 15, FA_OR);             /* 3 px wider on each side (the bar is 44 wide) */
+        cv_frame(x - 3, y - 4, 50, 15, FA_OR);
     cv_rect(x, y, 44, 7, FA_LINE);
     cv_rect(x + 1, y + 1, 42, 5, FA_BOX);
     cv_rect(x + 1, y + 1, fw, 5, FA_OR);
