@@ -1184,6 +1184,9 @@ static void persist_boot(void)                    /* before settings_init / pane
                 proj_fetch(i);
     }
     up_boot();                                     /* user presets */
+#if FELUCCA_FLASH
+    fb_boot();                                     /* FMini-1 preset bank: stamp, names (fmini_bank.c) */
+#endif
 #endif
 }
 

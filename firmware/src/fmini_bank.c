@@ -72,6 +72,123 @@ static void fb_set_name(uint32_t k, const uint8_t *name, uint32_t len)
     fb_name[k][i < 12u ? i : 12u] = 0;
 }
 
+/* the record's length: its blocks up to the first empty tag (the slot is zero beyond it) */
+static uint32_t fb_len(const uint8_t *rec)
+{
+    uint32_t i = 0;
+    while (i + 2u <= FB_SLOT && rec[i] != 0 && i + 2u + rec[i + 1u] <= FB_SLOT)
+        i += 2u + rec[i + 1u];
+    return i;
+}
+
+/* slot j's record from fb_obj_buf (an object read): its length, 0 when the slot was never saved or is damaged */
+static uint32_t fb_slot_from_buf(uint32_t j, uint8_t *rec)
+{
+    const uint8_t *src = fb_obj_buf + 4u + j * FB_SLOT;
+    uint32_t n;
+    if (src[0] == 0)
+        return 0;
+    n = fb_len(src);
+    if (n == 0 || !fr_valid(src, n))
+        return 0;
+    memcpy(rec, src, n);
+    return n;
+}
+
+#if FELUCCA_FLASH
+static int fb_obj_read(uint32_t o);
+static int fb_obj_clear(uint32_t o);
+#endif
+/* slot k's record into rec: the saved one, else its factory record; its length */
+static uint32_t fb_read(uint32_t k, uint8_t *rec)
+{
+#if FELUCCA_FLASH
+    if (k < FB_NSLOT && fb_obj_read(k / FB_PER_OBJ)) {
+        uint32_t n = fb_slot_from_buf(k % FB_PER_OBJ, rec);
+        if (n)
+            return n;
+    }
+#endif
+    return fb_factory_rec(k, rec);
+}
+
+#if FELUCCA_FLASH
+/* save slot k (its record rec, n bytes) into its object: the other slots of the object are kept. 0 = written */
+static int fb_write(uint32_t k, const uint8_t *rec, uint32_t n)
+{
+    uint32_t o = k / FB_PER_OBJ, j = k % FB_PER_OBJ, i;
+    uint8_t *dst;
+    if (k >= FB_NSLOT || n == 0u || n > FB_SLOT || !fr_valid(rec, n))
+        return -1;
+    if (!fb_obj_read(o))
+        fb_obj_clear(o);                        /* no bank here yet: a bank of stamp and empty slots */
+    dst = fb_obj_buf + 4u + j * FB_SLOT;
+    for (i = 0; i < FB_SLOT; i++)
+        dst[i] = i < n ? rec[i] : 0;
+    if (st_save(OBJ_PRESET0 + o, fb_obj_buf, FB_PAYLOAD) != 0)
+        return -1;
+    {
+        const uint8_t *d = 0;
+        uint32_t l = 0;
+        if (fr_find(rec, n, FR_NAME, &d, &l))
+            fb_set_name(k, d, l);
+    }
+    return 0;
+}
+#endif
+
+#if FELUCCA_FLASH
+/* object o into fb_obj_buf; 1 when it was read and its stamp is this bank's (an empty bank is a stamp only) */
+static int fb_obj_read(uint32_t o)
+{
+    uint32_t stamp;
+    if (!flash_ok || st_load(OBJ_PRESET0 + o, fb_obj_buf, FB_PAYLOAD) != (int)FB_PAYLOAD)
+        return 0;
+    stamp = (uint32_t)fb_obj_buf[0] | (uint32_t)fb_obj_buf[1] << 8 | (uint32_t)fb_obj_buf[2] << 16 | (uint32_t)fb_obj_buf[3] << 24;
+    return stamp == FB_STAMP;
+}
+
+/* a new object: the stamp and no saved slots (every slot is its factory record); its save result: 0 = written */
+static int fb_obj_clear(uint32_t o)
+{
+    uint32_t i;
+    for (i = 0; i < FB_PAYLOAD; i++)
+        fb_obj_buf[i] = 0;
+    fb_obj_buf[0] = (uint8_t)FB_STAMP;
+    fb_obj_buf[1] = (uint8_t)(FB_STAMP >> 8);
+    fb_obj_buf[2] = (uint8_t)(FB_STAMP >> 16);
+    fb_obj_buf[3] = (uint8_t)(FB_STAMP >> 24);
+    return flash_ok ? st_save(OBJ_PRESET0 + o, fb_obj_buf, FB_PAYLOAD) : -1;
+}
+
+/* the bank at boot (after persist_boot: flash_ok is known): an object without this bank's stamp (another firmware's
+ * bank, or none) is cleared, so every slot reads its factory record. Once per boot: 16 object reads, and the names. */
+static void fb_boot(void)
+{
+    uint32_t o, j, k;
+    uint8_t rec[FB_SLOT];
+    for (o = 0; o < FB_NSLOT / FB_PER_OBJ; o++) {
+        if (!fb_obj_read(o))
+            fb_obj_clear(o);                    /* (a failed write leaves the factory reads: nothing saved) */
+        for (j = 0; j < FB_PER_OBJ; j++) {
+            k = o * FB_PER_OBJ + j;
+            if (fb_slot_from_buf(j, rec)) {
+                const uint8_t *d = 0;
+                uint32_t l = 0;
+                if (fr_find(rec, fb_len(rec), FR_NAME, &d, &l))
+                    fb_set_name(k, d, l);
+            } else {
+                uint32_t n = fb_factory_rec(k, rec);
+                const uint8_t *d = 0;
+                uint32_t l = 0;
+                if (fr_find(rec, n, FR_NAME, &d, &l))
+                    fb_set_name(k, d, l);
+            }
+        }
+    }
+}
+#endif
+
 /* the RAM list at boot: every slot's name, from its record (saved, or the factory's) */
 static void fb_names_init(void)
 {
