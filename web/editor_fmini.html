@@ -160,6 +160,8 @@ const TX = {
     none: "Nenhum FM-1 encontrado. Conecte o cabo USB, feche outros programas que usam a porta MIDI e toque em Conectar.",
     pick: "Escolha a porta MIDI do FM-1 na lista ao lado e toque em Conectar.",
     noedit: "Este firmware não parece ser o FMini-1. O editor é só para o FMini-1.",
+    oldfw: "Este FMini-1 tem um firmware antigo. Atualize pelo instalador atual e conecte de novo.",
+    getlink: "Abrir o instalador atual",
     noext: "Atualização disponível: instale o FMini-1 v1.6.1 ou mais novo para editar a oitava e guardar tempo, oitava e efeitos na biblioteca.",
     noenv: "Atualização necessária: este firmware não tem o editor de osciladores e chaves. Instale a versão mais nova pelo site para editar tudo.",
     nonames: "Atualização disponível: este firmware envia só os nomes dos %n primeiros presets. Instale o FMini-1 v1.7.2 ou mais novo para ver todos.",
@@ -179,6 +181,8 @@ const TX = {
     none: "No FM-1 found. Plug in the USB cable, close other programs using the MIDI port and press Connect.",
     pick: "Pick the FM-1's MIDI port in the list and press Connect.",
     noedit: "This firmware does not look like the FMini-1. The editor is for the FMini-1 only.",
+    oldfw: "This FMini-1 runs an old firmware. Update it with the current installer and connect again.",
+    getlink: "Open the current installer",
     noext: "Update available: install FMini-1 v1.6.1 or newer to edit the octave and keep tempo, octave and effects in the library.",
     noenv: "Update needed: this firmware has no oscillator / switch editing. Install the newest version from the site to edit everything.",
     nonames: "Update available: this firmware sends only the names of the first %n presets. Install FMini-1 v1.7.2 or newer to see them all.",
@@ -483,7 +487,13 @@ async function connect() {
     setStatus(true, T("conn")); $("connect").textContent = T("disconnect"); $("connect").disabled = false;
     startPoll();
   } catch (e) {
-    if (e instanceof Error) { closePorts(); msg(T(e.code || (e.message === "timeout" ? "timeout" : "none")), true); }
+    if (e instanceof Error) {
+      closePorts(); msg(T(e.code || (e.message === "timeout" ? "timeout" : "none")), true);
+      if (e.code === "oldfw") {                       /* the installer link (the current firmware's page) */
+        const a = document.createElement("a"); a.href = "https://ruppert.github.io/fmini-1/"; a.textContent = " " + T("getlink");
+        $("msg").firstChild.append(a);
+      }
+    }
     setStatus(false, T("disc")); $("connect").textContent = T("connect"); $("connect").disabled = false;
   }
 }
@@ -495,6 +505,9 @@ async function handshake() {
   if (!/^FELUCCA/.test(ver)) throw bad("noedit");
   const nEng = a[i++]; const pCount = a[i++]; const gCount = a[i++]; i++; /* NSTEP */ S.pe0 = a[i++];
   const eng = []; for (let k = 0; k < nEng; k++) { let s; [s, i] = cstr(a, i); eng.push(s); }
+  /* protocol: after the engine names, NTRK, then tag 0x56 (version 1) and the protocol number, then CHAIN_ROWS */
+  const proto = a[i + 1] === 0x56 && a[i + 2] === 1 ? a[i + 3] : 0;
+  if (proto < 3) throw bad("oldfw");
   S.fmini = eng.indexOf("FMINI");
   if (S.fmini < 0) S.fmini = eng.indexOf("FMUG");          /* firmware up to 1.7.0 named the engine FMUG */
   if (S.fmini < 0) throw bad("noedit");

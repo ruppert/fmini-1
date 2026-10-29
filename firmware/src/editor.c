@@ -11,6 +11,7 @@
 #define ED_HDR0 0x7D
 #define ED_HDR1 0x46
 #define ED_HDR2 0x4C
+#define ED_PROTO 3u                  /* editor protocol version: 3 = FMini-1 1.14.0 (presets: 100 overwritable, no U bank) */
 enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, ED_PRESET, ED_PROJECT, ED_NAMES,
        ED_SMP_BEGIN, ED_SMP_WRITE, ED_SMP_END, ED_SMP_ERASE, ED_SMP_INFO,   /* 10..14: the sample slots (1.13: gone; SMP_INFO
                                                                             * still answers: 0 slots, so the editor shows none) */
@@ -431,6 +432,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         for (i = 0; i < NENGINES; i++)
             ed_str(ENGINES[i]->name, 8);
         ed_b(NTRK);                                       /* v3 */
+        ed_b(0x56); ed_b(1); ed_b(ED_PROTO);                /* protocol v3 (FMini-1 1.14.0): the web editor needs >= 3 */
         ed_b(CHAIN_ROWS);                                  /* v6 */
         ed_b(0x55); ed_b(1); ed_b(ed_ui_caps());             /* tagged preferences v1: commands 34..38 */
         ed_b(0x4d); ed_b(1); ed_b(64); ed_b(1);   /* motion + chance v1 (64: what it said before 1.2; 41 01 has the real count) */
