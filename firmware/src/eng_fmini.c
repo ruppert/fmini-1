@@ -78,6 +78,9 @@ static int32_t fmini_det(const uint8_t *g, uint32_t i)   /* the cents of DET byt
 static uint8_t fmini_patch[NTRK][FG_SIZE];        /* the tracks' patches (main loop writes, then fmini_pgen) */
 static volatile uint8_t fmini_pgen[NTRK];         /* +1 after each write of fmini_patch[t] */
 static uint16_t fmini_slot[NTRK];                 /* the SLOT value last loaded (main loop); 0xFFFF = none (1.14.0: 256 = OWN) */
+#define FMINI_LOAD_MS 50u                 /* a SLOT that keeps turning loads when it stops for this long (1.14.0) */
+static uint16_t fmini_want[NTRK];         /* the slot the knob points to, not loaded yet (0xFFFF: none) */
+static uint32_t fmini_want_ms[NTRK];      /* when fmini_want last changed */
 static uint8_t fmini_own[NTRK][FG_SIZE];          /* the own patch while SLOT shows a factory one (fmini_poll) */
 static uint8_t fmini_own_ok;                      /* bit tr: fmini_own[tr] holds it */
 static struct {                                  /* the patch as the audio ISR sees it (taken at a block's start) */
@@ -190,6 +193,7 @@ static void fmini_init(void)                      /* power-on: every track F1 */
     for (tr = 0; tr < NTRK; tr++) {
         fmini_set_patch(tr, FMINI_FACTORY[0]);
         fmini_slot[tr] = 0xFFFFu;
+        fmini_want[tr] = 0xFFFFu;
     }
 }
 
@@ -200,9 +204,20 @@ static void fmini_poll(void)
     uint32_t tr, bit;
     for (tr = 0; tr < NTRK; tr++) {
         int32_t s = trk[tr].p[P_E7];
-        if (trk[tr].eng_req != ENGI_FMINI || s == fmini_slot[tr])
+        if (trk[tr].eng_req != ENGI_FMINI || s == fmini_slot[tr]) {
+            fmini_want[tr] = 0xFFFFu;
             continue;
+        }
         bit = 1u << tr;
+        if (s >= 0 && s < (int32_t)FMINI_NSLOT) {  /* a slot: loads once the knob has been still for FMINI_LOAD_MS */
+            if (fmini_want[tr] != (uint16_t)s) {
+                fmini_want[tr] = (uint16_t)s;
+                fmini_want_ms[tr] = fm1_ms;
+                continue;
+            }
+            if (fm1_ms - fmini_want_ms[tr] < FMINI_LOAD_MS)
+                continue;
+        }
         if (s < 0 || s >= (int32_t)FMINI_NSLOT) {                                   /* OWN */
             if (fmini_own_ok & bit)
                 fmini_set_patch(tr, fmini_own[tr]);

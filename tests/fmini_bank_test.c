@@ -67,6 +67,28 @@ int main(void)
     fbchk(!strcmp(fb_name[0], "MINI LEAD") && !strcmp(fb_name[FMINI_NFACTORY], "INIT") && !strcmp(fb_name[FB_NSLOT - 1], "INIT"),
           "the RAM name list: slot 0 and the INIT slots");
 
+    /* the load waits: a SLOT loads once it has been still for 50 ms; each turn starts the count again */
+    {
+        uint32_t t0 = 1000u;
+        uint8_t want[FB_SLOT];
+        (void)want;
+        trk[0].eng_req = ENGI_FMINI;
+        fmini_slot[0] = 0xFFFFu;
+        fm1_ms = t0;
+        trk[0].p[P_E7] = 5;
+        fmini_poll();
+        fbchk(fmini_slot[0] != 5u, "a turned slot is not loaded at once");
+        fm1_ms = t0 + 30u;
+        trk[0].p[P_E7] = 6;                        /* turned again: the count restarts */
+        fmini_poll();
+        fm1_ms = t0 + 60u;                         /* 30 ms since the last turn */
+        fmini_poll();
+        fbchk(fmini_slot[0] != 6u, "still turning (30 ms since the last change): not loaded");
+        fm1_ms = t0 + 80u;                         /* 50 ms since the last turn */
+        fmini_poll();
+        fbchk(fmini_slot[0] == 6u, "still for 50 ms: the slot loads");
+    }
+
     printf(bad ? "FMINI BANK TEST FAILED\n" : "fmini_bank test passed\n");
     return bad != 0;
 }
