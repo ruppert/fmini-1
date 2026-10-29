@@ -23,7 +23,7 @@
 #endif
 #define FG_SIZE 32u
 #define FMINI_NFACTORY 100u
-#define FMINI_NSLOT 256u                  /* 1.14.0: the slots (0..99 factory, 100..255 INIT: fmini_bank.c) */
+#define FMINI_NSLOT 200u                  /* 1.14.0: the slots (0..99 factory, 100..199 INIT: fmini_bank.c) */
 #define FMINI_OWN FMINI_NSLOT
 #define FMINI_PACKED 128u          /* the slot of an FM6 patch in a project / a user preset (eng_fm6.c) */
 

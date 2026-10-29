@@ -2,13 +2,14 @@
  * Copyright (C) 2026 Guilherme Ruppert (FMini-1 fork) */
 #ifndef FMINI_BANK_C
 #define FMINI_BANK_C
-/* FMini-1 preset bank (1.14.0): 256 slots. Slots 0..99 start as the factory patches, 100..255 as INIT (one sawtooth
+/* FMini-1 preset bank (1.14.0): 200 slots. Slots 0..99 start as the factory patches, 100..199 as INIT (one sawtooth
  * on oscillator 1, no filter envelope, no effects). A slot that was saved holds its own record (fmini_rec.c); a slot
- * never saved reads its factory record. The records live in 16 storage objects (OBJ_PRESET0..15), 16 slots each; each
+ * never saved reads its factory record. The records live in 13 storage objects (OBJ_PRESET0..12), 16 slots each; each
  * object starts with a stamp, and a new firmware with another factory bank clears them at boot (install = factory).
  * The name and number of every slot are the only copy in RAM (fb_name); the record is read when a slot is chosen. */
 
-#define FB_NSLOT 256u
+#define FB_NSLOT 200u
+#define FB_NOBJ ((FB_NSLOT + FB_PER_OBJ - 1u) / FB_PER_OBJ)   /* 13 objects: the last one holds 8 slots */
 #define FB_PER_OBJ 16u
 #define FB_SLOT 128u                          /* one record: name 14 + patch 34 + extra 30 + preset 20 bytes, room to grow */
 #define FB_STAMP 0x31564246u                  /* "FBV1": the factory bank this build writes */
@@ -169,7 +170,7 @@ static void fb_boot(void)
 {
     uint32_t o, j, k;
     uint8_t rec[FB_SLOT];
-    for (o = 0; o < FB_NSLOT / FB_PER_OBJ; o++) {
+    for (o = 0; o < FB_NOBJ; o++) {
         if (!fb_obj_read(o))
             fb_obj_clear(o);                    /* (a failed write leaves the factory reads: nothing saved) */
         for (j = 0; j < FB_PER_OBJ; j++) {

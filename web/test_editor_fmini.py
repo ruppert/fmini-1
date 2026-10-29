@@ -135,7 +135,7 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(300)
     g = fa(82, [0, 0])
     check("OSC 1 WAVE: the firmware's patch byte (FMINI_GET) is PLS N", g[2] == 0 and g[3 + 3] == 5)
-    check("  .. SLOT is OWN now (256: two 7-bit bytes, protocol 3)", g[3 + 32] + 128 * g[3 + 33] == 256)
+    check("  .. SLOT is OWN now (200: two 7-bit bytes, protocol 3)", g[3 + 32] + 128 * g[3 + 33] == 200)
     pg.click("#tabs button:has-text('CTRL')")
     pg.locator(".sw", has_text="MOD OSC").click()
     pg.wait_for_timeout(300)

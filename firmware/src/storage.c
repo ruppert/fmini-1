@@ -30,9 +30,9 @@
  * kind (type OBJ_FM6VB, not an st_load object); a new bank is first staged in the autosave's older copy (fm6_vbank.c). */
 enum { OBJ_SETTINGS, OBJ_PROJECT0, OBJ_UPRESET0 = OBJ_PROJECT0 + 4, OBJ_FM6BANK = OBJ_UPRESET0 + 2, OBJ_UPFM6,
        OBJ_AUTOSAVE,
-       OBJ_PRESET0,                            /* FMini-1 1.14.0: the 256 preset slots, 16 objects of 16 records (appended:
+       OBJ_PRESET0,                            /* FMini-1 1.14.0: the 200 preset slots, 13 objects of 16 records (appended:
                                                 * the type ids are stored, so nothing above moves) */
-       OBJ_PRESET_LAST = OBJ_PRESET0 + 15u, OBJ_COUNT };
+       OBJ_PRESET_LAST = OBJ_PRESET0 + 12u, OBJ_COUNT };
 #define OBJ_FM6VB 32u                          /* the voice bank's commit records (fm6_vbank.c; >= OBJ_COUNT: st_load
                                                 * never takes one, no object here takes its sectors) */
 
