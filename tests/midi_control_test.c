@@ -870,7 +870,8 @@ static int pc_test(void)
         if (!eng_ok(e) || e == ENGI_DRUM || !preset_shown(e))
             continue;
         set_engine_of(t, e);
-        for (n = 0, last = -1; n < preset_shown(e); n++) {
+        /* (a Program Change is 0..127: FMINI's slots 128..199 are reached from PRESETS, not by PC) */
+        for (n = 0, last = -1; n < preset_shown(e) && n < 128u; n++) {
             pc(0, n); frame();
             ok &= t->eng_req == e && (int32_t)t->preset > last && preset_orig(ENGINES[e], t->preset) == t->preset;
             last = t->preset;

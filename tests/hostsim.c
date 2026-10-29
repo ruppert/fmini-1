@@ -34,6 +34,12 @@ static struct { volatile uint32_t notes, buttons; } fm1_in;
 #if !FELUCCA_FLASH                           /* (the flash build, the emulator: fmini_bank.c after storage.c, felucca_web.c) */
 #include "../firmware/src/fmini_bank.c"
 #endif
+#if !FELUCCA_FLASH
+/* every host test: the FMini RAM presets exist before main (the power-on fmini_init, fb_boot, in the device) */
+#undef __attribute__                          /* (this file drops the sources' section attributes: keep this one) */
+__attribute__((constructor)) static void hostsim_fmini_presets(void) { fb_names_init(); }
+#define __attribute__(x)
+#endif
 #include "../firmware/src/params.c"
 #include "../firmware/src/mod.c"
 #include "../firmware/src/voice.c"
