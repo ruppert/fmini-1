@@ -1036,7 +1036,7 @@ tests `tests/editor_test.c` (fmini_patches) and `web/test_editor_fmini.py` (the 
 
 | cmd | Request args | Reply args |
 | --- | --- | --- |
-| 82 FMINI_GET | target, index | target, index, rc, then (rc 0) the 32 patch bytes, and for target 0 the track's SLOT (`P_E7`: 0..99 = F1..F100, 100 = OWN) |
+| 82 FMINI_GET | target, index | target, index, rc, then (rc 0) the 32 patch bytes, and for target 0 the track's SLOT (`P_E7`, protocol 3: 0..99 = F1..F100, 100..255 = INIT slots, 256 = OWN) as two 7-bit bytes, low first, then the octave + 4 |
 | 83 FMINI_PUT | 0, track, 32 patch bytes [, octave + 4] | target, index, rc |
 | 84 FMINI_PRESET (1.6.1) | slot 0..31 | slot, rc, then 14 x v14 (below) |
 
@@ -1315,3 +1315,7 @@ device gone at ~0.3 s, the MIDI port gone at ~0.57 s and back at ~1.15 s; ON -> 
 at ~0.6 s while the MIDI port was not seen to disappear at all (so do not wait for a disconnect event: after
 a real change, wait ~1.5 s and open again). What the editor sends in that window is lost, `WATCH` ends with the
 bus reset (send `INFO` and `WATCH` again after reconnecting), and a backup in progress answers rc 5 (stale).
+
+**Protocol 3 (FMini-1 1.14.0; INFO tag `56 01 3`, between NTRK and CHAIN_ROWS):** the bank has 256 slots (SLOT 0..255; 256 = OWN). The
+`FMINI_GET` track reply carries the SLOT as two bytes (`lo7`, `hi7`) before the octave, so the octave is its last byte. An editor
+that reads an older reply must refuse the device (the web editor shows the notice with the link to the current installer).
