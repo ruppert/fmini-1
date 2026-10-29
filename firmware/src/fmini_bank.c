@@ -17,6 +17,7 @@
 #define FB_INIT_SLOT FMINI_NFACTORY           /* the first INIT slot */
 
 static char fb_name[FB_NSLOT][13];            /* RAM: the list's names (upper case, 0-terminated) */
+static uint8_t fb_ready;                      /* the RAM lists are filled (fb_names_init or fb_boot) */
 static uint8_t fb_obj_buf[FB_PAYLOAD] __attribute__((aligned(4), section(".pool")));   /* (main loop only) */
 
 /* the INIT patch: a sawtooth on oscillator 1 alone (FG_ bytes, eng_fmini.c) */
@@ -98,11 +99,45 @@ static uint32_t fb_slot_from_buf(uint32_t j, uint8_t *rec)
     return n;
 }
 
+/* slot k's preset as the generic code reads it (fmini_pre, eng_fmini.c) from its record n bytes: the name is the RAM copy */
+static void fb_fill_pre(uint32_t k, const uint8_t *rec, uint32_t n)
+{
+    const uint8_t *d = 0;
+    uint32_t l = 0, i;
+    preset_t *p = &fmini_pre[k];
+    p->name = fb_name[k];
+    p->pat = 0;                                 /* no sequencer pattern in a preset (the steps are not stored) */
+    if (fr_find(rec, n, FR_PARAM, &d, &l) && l == 18u) {
+        for (i = 0; i < 8; i++)
+            p->e[i] = (int8_t)d[i];
+        for (i = 0; i < 4; i++)
+            p->env[i] = d[8 + i];
+        p->fenv = (int8_t)d[12];
+        p->mono = d[13];
+        for (i = 0; i < 4; i++)
+            p->fx[i] = d[14 + i];
+    }
+}
+
+/* slot k's whole state into the RAM lists: its name and its preset (its record: saved, or factory) */
+static void fb_slot_init(uint32_t k, const uint8_t *rec, uint32_t n)
+{
+    const uint8_t *d = 0;
+    uint32_t l = 0;
+    if (fr_find(rec, n, FR_NAME, &d, &l))
+        fb_set_name(k, d, l);
+    fb_fill_pre(k, rec, n);
+}
+
 #if FELUCCA_FLASH
 static int fb_obj_read(uint32_t o);
 static int fb_obj_clear(uint32_t o);
 #endif
 /* slot k's record into rec: the saved one, else its factory record; its length */
+#if !FELUCCA_FLASH
+static uint8_t fb_host[FB_NSLOT][FB_SLOT];    /* host build (tests): the saved records in RAM instead of flash */
+static uint8_t fb_host_n[FB_NSLOT];
+#endif
 static uint32_t fb_read(uint32_t k, uint8_t *rec)
 {
 #if FELUCCA_FLASH
@@ -111,8 +146,25 @@ static uint32_t fb_read(uint32_t k, uint8_t *rec)
         if (n)
             return n;
     }
+#else
+    if (k < FB_NSLOT && fb_host_n[k]) {
+        memcpy(rec, fb_host[k], fb_host_n[k]);
+        return fb_host_n[k];
+    }
 #endif
     return fb_factory_rec(k, rec);
+}
+
+/* slot k's arpeggiator, LFO, level, FX and octave (the FMINI_X block of its record); zeros if the record is damaged */
+static void fb_extra(uint32_t k, fmini_x_t *x)
+{
+    uint8_t rec[FB_SLOT];
+    uint32_t n = fb_read(k, rec), l = 0;
+    const uint8_t *d = 0;
+    if (fr_find(rec, n, FR_EXTRA, &d, &l) && l == sizeof *x)
+        memcpy(x, d, sizeof *x);
+    else
+        memset(x, 0, sizeof *x);
 }
 
 #if FELUCCA_FLASH
@@ -130,12 +182,18 @@ static int fb_write(uint32_t k, const uint8_t *rec, uint32_t n)
         dst[i] = i < n ? rec[i] : 0;
     if (st_save(OBJ_PRESET0 + o, fb_obj_buf, FB_PAYLOAD) != 0)
         return -1;
-    {
-        const uint8_t *d = 0;
-        uint32_t l = 0;
-        if (fr_find(rec, n, FR_NAME, &d, &l))
-            fb_set_name(k, d, l);
-    }
+    fb_slot_init(k, rec, n);                    /* the list and the preset now show the saved slot */
+    return 0;
+}
+#else
+/* host build: the same save, into the RAM copy (no flash) */
+static int fb_write(uint32_t k, const uint8_t *rec, uint32_t n)
+{
+    if (k >= FB_NSLOT || n == 0u || n > FB_SLOT || !fr_valid(rec, n))
+        return -1;
+    memcpy(fb_host[k], rec, n);
+    fb_host_n[k] = (uint8_t)n;
+    fb_slot_init(k, rec, n);
     return 0;
 }
 #endif
@@ -170,23 +228,19 @@ static void fb_boot(void)
 {
     uint32_t o, j, k;
     uint8_t rec[FB_SLOT];
+    fb_ready = 1;
     for (o = 0; o < FB_NOBJ; o++) {
         if (!fb_obj_read(o))
             fb_obj_clear(o);                    /* (a failed write leaves the factory reads: nothing saved) */
         for (j = 0; j < FB_PER_OBJ; j++) {
+            uint32_t n;
             k = o * FB_PER_OBJ + j;
-            if (fb_slot_from_buf(j, rec)) {
-                const uint8_t *d = 0;
-                uint32_t l = 0;
-                if (fr_find(rec, fb_len(rec), FR_NAME, &d, &l))
-                    fb_set_name(k, d, l);
-            } else {
-                uint32_t n = fb_factory_rec(k, rec);
-                const uint8_t *d = 0;
-                uint32_t l = 0;
-                if (fr_find(rec, n, FR_NAME, &d, &l))
-                    fb_set_name(k, d, l);
-            }
+            if (k >= FB_NSLOT)
+                break;
+            n = fb_slot_from_buf(j, rec);
+            if (!n)
+                n = fb_factory_rec(k, rec);     /* never saved, or damaged: the factory's record */
+            fb_slot_init(k, rec, n);
         }
     }
 }
@@ -209,12 +263,12 @@ static void fb_names_init(void)
 {
     uint32_t k;
     uint8_t rec[FB_SLOT];
+    if (fb_ready)                               /* the flash read (fb_boot) has the saved slots: keep them */
+        return;
+    fb_ready = 1;
     for (k = 0; k < FB_NSLOT; k++) {
-        uint32_t n = fb_factory_rec(k, rec);
-        const uint8_t *d = 0;
-        uint32_t l = 0;
-        if (fr_find(rec, n, FR_NAME, &d, &l))
-            fb_set_name(k, d, l);
+        uint32_t n = fb_factory_rec(k, rec);    /* (host path: no flash, so the factory records) */
+        fb_slot_init(k, rec, n);
     }
 }
 

@@ -8,6 +8,7 @@
 int main(void)
 {
     char line[2048];
+    fb_names_init();                              /* the RAM presets (main.c: fmini_init, fb_boot) */
     reset();
     set_engine_of(&trk[0], ENGI_FMINI);
     apply_preset_to(&trk[0], 0);

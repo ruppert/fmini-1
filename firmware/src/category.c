@@ -46,7 +46,10 @@ static uint32_t preset_cat(uint32_t e, uint32_t k)    /* factory preset k of eng
         ;
     for (c = 1; s[i] && L[c] && L[c] != s[i]; c++)
         ;
-    return s[i] && L[c] ? c : cat_of_engine(e);
+    if (s[i] && L[c])
+        return c;
+    return e == ENGI_FMINI && k >= FMINI_NFACTORY ? CAT_OTHER   /* 1.14.0: the INIT slots (100..199) */
+                                                  : cat_of_engine(e);
 }
 #endif
 #endif

@@ -22,7 +22,7 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
        ED_UI_STATE, ED_UI_SET, ED_UI_PALETTES, ED_FAV_GET, ED_FAV_SET,
        ED_MOTION = 64, ED_BACKUP_LIST, ED_BACKUP_GET, ED_BACKUP_PUT };                              /* v6: song chain */
 
-static uint8_t ed_out[1408] __attribute__((section(".pool")));  /* (NAMES of FMINI: 100 names of up to 12 characters, 1326 bytes; before 1.7.2 the
+static uint8_t ed_out[2816] __attribute__((section(".pool")));  /* (1.14.0: NAMES of FMINI, 200 names of up to 12 characters, ~2.6 KB; 1.7.2: 100 names, 1326 bytes; before 1.7.2 the
                                                                  * buffer held 664 (MOTION op 8: 128 records and their kinds, 653 bytes) and cut
                                                                  * that reply at the 72nd name without saying so: tests/editor_test.c names_complete) */
 static uint32_t ed_n;
@@ -556,7 +556,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         if (na < 1u || a[0] >= NENGINES)
             return;
         ed_b(a[0]);
-        ed_b(ENGINES[a[0]]->npresets);
+        ed_b(ENGINES[a[0]]->npresets & 0x7Fu);          /* the count: two 7-bit bytes, low first (1.14.0: up to 200 presets) */
+        ed_b(ENGINES[a[0]]->npresets >> 7);
         for (i = 0; i < ENGINES[a[0]]->npresets; i++)
             ed_str(ENGINES[a[0]]->presets[i].name, 12);
         for (i = 0; i < 2u; i++)                           /* then the two edit-page titles */

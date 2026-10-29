@@ -482,10 +482,12 @@ static void graph_fmini(const track_t *t, uint16_t c)
     {   /* the foot: the patch's place and name bottom left, the page "n/7" small bottom right */
         const preset_t *ps = &ENGINES[ENGI_FMINI]->presets[t->preset % ENGINES[ENGI_FMINI]->npresets];
         int32_t sl = t->p[P_E7];
-        if (sl >= 0 && sl < (int32_t)FMINI_NFACTORY) {
-            pn[0] = 'F';
-            fmt_int(pn + 1, sl + 1);
-            str_cpy(pn + str_len(pn), " ", 2);
+        if (sl >= 0 && sl < (int32_t)FMINI_NSLOT) {   /* the slot: three digits, then its name */
+            pn[0] = (char)('0' + (sl / 100) % 10);
+            pn[1] = (char)('0' + (sl / 10) % 10);
+            pn[2] = (char)('0' + sl % 10);
+            pn[3] = ' ';
+            pn[4] = 0;
             str_cpy(pn + str_len(pn), ps->name, 12);
         } else {
             str_cpy(pn, "OWN", 4);

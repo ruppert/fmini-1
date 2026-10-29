@@ -1391,9 +1391,10 @@ static int names_complete(void)
     int bad = 0, all = 1;
     uint32_t e, k, worst = 0;
     reset();
+    fb_names_init();                                       /* the RAM presets (FMINI: the 200 names) */
     for (e = 0; e < NENGINES; e++) {
         uint8_t a = (uint8_t)e;
-        uint32_t n = request(ED_NAMES, &a, 1), j = 7, np = ENGINES[e]->npresets, ok = n > 8u && host_wire[5] == e && host_wire[6] == np;
+        uint32_t n = request(ED_NAMES, &a, 1), j = 8, np = ENGINES[e]->npresets, ok = n > 9u && host_wire[5] == e && host_wire[6] == (np & 0x7Fu) && host_wire[7] == (np >> 7);
         for (k = 0; ok && k < np; k++) {
             const char *s = ENGINES[e]->presets[k].name;
             uint32_t len = (uint32_t)strlen(s), i;
@@ -1416,7 +1417,7 @@ static int names_complete(void)
         if (n > worst) worst = n;
     }
     bad += check("NAMES: every engine's reply has all its preset names and both titles, whole", all);
-    bad += check("  .. FMINI lists 100 of them", ENGINES[ENGI_FMINI]->npresets == 100u);
+    bad += check("  .. FMINI lists its 200 slots", ENGINES[ENGI_FMINI]->npresets == 200u);
     bad += check("  .. and the largest reply fits the reply buffer with room to spare", worst + 16u < sizeof ed_out);
     return bad;
 }

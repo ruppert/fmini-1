@@ -71,9 +71,9 @@ with sync_playwright() as pw:
     pg.wait_for_function("!document.body.classList.contains('off')", timeout=15000)
     check("Connect: handshake, descriptors, names; status shows connected", "FMini-1" in pg.inner_text("#stxt") and not errs)
     check("INFO told the page the patch commands exist", pg.evaluate("__fmini.S.canPatch") is True)
-    check("the preset list has the 100 factory patches", pg.evaluate("document.querySelectorAll('#preset option').length") >= 100)
+    check("the preset list has the 200 slots (100 factory, 100 INIT)", pg.evaluate("document.querySelectorAll('#preset option').length") >= 200)
     nm = pg.evaluate("__fmini.S.names")
-    check("  .. and every one of them has its name (the last: " + (nm[99] if len(nm) > 99 else "?") + ")", len(nm) == 100 and all(len(x) > 0 for x in nm))
+    check("  .. and every one of them has its name (the last: " + (nm[199] if len(nm) > 199 else "?") + ")", len(nm) == 200 and all(len(x) > 0 for x in nm))
     pg.wait_for_timeout(300)
 
     # a track parameter through a knob (FILT > CUTOFF = P_E0)
@@ -283,7 +283,7 @@ with sync_playwright() as pw:
     pg.click("#connect"); pg.wait_for_timeout(300)
     pg.click("#connect")
     pg.wait_for_function("!document.body.classList.contains('off')", timeout=15000)
-    check("  .. and the 1.7.2 firmware gives all 100 again, with no notice", pg.evaluate("__fmini.S.names.filter(Boolean).length") == 100 and "Update" not in pg.inner_text("#msg") and "Atualiz" not in pg.inner_text("#msg"))
+    check("  .. and the current firmware gives all 200 again, with no notice", pg.evaluate("__fmini.S.names.filter(Boolean).length") == 200 and "Update" not in pg.inner_text("#msg") and "Atualiz" not in pg.inner_text("#msg"))
 
     if SHOTS:
         SHOTS.mkdir(parents=True, exist_ok=True)

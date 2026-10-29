@@ -187,9 +187,11 @@ static void fmini_track_loaded(const track_t *t)
     }
 }
 
+static void fb_names_init(void);                  /* fmini_bank.c: the RAM presets (before the first apply_preset_to) */
 static void fmini_init(void)                      /* power-on: every track F1 */
 {
     uint32_t tr;
+    fb_names_init();
     for (tr = 0; tr < NTRK; tr++) {
         fmini_set_patch(tr, FMINI_FACTORY[0]);
         fmini_slot[tr] = 0xFFFFu;
@@ -550,7 +552,11 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 }
 
 /* --------------------------------------------------------------- the engine --- */
-static const engine_t ENG_FMINI = {
+/* every slot's preset (name, knob bytes, env, fx, mono) as the generic code reads them: fmini_bank.c fills it from the
+ * records at boot (saved or factory) and when a slot is saved. The engine's presets are these 200, and nothing else. */
+static preset_t fmini_pre[FMINI_NSLOT];
+
+static engine_t ENG_FMINI = {
     .name = "FMINI",
     .page_title = {"FILTER", "PATCH"},
     .edit = {
@@ -563,8 +569,8 @@ static const engine_t ENG_FMINI = {
         {"MOD", F_PCT, 0, 127, 0, 0, 0},
         {"SLOT", F_INT, 0, FMINI_OWN, 0, 0, 0},
     },
-    .presets = FMINI_PRESETS,
-    .npresets = NELEM(FMINI_PRESETS),
+    .presets = fmini_pre,
+    .npresets = FMINI_NSLOT,
     .note_on = fmini_note_on,
     .render = fmini_render,
     .knob = {P_E0, P_E1, P_E2, P_E4},

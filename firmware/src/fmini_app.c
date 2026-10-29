@@ -494,33 +494,16 @@ static void fa_wave_boxes(uint32_t pg, uint32_t cur)
 
 /* ------------------------------------------------------- presets --- */
 static uint8_t fa_base;                                   /* the factory patch last loaded (0..99): the one PRESETS goes on from, edited or not (an edit makes SLOT OWN) */
-/* the list PRESETS walks: the 8 factory patches, then the user presets of this instrument (SAVE) in slot order */
-static uint32_t fa_nuser(void)
+/* 1.14.0: no user bank. The 200 slots are the presets, all of them the same way (0..99 factory, 100..199 INIT at
+ * first, then whatever was saved): PRESETS walks them, SAVE writes one (fmini_bank.c) */
+static int fa_on_user(void) { return 0; }                 /* (kept for the callers: a track is never on a user preset now) */
+/* the slot number on the screen: three digits, 000..199 */
+static void fa_slot_num(char *l, uint32_t k)
 {
-    uint32_t k, n = 0;
-    for (k = 0; k < UP_SLOTS; k++)
-        n += (uint32_t)(up_used(k) && up_engine(k) == ENGI_FMINI);
-    return n;
-}
-static uint32_t fa_user_nth(uint32_t n)                   /* the slot of the n-th user preset */
-{
-    uint32_t k;
-    for (k = 0; k < UP_SLOTS; k++)
-        if (up_used(k) && up_engine(k) == ENGI_FMINI && !n--)
-            return k;
-    return 0;
-}
-static uint32_t fa_user_rank(uint32_t slot)
-{
-    uint32_t k, n = 0;
-    for (k = 0; k < slot && k < UP_SLOTS; k++)
-        n += (uint32_t)(up_used(k) && up_engine(k) == ENGI_FMINI);
-    return n;
-}
-static int fa_on_user(void)
-{
-    const track_t *t = TSEL;
-    return t->user && up_used((uint32_t)t->user - 1u) && up_engine((uint32_t)t->user - 1u) == ENGI_FMINI;
+    l[0] = (char)('0' + (k / 100u) % 10u);
+    l[1] = (char)('0' + (k / 10u) % 10u);
+    l[2] = (char)('0' + k % 10u);
+    l[3] = 0;
 }
 
 /* SAVE: a small dialog. PRESETS picks the slot U01..U32, SELECT moves along the name and ALGORITHM changes the letter,
@@ -532,51 +515,44 @@ static uint32_t fa_msg_until;                             /* "SAVED U05" shown u
 static char fa_msg[16];
 static const char FA_CH[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-";
 
-static void fa_sv_fill(void)                              /* the slot's own name (overwrite) or the playing patch's */
+static uint32_t fa_cur_slot(void)                         /* the slot the track plays (OWN: the patch it came from) */
 {
-    uint32_t k = fa_sv_slot;
-    if (up_used(k) && up_engine(k) == ENGI_FMINI)
-        up_name(k, fa_sv_name);
-    else if (fa_on_user())
-        up_name((uint32_t)TSEL->user - 1u, fa_sv_name);
-    else
-        str_cpy(fa_sv_name, ENGINES[ENGI_FMINI]->presets[TSEL->p[P_E7] >= 0 && TSEL->p[P_E7] < (int32_t)FMINI_NFACTORY ? (uint32_t)TSEL->p[P_E7] : fa_base % FMINI_NFACTORY].name, 13);
+    const track_t *t = TSEL;
+    return t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NSLOT ? (uint32_t)t->p[P_E7] : fa_base % FMINI_NSLOT;
+}
+static void fa_sv_fill(void)                              /* the slot's name, as it is now (overwrite) */
+{
+    str_cpy(fa_sv_name, ENGINES[ENGI_FMINI]->presets[fa_sv_slot].name, 13);
 }
 static void fa_sv_open(void)
 {
-    uint32_t k;
     fa_sv = 1;
     fa_sv_pos = 0;
-    if (fa_on_user())
-        fa_sv_slot = (uint8_t)(TSEL->user - 1u);
-    else {                                                /* the first free slot */
-        for (k = 0; k < UP_SLOTS && up_used(k); k++)
-            ;
-        fa_sv_slot = (uint8_t)(k < UP_SLOTS ? k : 0u);
-    }
+    fa_sv_slot = (uint8_t)fa_cur_slot();                  /* the slot being played: SAVE overwrites it */
     fa_sv_fill();
 }
 static void fa_say(const char *a, uint32_t k)
 {
     char l[4];
-    up_slot_label(l, k);
+    fa_slot_num(l, k);
     str_cpy(fa_msg, a, 9);
     str_cpy(fa_msg + str_len(fa_msg), l, 4);
     fa_msg_until = fm1_ms + 1500u;
 }
 static uint8_t fa_last_user;
+static int fa_save_slot(uint32_t k, const char *name);    /* (below: the track's sound into slot k) */
 static void fa_sv_do(void)
 {
     uint32_t k = fa_sv_slot, n = str_len(fa_sv_name);
     int rc;
     while (n && fa_sv_name[n - 1u] == ' ')                /* no trailing blanks */
         fa_sv_name[--n] = 0;
-    rc = up_store(k, fa_sv_name);
+    rc = fa_save_slot(k, fa_sv_name);
     fa_sv = 0;
-    if (rc == 0 || rc == 3) {
-        TSEL->user = (uint8_t)(k + 1u);
-        fa_last_user = (uint8_t)(k + 1u);
-        fa_say(rc == 3 ? "SAVED(RAM) " : "SAVED ", k);
+    if (rc == 0) {
+        TSEL->p[P_E7] = (int16_t)k;                       /* the track now plays the slot it saved */
+        fa_base = (uint8_t)k;
+        fa_say("SAVED ", k);
     } else
         str_cpy(fa_msg, "SAVE ERROR", 16), fa_msg_until = fm1_ms + 1500u;
     ui.force = 1;
@@ -587,15 +563,14 @@ static void fa_dialog(void)
 {
     uint32_t k = fa_sv_slot, i;
     char l[4], hdr[20];
-    int used = up_used(k) && up_engine(k) == ENGI_FMINI;
     const uint16_t bgd = FA_RGB(0x1B, 0x19, 0x17);
     cv_rect(16, 62, 208, 112, FA_OR);
     cv_rect(18, 64, 204, 108, bgd);
-    up_slot_label(l, k);
+    fa_slot_num(l, k);
     fa_ctext(120, 72, &AF_S, "SAVE PRESET", FA_CR);
     str_cpy(hdr, l, 4);
     fa_ltext(28, 92, &AF_M, hdr, FA_OR);
-    fa_ltext(28 + text_w(&AF_M, hdr) + 8, 95, &AF_X, used ? "OVERWRITE" : "EMPTY", used ? FA_RED : FA_MU);
+    fa_ltext(28 + text_w(&AF_M, hdr) + 8, 95, &AF_X, "OVERWRITE", FA_RED);   /* every slot holds a preset: SAVE replaces it */
     for (i = 0; i < 12u; i++) {                           /* the name, letter by letter, the cursor underlined */
         char c[2] = {fa_sv_name[i] ? fa_sv_name[i] : ' ', 0};
         int32_t x = 28 + (int32_t)i * 14;
@@ -1153,16 +1128,9 @@ static uint8_t fa_primed;                                 /* the first frame has
 static uint32_t fa_pp_until;                              /* the preset pop-up shows until fm1_ms passes this */
 static void fa_preset_label(char *num, char *name)
 {
-    if (fa_on_user()) {
-        up_slot_label(num, (uint32_t)TSEL->user - 1u);
-        up_name((uint32_t)TSEL->user - 1u, name);
-    } else {
-        uint32_t k = fa_base % FMINI_NFACTORY;
-        num[0] = (char)('0' + k / 10u);
-        num[1] = (char)('0' + k % 10u);
-        num[2] = 0;
-        str_cpy(name, ENGINES[ENGI_FMINI]->presets[k].name, 16);
-    }
+    uint32_t k = fa_cur_slot();
+    fa_slot_num(num, k);
+    str_cpy(name, ENGINES[ENGI_FMINI]->presets[k].name, 16);
 }
 static int fa_pp_on(void) { return fa_pp_until && (int32_t)(fm1_ms - fa_pp_until) < 0; }
 /* the pop-up of a preset change: number and name large, 1.5 s */
@@ -1185,7 +1153,7 @@ static uint32_t fa_track_preset(void)
     const track_t *t = TSEL;
     int32_t sl = t->p[P_E7];
     uint32_t u = fa_on_user() ? t->user : 0u, ch = 0;
-    if (sl >= 0 && sl < (int32_t)FMINI_NFACTORY) {
+    if (sl >= 0 && sl < (int32_t)FMINI_NSLOT) {
         if (sl != fa_last_sl) {
             fa_base = (uint8_t)sl;
             fa_last_sl = (int16_t)sl;
@@ -1450,11 +1418,11 @@ static void fa_select(int32_t s)
 static const uint8_t FA_XG[12] = {G_RTYPE, G_RSIZE, G_RDAMP, G_DTIME, G_DRREV, G_DFDBK, G_ENGGO, G_CDEPTH, G_CRATE, G_INFO, G_DRLVL, G_MIDI};
 static void fa_factory_extras(track_t *t, uint32_t n)
 {
-    const fmini_x_t *x;
+    fmini_x_t xs, *x = &xs;
     uint32_t i;
-    if (n >= FMINI_NFACTORY)
+    if (n >= FMINI_NSLOT)
         return;
-    x = &FMINI_X[n];
+    fb_extra(n, x);                             /* the slot's record (saved or factory) */
     t->p[P_AMODE] = x->arp[0] ? x->arp[1] : 0;
     t->p[P_ARATE] = x->arp[2];
     t->p[P_AOCT] = x->arp[3];
@@ -1479,27 +1447,75 @@ static void fa_factory_extras(track_t *t, uint32_t n)
     fa_ar_last = x->arp[1] ? x->arp[1] : 1u;
 }
 
+/* SAVE: the track's sound (its patch, the knobs, the sends, the arpeggiator, LFO, FX, octave) as slot k's record, with
+ * the name; the steps are not in a preset. 0 = saved (the RAM list shows it at once) */
+static int fa_save_slot(uint32_t k, const char *name)
+{
+    static const uint8_t ENV[4] = {P_ATK, P_DEC, P_SUS, P_REL};
+    track_t *t = TSEL;
+    uint32_t tr = (uint32_t)(t - trk), n = 0, i, nl = 0;
+    uint8_t rec[FB_SLOT], patch[FG_SIZE], par[18], nb[12];
+    fmini_x_t x;
+    if (k >= FMINI_NSLOT)
+        return -1;
+    memset(&x, 0, sizeof x);
+    x.arp[0] = t->p[P_AMODE] != 0;
+    x.arp[1] = (uint8_t)t->p[P_AMODE];
+    x.arp[2] = (uint8_t)t->p[P_ARATE];
+    x.arp[3] = (uint8_t)t->p[P_AOCT];
+    x.arp[4] = (uint8_t)t->p[P_AGATE];
+    x.arp[5] = (uint8_t)t->p[P_ASWING];
+    x.arp[6] = (uint8_t)t->p[P_APROB];
+    x.lfo[0] = (uint8_t)t->p[P_LRATE];
+    x.lfo[1] = (uint8_t)t->p[P_LWAVE];
+    x.lfo[2] = (uint8_t)t->p[P_LFADE];
+    x.lfo[3] = (uint8_t)t->p[P_LSYNC];
+    x.level = (uint8_t)t->p[P_LEVEL];
+    x.mod[0] = (int8_t)t->p[P_LD_PIT];
+    x.mod[1] = (int8_t)t->p[P_LD_AMP];
+    x.mod[2] = (int8_t)t->p[P_ED_PIT];
+    for (i = 0; i < 12u; i++)
+        x.fx[i] = (uint8_t)clamp(song.g[FA_XG[i]], 0, 255);
+    x.oct = (int8_t)song.octave;
+    for (i = 0; i < 8u; i++)
+        par[i] = (uint8_t)(int8_t)t->p[P_E0 + i];
+    for (i = 0; i < 4u; i++)
+        par[8 + i] = (uint8_t)t->p[ENV[i]];
+    par[12] = (uint8_t)(int8_t)t->p[P_ED_FLT];
+    par[13] = t->p[P_VOICE] == V_LEGATO ? 1u : 0u;
+    for (i = 0; i < 4u; i++)
+        par[14 + i] = (uint8_t)(clamp(t->p[P_DIST + i], 0, 127) + 1);
+    memcpy(patch, fmini_patch[tr], FG_SIZE);
+    while (nl < 12u && name[nl]) {
+        nb[nl] = (uint8_t)name[nl];
+        nl++;
+    }
+    n = fr_put(rec, FB_SLOT, n, FR_NAME, nb, nl);
+    n = fr_put(rec, FB_SLOT, n, FR_PATCH, patch, FG_SIZE);
+    n = fr_put(rec, FB_SLOT, n, FR_EXTRA, (const uint8_t *)&x, sizeof x);
+    n = fr_put(rec, FB_SLOT, n, FR_PARAM, par, sizeof par);
+    if (!n)
+        return -1;
+    return fb_write(k, rec, n);                       /* flash (fmini_bank.c), or the host's RAM copy */
+}
+
 /* PRESETS: the previous / next patch of the list (factory F1..F8, then the saved ones), round; in the SAVE dialog the slot */
 static void fa_preset(int32_t s)
 {
     track_t *t = TSEL;
-    uint32_t nu = fa_nuser(), n = FMINI_NFACTORY + nu, cur, nx;
+    uint32_t cur, nx;
     if (fa_sv) {
-        fa_sv_slot = (uint8_t)((fa_sv_slot + UP_SLOTS + (s > 0 ? 1u : UP_SLOTS - 1u)) % UP_SLOTS);
+        fa_sv_slot = (uint8_t)((fa_sv_slot + FMINI_NSLOT + (s > 0 ? 1u : FMINI_NSLOT - 1u)) % FMINI_NSLOT);
         fa_sv_fill();
         return;
     }
-    cur = fa_on_user() ? FMINI_NFACTORY + fa_user_rank((uint32_t)t->user - 1u)
-                       : (t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NFACTORY ? (uint32_t)t->p[P_E7] : fa_base % FMINI_NFACTORY);   /* (OWN: an edit of CTRL / OSC / MIX: on from the patch it came from) */
-    nx = (cur + (s > 0 ? 1u : n - 1u)) % n;
-    if (nx < FMINI_NFACTORY) {
-        t->user = 0;
-        apply_preset_to(t, nx);
-        t->p[P_E7] = (int16_t)nx;
-        fa_factory_extras(t, nx);                         /* its arpeggiator, LFO, FX settings and octave */
-    } else {
-        up_load(fa_user_nth(nx - FMINI_NFACTORY));
-    }
+    /* every slot is a preset now (0..199, the same way): the one shown, or the patch the track came from (OWN) */
+    cur = t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NSLOT ? (uint32_t)t->p[P_E7] : fa_base % FMINI_NSLOT;
+    nx = (cur + (s > 0 ? 1u : FMINI_NSLOT - 1u)) % FMINI_NSLOT;
+    t->user = 0;
+    apply_preset_to(t, nx);
+    t->p[P_E7] = (int16_t)nx;
+    fa_factory_extras(t, nx);                         /* its arpeggiator, LFO, FX settings and octave */
     fmini_poll();
 }
 
@@ -1958,8 +1974,11 @@ static void fa_init(void)
             if (!i)
                 fa_factory_extras(t, 0);                 /* the first patch's arpeggiator, LFO, FX settings and octave */
         }
-        else if (t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NFACTORY && !fa_on_user())
-            song.octave = FMINI_X[t->p[P_E7]].oct;        /* the autosaved factory patch (the octave is not autosaved): its own octave, as a PRESETS turn gives */
+        else if (t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NSLOT) {
+            fmini_x_t x;                                   /* the autosaved slot (the octave is not autosaved): its own octave, as a PRESETS turn gives */
+            fb_extra((uint32_t)t->p[P_E7], &x);
+            song.octave = x.oct;
+        }
         t->p[P_MUTE] = i ? 1 : 0;
     }
     song.sel = 0;

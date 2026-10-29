@@ -56,6 +56,7 @@ int main(int argc, char **argv)
     int pg;
     const char *dir = argc > 1 ? argv[1] : ".";
     { uint32_t gi; for (gi = 0; gi < G_COUNT; gi++) song.g[gi] = GP[gi].def; }   /* main.c's power-on globals */
+    fb_names_init();                                  /* the RAM presets (main.c: fmini_init, fb_boot) */
     fa_init();
     for (pg = 0; pg < 7; pg++) {
         fa_page = (uint8_t)pg;
@@ -107,25 +108,17 @@ int main(int argc, char **argv)
     fa_draw();
     dump(dir, 11);
     {   /* SAVE: a user preset in the first free slot, found again by PRESETS; the bank is mostly mono, its pads, keys and plucks poly */
-        char nm[16];
-        uint32_t before = fa_nuser();
-        apply_preset_to(TSEL, 5);
-        TSEL->p[P_E7] = 5;
+        apply_preset_to(TSEL, 5);                       /* 1.14.0: SAVE writes the slot being played (150, an INIT slot) */
+        TSEL->p[P_E7] = 150;
         fmini_poll();
         fa_sv_open();
-        if (!fa_sv || fa_sv_slot != 0 || before != 0) { printf("save: open\n"); return 1; }
+        if (!fa_sv || fa_sv_slot != 150) { printf("save: open\n"); return 1; }
         str_cpy(fa_sv_name, "MY PATCH", 13);
         fa_sv_do();
-        if (fa_sv || fa_nuser() != 1 || !fa_on_user() || TSEL->user != 1) { printf("save: not stored\n"); return 1; }
-        up_name(0, nm);
-        if (!str_eq(nm, "MY PATCH")) { printf("save: name %s\n", nm); return 1; }
-        apply_preset_to(TSEL, 7);
-        TSEL->user = 0;
-        TSEL->p[P_E7] = (int16_t)(FMINI_NFACTORY - 1u);
-        fa_preset(1);                                   /* the last factory patch -> the saved one */
-        if (!fa_on_user() || TSEL->user != 1) { printf("save: PRESETS does not reach it\n"); return 1; }
-        fa_preset(1);                                   /* ... and round to the first factory patch */
-        if (fa_on_user() || TSEL->p[P_E7] != 0) { printf("save: no wrap\n"); return 1; }
+        if (fa_sv || TSEL->p[P_E7] != 150 || !str_eq(ENGINES[ENGI_FMINI]->presets[150].name, "MY PATCH")) { printf("save: not stored\n"); return 1; }
+        TSEL->p[P_E7] = (int16_t)(FMINI_NSLOT - 1u);
+        fa_preset(1);                                   /* the last slot (199) -> round to the first (0) */
+        if (TSEL->p[P_E7] != 0) { printf("save: no wrap\n"); return 1; }
         TSEL->p[P_VOICE] = V_LEGATO;
         fa_mono();
         if (TSEL->p[P_VOICE] != V_MONO) { printf("not mono\n"); return 1; }
@@ -157,13 +150,13 @@ int main(int argc, char **argv)
         fmg_algo(1);
         if (TSEL->p[P_VOICE] != V_POLY) { printf("voices: ALGORITHM does not set POLY\n"); return 1; }
         fa_sv_open();
-        fa_sv_slot = 2;
+        fa_sv_slot = 151;
         str_cpy(fa_sv_name, "POLY PATCH", 13);
         fa_sv_do();
         apply_preset_to(TSEL, 0);
         fa_mono();
         if (TSEL->p[P_VOICE] != V_MONO) { printf("voices: the first factory patch (a lead) is not MONO\n"); return 1; }
-        up_load(2);
+        apply_preset_to(TSEL, 151);                     /* the slot saved above (POLY) comes back POLY */
         fa_mono();
         if (TSEL->p[P_VOICE] != V_POLY) { printf("voices: the preset does not keep POLY\n"); return 1; }
         TSEL->p[P_MUTE] = 0;
@@ -188,7 +181,7 @@ int main(int argc, char **argv)
         song.octave = -2;
         song.g[G_RSIZE] = 11; song.g[G_DRREV] = 0; song.g[G_CRATE] = 100; song.g[G_DRLVL] = 127;
         fa_sv_open();
-        fa_sv_slot = 1;
+        fa_sv_slot = 152;
         str_cpy(fa_sv_name, "ARP PATCH", 13);
         fa_sv_do();
         apply_preset_to(TSEL, 4);
@@ -196,19 +189,20 @@ int main(int argc, char **argv)
         song.octave = 3;
         song.g[G_RSIZE] = 50; song.g[G_DRREV] = 50; song.g[G_CRATE] = 50; song.g[G_DRLVL] = 50;
         if (TSEL->p[P_AMODE] != 0 || TSEL->p[P_AHOLD] != 0) { printf("arp: a factory patch leaves the ARP on\n"); return 1; }
+        TSEL->p[P_E7] = 4;                              /* the track plays slot 4 */
         fa_preset(1);                                   /* the next factory patch (5, DUB STAB): its own FX settings, arpeggiator and octave */
         if (fa_on_user() || TSEL->p[P_E7] != 5 || song.g[G_RSIZE] != FMINI_X[5].fx[1] || song.g[G_DRLVL] != FMINI_X[5].fx[10] ||
             song.g[G_RTYPE] != FMINI_X[5].fx[0] || song.g[G_DTIME] != FMINI_X[5].fx[3] || song.octave != FMINI_X[5].oct) {
             printf("fx: factory patch 5 keeps the old FX settings (%d %d %d)\n", song.g[G_RSIZE], song.g[G_DRLVL], song.octave); return 1;
         }
-        up_load(1);
+        fa_factory_extras(TSEL, 152);                    /* the slot saved above: its own octave (-2) */
         if (song.octave != -2) { printf("octave: preset load -> %d\n", song.octave); return 1; }
         if (song.g[G_RSIZE] != 11 || song.g[G_DRREV] != 0 || song.g[G_CRATE] != 100 || song.g[G_DRLVL] != 127) {
             printf("fx: preset load: %d %d %d %d\n", song.g[G_RSIZE], song.g[G_DRREV], song.g[G_CRATE], song.g[G_DRLVL]);
             return 1;
         }
-        if (TSEL->p[P_AMODE] != 3 || TSEL->p[P_ARATE] != 4 || TSEL->p[P_AOCT] != 3 || TSEL->p[P_AGATE] != 90 || TSEL->p[P_AHOLD] != 1 ||
-            song.g[G_BPM] != 93) {
+        /* 1.14.0: a preset holds the arpeggiator's mode, rate, octave and gate, not HOLD or the tempo (both are the song's) */
+        if (TSEL->p[P_AMODE] != 3 || TSEL->p[P_ARATE] != 4 || TSEL->p[P_AOCT] != 3 || TSEL->p[P_AGATE] != 90) {
             printf("arp: preset load: mode %d rate %d oct %d gate %d hold %d bpm %d\n", TSEL->p[P_AMODE], TSEL->p[P_ARATE],
                    TSEL->p[P_AOCT], TSEL->p[P_AGATE], TSEL->p[P_AHOLD], song.g[G_BPM]);
             return 1;
@@ -510,19 +504,19 @@ int main(int argc, char **argv)
         fmini_poll();
         fa_track_preset();
         fa_preset_label(num, nm);
-        if (strcmp(num, "42") || !fa_pp_on()) { printf("label %s pop %d\n", num, fa_pp_on()); return 1; }
+        if (strcmp(num, "042") || !fa_pp_on()) { printf("label %s pop %d\n", num, fa_pp_on()); return 1; }
         ui.force = 1; fa_draw(); dump(dir, 17);
         fm1_ms += 1600;
         if (fa_pp_on()) { printf("pop-up stays\n"); return 1; }
         fmg_write(FG_TUNE, 70);                          /* edited: SLOT OWN, the number stays */
         fa_track_preset();
         fa_preset_label(num, nm);
-        if (strcmp(num, "42") || fa_pp_on() || nm[0] == 0) { printf("edited label %s\n", num); return 1; }
-        for (k = 0; k < FMINI_NFACTORY; k++) {            /* every number 00..99 */
+        if (strcmp(num, "042") || fa_pp_on() || nm[0] == 0) { printf("edited label %s\n", num); return 1; }
+        for (k = 0; k < FMINI_NSLOT; k++) {               /* every number 000..199 */
             TSEL->p[P_E7] = (int16_t)k;
             fa_track_preset();
             fa_preset_label(num, nm);
-            if (num[0] < '0' || num[0] > '9' || num[1] < '0' || num[1] > '9' || num[2]) { printf("label %u\n", k); return 1; }
+            if (num[0] < '0' || num[0] > '9' || num[1] < '0' || num[1] > '9' || num[2] < '0' || num[2] > '9' || num[3]) { printf("label %u\n", k); return 1; }
         }
         for (k = 0; k < 4; k++) {                        /* GLO > PITCH BEND */
             static const int UP[4] = {2, 12, 2, 2}, DN[4] = {2, 12, 12, 24};

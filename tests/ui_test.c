@@ -1391,7 +1391,7 @@ static int test_categories(void)
     for (e = 0; e < NENGINES; e++) {
         const char *c = PRESET_CAT[e];
         if (!eng_ok(e) || e == ENGI_DIGITAL) continue;    /* (DIGITAL: FELUCCA_FM4 builds only, its sounds no category) */
-        ok &= str_len(c) == ENGINES[e]->npresets;
+        ok &= e == ENGI_FMINI ? str_len(c) == FMINI_NFACTORY : str_len(c) == ENGINES[e]->npresets;   /* (FMINI: the 100 factory letters; INIT slots are OTHER) */
         for (k = 0; k < ENGINES[e]->npresets; k++)
             ok &= preset_cat(e, k) >= CAT_BASS && preset_cat(e, k) <= CAT_OTHER;
     }
@@ -1423,8 +1423,10 @@ static int test_categories(void)
         track_t before = *TSEL;
         ui.msg_t = 0;
         turn(EN_PRESET, 1);
-        bad += check("  OTHER is empty (no factory sound): NO SOUNDS IN LIST, the sound stays",
-                     msg_is("NO SOUNDS IN LIST") && !memcmp(TSEL, &before, sizeof before));
+        /* 1.14.0: OTHER holds FMINI's INIT slots (100..199): the PRESETS knob goes there and loads one */
+        bad += check("  OTHER: FMINI's INIT slots, the knob loads one of them",
+                     track_cat(TSEL) == CAT_OTHER && TSEL->eng_req == ENGI_FMINI && TSEL->p[P_E7] >= (int32_t)FMINI_NFACTORY);
+        (void)before;
     }
 #endif
     {   /* the settings: the category's byte, unknown = none; FAV clears it */
@@ -1455,6 +1457,7 @@ static int test_categories(void)
         ok &= set_later.on;                                /* (still on PRESETS, touched 3 s ago: not yet) */
         frames(SET_LATER_MS);
         ok &= !set_later.on;                               /* idle: written */
+        scrn.idle = fm1_ms;                            /* the user is at the panel again (the idle clock from the 13 s wait above) */
         turn(EN_K4, -2);
         turn(EN_K3, -1);
         ok2 = set_later.on && list_mode() == m0;
@@ -9615,6 +9618,7 @@ static int test_edit_quick_actions(void)
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
+    fb_names_init();                              /* the RAM presets of FMINI (main.c: fmini_init, fb_boot) */
     int bad = 0;
     bad += test_large_face();
     bad += test_sound_loads();

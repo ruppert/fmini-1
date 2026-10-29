@@ -1383,6 +1383,8 @@ static void apply_preset_to(track_t *t, uint32_t pi)
         for (i = 0; i < 4u; i++)
             t->p[P_DIST + i] = (int16_t)(pr->fx[i] ? pr->fx[i] - 1 : FX_DEF[i]);
     }
+    if (t->eng_req == ENGI_FMINI)                     /* FMINI: a preset is its slot (0..199), the same way for every one */
+        t->p[P_E7] = (int16_t)pi;
     fm6_track_loaded(t);                              /* FM6: the preset's patch (its SLOT) */
     fmini_track_loaded(t);                             /* FMINI: the same */
     load_end(t);
