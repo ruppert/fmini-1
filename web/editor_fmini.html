@@ -97,7 +97,6 @@
   .mini:hover { border-color: var(--mute); }
   .mini.warn:hover { border-color: var(--bad); color: var(--bad); }
   .libname { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .libname input { background: #0f0e0d; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; color: var(--fg); font: 600 14px var(--mono); width: 180px; text-transform: uppercase; }
   #busy { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--or); color: #1a0e05; font-weight: 700; padding: 10px 18px; border-radius: 10px; box-shadow: 0 6px 28px #000a; z-index: 9; max-width: 92vw; text-align: center; }
   #busy[hidden] { display: none; }
   .busy .bar, .busy nav.tabs, .busy main.panel, .busy .tools { pointer-events: none; opacity: .5; }
@@ -167,12 +166,8 @@ const TX = {
     nonames: "Atualização disponível: este firmware envia só os nomes dos %n primeiros presets. Instale o FMini-1 v1.7.2 ou mais novo para ver todos.",
     noeng: "A trilha 1 não está com o motor FMINI.", lost: "A conexão com o aparelho foi perdida.", timeout: "O aparelho não respondeu.",
     badfile: "Arquivo de som inválido.", rnd: "Aleatorizar", amt: "Variação", abcopy: "Copiar A → B", abcopyb: "Copiar B → A", abtip: "Alterna entre dois ajustes para comparar",
-    lib: "BIBLIOTECA", libname: "Nome para salvar", libsave: "Salvar aqui", libload: "Carregar", libexp: "Exportar", liberase: "Apagar", libempty: "— vazio —",
-    libother: "outro motor", libtitle: "Meus presets (U01–U32)", libexpall: "Exportar biblioteca", libimpall: "Importar biblioteca", factexp: "Exportar banco de fábrica",
-    libhint: "“Salvar aqui” grava no aparelho o som que está tocando: o patch, os knobs, o andamento, a oitava e os ajustes de efeitos.",
-    busysave: "Gravando no aparelho… não desconecte o USB.", busyimp: "Importando… não desconecte o USB.", busyfact: "Lendo o banco de fábrica…", busyread: "Lendo…",
-    askover: "Esse slot já tem um preset (%n). Substituir?", askerase: "Apagar o preset %n?", askimp: "Gravar %c presets da biblioteca nos slots do aparelho? Os presets desses slots serão substituídos e o som que está tocando será trocado.",
-    imported: "Biblioteca importada.", exported: "Arquivo salvo.", factdone: "Banco de fábrica exportado.", libfail: "O aparelho recusou a gravação.", loaded: "Som carregado no aparelho.", saved: "Som salvo em arquivo." },
+    lib: "PRESETS", libload: "Carregar", libempty: "— vazio —", libtitle: "Presets do aparelho (000–199)", factexp: "Exportar banco de fábrica",
+    libhint: "000–099 are factory presets; 100–199 start as INIT. To store the sound that is playing into a slot, use SAVE on the device. Over MIDI (Program Change) only the numbers 0–127 are reachable.", busyfact: "Lendo o banco de fábrica…", busyread: "Lendo…", factdone: "Banco de fábrica exportado.", loaded: "Som carregado no aparelho.", saved: "Som salvo em arquivo." },
   en: { editor: "Editor", connect: "Connect", disconnect: "Disconnect", connecting: "Connecting…", disc: "Disconnected",
     conn: "Connected — FMini-1", save: "Save sound", open: "Open sound", home: "FMini-1 site",
     foot1: "Works in Chrome, Edge and Android (Web MIDI with SysEx). Edits change the sound that is playing; to keep it, use the device's own SAVE.",
@@ -188,19 +183,15 @@ const TX = {
     nonames: "Update available: this firmware sends only the names of the first %n presets. Install FMini-1 v1.7.2 or newer to see them all.",
     noeng: "Track 1 is not on the FMINI engine.", lost: "The connection to the device was lost.", timeout: "The device did not answer.",
     badfile: "Invalid sound file.", rnd: "Randomize", amt: "Amount", abcopy: "Copy A → B", abcopyb: "Copy B → A", abtip: "Switch between two settings to compare",
-    lib: "LIBRARY", libname: "Name to save", libsave: "Save here", libload: "Load", libexp: "Export", liberase: "Erase", libempty: "— empty —",
-    libother: "other engine", libtitle: "My presets (U01–U32)", libexpall: "Export library", libimpall: "Import library", factexp: "Export factory bank",
-    libhint: "“Save here” stores the sound that is playing in the device: the patch, the knobs, the tempo, the octave and the effect settings.",
-    busysave: "Writing to the device… do not unplug USB.", busyimp: "Importing… do not unplug USB.", busyfact: "Reading the factory bank…", busyread: "Reading…",
-    askover: "This slot already holds a preset (%n). Replace it?", askerase: "Erase preset %n?", askimp: "Write %c presets of the library into the device's slots? Those slots will be replaced and the sound that is playing will change.",
-    imported: "Library imported.", exported: "File saved.", factdone: "Factory bank exported.", libfail: "The device refused the write.", loaded: "Sound loaded into the device.", saved: "Sound saved to a file." },
+    lib: "PRESETS", libload: "Load", libempty: "— empty —", libtitle: "Device presets (000–199)", factexp: "Export factory bank",
+    libhint: "“Save here” stores the sound that is playing in the device: the patch, the knobs, the tempo, the octave and the effect settings.", busyfact: "Reading the factory bank…", busyread: "Reading…", factdone: "Factory bank exported.", loaded: "Sound loaded into the device.", saved: "Sound saved to a file." },
 };
 const LANG = /^pt/i.test(navigator.language || "") ? "pt" : "en";
 const T = (k, o) => { let t = TX[LANG][k] || k; for (const x in o || {}) t = t.replace("%" + x, o[x]); return t; };
 document.documentElement.lang = LANG === "pt" ? "pt-BR" : "en";
 
 /* ---------------------------------------------------------------- protocol --- */
-const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, PRESET: 8, NAMES: 10, TRACK: 27, UP_LIST: 16, UP_GET: 17, UP_STORE: 19, UP_LOAD: 20, UP_ERASE: 21, FMINI_GET: 82, FMINI_PUT: 83, FMINI_PRESET: 84 };
+const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, PRESET: 8, NAMES: 10, TRACK: 27, FMINI_GET: 82, FMINI_PUT: 83, FMINI_PRESET: 84 };
 const FG = { R1: 0, R2: 1, R3: 2, W1: 3, W2: 4, W3: 5, F2: 6, F3: 7, L1: 8, L2: 9, L3: 10, LN: 11, SW1: 12, SW2: 13, TUNE: 14, MMIX: 15, KBD: 16, GLID: 17, SIZE: 32 };
 const FS = { O1: 1, O2: 2, O3: 4, NZ: 8, PINK: 16, MOSC: 32, MFLT: 64 }, FT = { GLIDE: 1, SQR: 2 };
 /* track parameters (core.h; all but E0..E7 are fixed ids) and globals */
@@ -575,7 +566,7 @@ let cur = 0;                                   /* the patch the page last asked 
 async function loadPreset(k) {
   if (!(k >= 0 && k < S.names.length)) return;
   cur = k; touch.until = Date.now() + 800;
-  try { await req(CMD.PRESET, [S.fmini, k], 1500); await sleep(60); await pull(true); } catch (e) { fail(e); }
+  try { await req(CMD.PRESET, [S.fmini, k & 127, k >> 7], 1500); await sleep(60); await pull(true); } catch (e) { fail(e); }
 }
 $("preset").addEventListener("change", (e) => loadPreset(+e.target.value));
 $("prev").addEventListener("click", () => loadPreset((cur + S.names.length - 1) % S.names.length));
@@ -637,7 +628,6 @@ $("file").addEventListener("change", async (e) => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   try {
     const o = JSON.parse(await f.text());
-    if (o.fmini1lib === 1) { await importLibrary(o); return; }
     if (!validSound(o)) throw 0;
     if (!S.canPatch) throw 0;
     applySnap(objectToSnap(o)); msg(T("loaded"));
@@ -689,112 +679,24 @@ async function withBusy(text, fn) {
   busy(text); const keep = touch.until; touch.until = Date.now() + 3600e3;
   try { return await fn(); } finally { touch.until = Date.now() + 600; busy(""); void keep; }
 }
-async function libList() {
-  const out = [];
-  for (const s0 of [0, 16]) {
-    const r = await req(CMD.UP_LIST, [s0, 16], 1500);
-    let j = 3;
-    for (let k = 0; k < r[1]; k++) { const used = r[j++], eng = r[j++]; let nm; [nm, j] = cstr(r, j); out[s0 + k] = { used, eng, name: nm }; }
-  }
-  return out;
-}
-const slotName = (i) => "U" + String(i + 1).padStart(2, "0");
-async function libRead(slot) {                                    /* a stored preset as a sound object, without loading it */
-  const r = await req(CMD.UP_GET, [slot], 1500);
-  let j = 2; j++; /* engine */
-  let nm; [nm, j] = cstr(r, j);
-  const p = []; for (let k = 0; k < S.pCount; k++) p.push(rv(r, j + 2 * k));
-  const q = await req(CMD.FMINI_GET, [3, slot], 1500);
-  if (q[2] !== 0) throw new Error("lost");
-  const g = {}; let oct = 0;
-  if (S.extras) {                                                   /* the tempo, the octave and the FX globals the preset kept */
-    const x = await req(CMD.FMINI_PRESET, [slot], 1500), v = []; for (let k = 0; k < 14; k++) v.push(rv(x, 2 + 2 * k));
-    if (x[1] === 0) {
-      if (v[1] > 0) oct = v[1] - 4;
-      if (v[0] >= 40) g[G.BPM] = v[0];
-      [G.RSIZE, G.DRREV, G.CRATE, G.DRLVL].forEach((id, k) => { if (v[2 + k] > 0) g[id] = v[2 + k] - 1; });
-      [G.RTYPE, G.RDAMP, G.DTIME, G.DFDBK, G.ENGGO, G.CDEPTH, G.INFO, G.MIDI].forEach((id, k) => { if (v[6 + k] > 0) g[id] = v[6 + k] - 1; });
-    }
-  }
-  return soundObject(nm, q.slice(3, 3 + FG.SIZE), p, g, oct);
-}
-async function libStore(slot, name) {
-  const nm = [...name.toUpperCase().slice(0, 12)].map((c) => c.charCodeAt(0)).filter((c) => c >= 32 && c <= 126);
-  const r = await req(CMD.UP_STORE, [slot, ...nm, 0], 8000);
-  return r[1] === 0;
-}
+/* the PRESETS tab: the device's own 200 slots (0..99 factory, 100..199 INIT), named by NAMES and loaded with PRESET.
+   Nothing is written from here: a slot is written on the device itself (SAVE) */
 async function buildLib() {
   const panel = $("panel"); panel.textContent = "";
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
   const btn = (text, fn, cls) => { const b = mk("button", cls || "btn", text); b.addEventListener("click", fn); return b; };
-  const g1 = mk("section", "grp"), row = mk("div", "libname");
-  g1.append(mk("h2", "", T("libname")));
-  const inp = mk("input"); inp.id = "libname"; inp.maxLength = 12; inp.value = curName().slice(0, 12); inp.setAttribute("aria-label", T("libname")); row.append(inp);
-  row.append(btn(T("libexpall"), exportLibrary), btn(T("libimpall"), () => { $("file").click(); }), btn(T("factexp"), exportFactory));
-  g1.append(row); const hint = mk("div", "", T("libhint")); hint.style.cssText = "margin-top:10px;color:var(--mute);font-size:13px"; g1.append(hint);
-  const g2 = mk("section", "grp"); g2.append(mk("h2", "", T("libtitle")));
+  const g1 = mk("section", "grp"), row = mk("div", "libname"), hint = mk("div", "", T("libhint"));
+  hint.style.cssText = "margin-top:10px;color:var(--mute);font-size:13px";
+  g1.append(mk("h2", "", T("libtitle")), row, hint);
+  row.append(btn(T("factexp"), exportFactory));
+  const g2 = mk("section", "grp"); g2.append(mk("h2", "", T("lib")));
   const grid = mk("div", "slots"); g2.append(grid); panel.append(g1, g2);
-  let list;
-  try { list = await libList(); } catch (e) { fail(e); return; }
-  if (!PAGES[S.page].lib) return;
-  list.forEach((it, i) => {
-    const used = it.used === 1, mine = used && it.eng === S.fmini;
-    const c = mk("div", "slot" + (!used ? " empty" : mine ? "" : " other"));
-    c.append(mk("div", "sn", slotName(i)), mk("div", "nm", !used ? T("libempty") : mine ? it.name : it.name + " · " + T("libother")));
-    const act = mk("div", "act");
-    act.append(btn(T("libsave"), () => saveSlot(i, it, inp.value), "mini"));
-    if (mine) { act.append(btn(T("libload"), () => loadSlot(i), "mini"), btn(T("libexp"), () => exportSlot(i), "mini")); }
-    if (used) act.append(btn(T("liberase"), () => eraseSlot(i, it), "mini warn"));
-    c.append(act); grid.append(c);
+  S.names.forEach((nm, i) => {
+    const c = mk("div", "slot" + (nm ? "" : " empty"));
+    c.append(mk("div", "sn", String(i).padStart(3, "0")), mk("div", "nm", nm || T("libempty")));
+    c.append(mk("div", "act")); c.lastChild.append(btn(T("libload"), () => loadPreset(i), "mini"));
+    grid.append(c);
   });
-}
-const libRefresh = () => { if (PAGES[S.page].lib) buildLib(); };
-async function saveSlot(i, it, name) {
-  name = (name.trim() || curName()).toUpperCase();
-  if (it.used === 1 && !confirm(T("askover", { n: slotName(i) + " " + it.name }))) return;
-  try {
-    const ok = await withBusy(T("busysave"), () => libStore(i, name));
-    msg(ok ? T("saved") : T("libfail"), !ok);
-  } catch (e) { fail(e); return; }
-  libRefresh();
-}
-async function loadSlot(i) {
-  try { await withBusy(T("busyread"), async () => { await req(CMD.UP_LOAD, [i], 1500); await sleep(80); await pull(true); }); } catch (e) { fail(e); }
-}
-async function eraseSlot(i, it) {
-  if (!confirm(T("askerase", { n: slotName(i) + " " + it.name }))) return;
-  try { await withBusy(T("busysave"), () => req(CMD.UP_ERASE, [i], 8000)); } catch (e) { fail(e); return; }
-  libRefresh();
-}
-async function exportSlot(i) {
-  try { const o = await withBusy(T("busyread"), () => libRead(i)); download(o, slug(o.name) + ".json"); msg(T("exported")); } catch (e) { fail(e); }
-}
-async function exportLibrary() {
-  try {
-    const slots = await withBusy(T("busyread"), async () => {
-      const list = await libList(), out = [];
-      for (let i = 0; i < list.length; i++) if (list[i].used === 1 && list[i].eng === S.fmini) out.push({ slot: i, sound: await libRead(i) });
-      return out;
-    });
-    download({ fmini1lib: 1, slots }, "fmini-1-library.json"); msg(T("exported"));
-  } catch (e) { fail(e); }
-}
-async function flushNow() { clearTimeout(flushT); flushT = 0; await flush(); }
-async function importLibrary(o) {
-  const items = (o.slots || []).filter((x) => x && x.slot >= 0 && x.slot < 32 && validSound(x.sound));
-  if (!items.length || !S.canPatch) throw 0;
-  if (!confirm(T("askimp", { c: items.length }))) return;
-  try {
-    await withBusy(T("busyimp"), async () => {
-      for (const it of items) {
-        applySnap(objectToSnap(it.sound)); await flushNow();
-        if (!(await libStore(it.slot, it.sound.name || slotName(it.slot)))) throw bad("libfail");
-      }
-      await pull(true);
-    });
-    msg(T("imported"));
-  } catch (e) { if (e && e.code === "libfail") msg(T("libfail"), true); else fail(e); }
-  libRefresh();
 }
 async function exportFactory() {
   const before = currentSound("");
@@ -802,14 +704,14 @@ async function exportFactory() {
     const slots = await withBusy(T("busyfact"), async () => {
       const out = [];
       for (let k = 0; k < 100; k++) {                     /* the factory bank: slots 0..99 (100..199 are INIT) */
-        await req(CMD.PRESET, [S.fmini, k], 1500); await sleep(30);
+        await req(CMD.PRESET, [S.fmini, k & 127, k >> 7], 1500); await sleep(30);
         const d = await req(CMD.DUMP, [], 1500), q = await req(CMD.FMINI_GET, [0, 0], 1500);
         const p = []; for (let i = 0; i < S.pCount; i++) p.push(rv(d, 2 + 2 * i));
         out.push({ slot: k, sound: soundObject(S.names[k], q.slice(3, 3 + FG.SIZE), p) });
       }
       return out;
     });
-    download({ fmini1lib: 1, factory: 1, slots }, "fmini-1-factory-bank.json"); msg(T("factdone"));
+    download({ fmini1: 1, factory: 1, slots }, "fmini-1-factory-bank.json"); msg(T("factdone"));
   } catch (e) { fail(e); return; }
   try { await pull(true); applySnap(objectToSnap(before)); } catch (e) { fail(e); }   /* (the sound that was playing comes back) */
 }

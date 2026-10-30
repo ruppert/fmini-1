@@ -347,7 +347,9 @@ static int ed_args_ok(uint32_t cmd, const uint8_t *a, uint32_t n)
     case ED_INFO: case ED_DUMP: case ED_SMP_INFO: case ED_PING:
     case ED_UI_STATE: case ED_UI_PALETTES: case ED_LEARN_GET: case ED_PALETTE_GET:
         return !n;
-    case ED_GET: case ED_DESC: case ED_PRESET: case ED_PROJECT: case ED_UP_LIST:
+    case ED_PRESET:                                        /* engine, preset (7 bits; 3 bytes: two 7-bit bytes, 0..199 for FMini-1) */
+        return n == 2u || n == 3u;
+    case ED_GET: case ED_DESC: case ED_PROJECT: case ED_UP_LIST:
     case ED_TRACK_PARAM:
         return n == 2u || (cmd == ED_TRACK_PARAM && n == 4u);
     case ED_SET:
@@ -531,7 +533,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         {
             if (a[0] != TSEL->eng_req)
                 set_engine(a[0]);
-            apply_preset(a[1]);
+            apply_preset(na >= 3u ? (uint32_t)a[1] | (uint32_t)a[2] << 7 : a[1]);   /* preset: lo, hi (protocol 3) */
         }
         ed_load_after(&b);
         ui.force = 1;
