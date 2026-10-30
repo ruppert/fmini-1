@@ -1834,6 +1834,22 @@ static void fa_mono(void)
     }
 }
 
+/* a reset (fb_rs_apply) changes the preset's record in flash; the track that shows it keeps the old values in RAM,
+ * so it is loaded again here (only the FMINI track on its own preset, or every reset of all of them) */
+static void fa_reload_reset(void)
+{
+    track_t *t = TSEL;
+    uint32_t cur;
+    if (t->eng_req != ENGI_FMINI)
+        return;
+    cur = t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NSLOT ? (uint32_t)t->p[P_E7] : FMINI_NSLOT;
+    if (cur >= FMINI_NSLOT || (fb_rs_k != FB_RS_ALL && cur != fb_rs_k))
+        return;
+    apply_preset_to(t, cur);
+    t->p[P_E7] = (int16_t)cur;
+    fa_factory_extras(t, cur);
+}
+
 static void fa_input(void)
 {
     uint32_t pressed = fm1_input_edges(0), k;
@@ -1850,8 +1866,12 @@ static void fa_input(void)
             }
             if ((pressed >> panel.btn[B_SAVE]) & 1u) {
                 fb_rs = fb_rs_yes ? FB_RS_OK : FB_RS_NO;
-                if (fb_rs == FB_RS_OK && fb_rs_k != FB_NSLOT && fb_rs_apply() != 0)   /* a reset: done here, at YES */
-                    fb_rs = FB_RS_NO;
+                if (fb_rs == FB_RS_OK && fb_rs_k != FB_NSLOT) {                        /* a reset: done here, at YES */
+                    if (fb_rs_apply() != 0)
+                        fb_rs = FB_RS_NO;
+                    else
+                        fa_reload_reset();
+                }
             }
             fb_rs_touch();
             ui.force = 1;
