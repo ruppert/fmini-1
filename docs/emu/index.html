@@ -59,6 +59,10 @@ a { color: inherit; }
 .latched .face { stroke: #79b8ff; stroke-width: 3; }
 .site { display: block; width: fit-content; margin: 0 auto 14px; padding: 10px 20px; border-radius: 10px; background: #ff7a1a; color: #1a0e05; font-weight: 800; font-size: 15px; text-decoration: none; }
 .site:hover { background: #ff9440; }
+.sitebar { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 auto 14px; }
+.sitebar .site { margin: 0; }
+.sitebar .donate { background: transparent; color: #ff9a4d; border: 1px solid #ff7a1a; }
+.sitebar .donate:hover { background: #2a1a0e; }
 .start { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px;
          background: rgba(0, 0, 0, .5); border-radius: 4% / 6%; }
 .start[hidden] { display: none; }
@@ -76,7 +80,10 @@ footer small { font-size: 11px; opacity: .8; }
 </head>
 <body>
 <main>
+<div class="sitebar">
 <a class="site" href="../">FMini-1 official website &rarr;</a>
+<a class="site donate" href="https://ko-fi.com/ruppert" target="_blank" rel="noopener">Support the project &#9749;</a>
+</div>
 <div class="device" id="device">
   <svg id="panel" viewBox="0 0 1000 624" aria-hidden="true"></svg>
   <canvas id="screen" width="240" height="240" role="img" aria-label="The screen"></canvas>

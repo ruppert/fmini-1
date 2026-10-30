@@ -37,6 +37,7 @@
   .lang { font: 600 12px/1 var(--mono); color: var(--dim); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; cursor: pointer; }
   .lang:hover { color: var(--fg); border-color: var(--mute); }
   header.nav nav a.try .ts { display: none; }
+  header.nav nav a.donate { color: var(--or2); }
   /* a phone: the section links go, the emulator's ("Try in browser") and Install stay; on a narrow one the short label */
   @media (max-width: 720px) {
     header.nav nav a:not(.keep):not(.try) { display: none; }
@@ -46,6 +47,13 @@
     header.nav nav a.try { color: var(--fg); border: 1px solid var(--line); }
   }
   @media (max-width: 430px) { header.nav nav a.try .tl { display: none; } header.nav nav a.try .ts { display: inline; } }
+  .tipbg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .tipbg[hidden] { display: none; }
+  .tipbox { background: var(--surface2, #1b1917); border: 1px solid var(--line); border-radius: 14px; padding: 22px; max-width: 380px; color: var(--fg); }
+  .tipbox h3 { margin: 0 0 8px; font-size: 18px; }
+  .tipbox p { margin: 0 0 16px; color: var(--dim); line-height: 1.45; }
+  .tipgo { display: inline-block; background: var(--or); color: #1a0e05; font-weight: 700; text-decoration: none; padding: 10px 16px; border-radius: 10px; margin-right: 8px; }
+  .tipx { background: none; border: 1px solid var(--line); color: var(--dim); padding: 10px 14px; border-radius: 10px; cursor: pointer; font: inherit; }
 
   /* hero */
   .hero { padding: 72px 0 0; }
@@ -236,6 +244,7 @@
       <a href="#feat" data-t="nav_ft"></a>
       <a href="editor/" data-t="nav_ed"></a>
       <a href="emu/" class="try"><span class="tl" data-t="nav_try"></span><span class="ts" data-t="nav_try_s"></span></a>
+      <a href="https://ko-fi.com/ruppert" class="try donate" target="_blank" rel="noopener"><span class="tl" data-t="donate"></span><span class="ts" data-t="donate_s"></span></a>
       <a href="#install" class="keep" data-t="nav_i"></a>
     </nav>
     <button class="lang" id="lang" aria-label="Language"></button>
@@ -392,7 +401,7 @@ const TEXT = {
     beta: "O FMini-1 é uma versão experimental. O autor não se responsabiliza se o seu FM-1 for danificado ou se comportar de forma estranha por causa deste firmware personalizado. Use por sua conta e risco.",
     nomidi: "Este navegador não consegue. Abra a página no Chrome ou no Edge.", loadfail: "Não foi possível carregar: ",
     start: "Iniciando", verify: "Verificando", loader: "Entrando no modo de atualização", write: "Gravando",
-    reboot: "Reiniciando", done: "Pronto! O FM-1 agora é um FMini-1", stopped: "Interrompido. Desconecte e reconecte o USB e aperte Instalar de novo.",
+    reboot: "Reiniciando", done: "Pronto! O FM-1 agora é um FMini-1", tip_t: "Firmware instalado!", tip_b: "Se você gostar dele, considere dar uma ajuda (tip) para o projeto. Obrigado!", tip_go: "Apoiar no Ko-fi", tip_x: "Fechar", donate: "Apoiar", donate_s: "☕", stopped: "Interrompido. Desconecte e reconecte o USB e aperte Instalar de novo.",
     error: "Erro: ",
     denied: "O acesso ao MIDI (SysEx) não foi permitido. Permita o MIDI nas configurações do site (barra de endereço) e aperte Instalar de novo.",
     notfound: "FM-1 não encontrado. Confira o cabo USB (precisa ser de dados), feche outros apps que usam MIDI e aperte Instalar de novo.",
@@ -424,7 +433,7 @@ const TEXT = {
     beta: "FMini-1 is an experimental release. The author accepts no responsibility if your FM-1 is damaged or misbehaves because of this custom firmware. Use it at your own risk.",
     nomidi: "This browser cannot do it. Open the page in Chrome or Edge.", loadfail: "Could not load: ",
     start: "Starting", verify: "Verifying", loader: "Switching to update mode", write: "Writing",
-    reboot: "Restarting", done: "Done", stopped: "Stopped. Replug the USB cable and press Install again.",
+    reboot: "Restarting", done: "Done", tip_t: "Firmware installed!", tip_b: "If you like it, consider a tip to support the project. Thank you!", tip_go: "Support on Ko-fi", tip_x: "Close", donate: "Support", donate_s: "☕", stopped: "Stopped. Replug the USB cable and press Install again.",
     error: "Error: ",
     denied: "MIDI (SysEx) access was not allowed. Allow MIDI in the site settings (address bar) and press Install again.",
     notfound: "FM-1 not found. Check the USB cable (a data cable), close other apps that use MIDI, and press Install again.",
@@ -607,13 +616,16 @@ let lastKey = null, lastArg = "";
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach((e) => { e.textContent = t(e.dataset.t); });
+  $("tipx").textContent = t("tip_x");
   $("lang").textContent = lang === "pt" ? "PT" : "EN";
   if (lastKey) $("status").textContent = t(lastKey) + lastArg;
   renderSite();
 }
+$("tipx").addEventListener("click", () => { $("tip").hidden = true; });
+$("tip").addEventListener("click", (e) => { if (e.target.id === "tip") $("tip").hidden = true; });
 $("lang").addEventListener("click", () => { lang = LANGS[(LANGS.indexOf(lang) + 1) % LANGS.length]; applyLang(); });
 applyLang();
-const sayK = (k, arg = "") => { lastKey = k; lastArg = arg; $("status").textContent = t(k) + arg; document.body.classList.toggle("bad", ["error","denied","notfound","model","lost","noloader","noreturn","mismatch","badpkg","stopped","loadfail","nomidi"].includes(k)); };
+const sayK = (k, arg = "") => { lastKey = k; lastArg = arg; $("status").textContent = t(k) + arg; if (k === "done") $("tip").hidden = false; document.body.classList.toggle("bad", ["error","denied","notfound","model","lost","noloader","noreturn","mismatch","badpkg","stopped","loadfail","nomidi"].includes(k)); };
 const say = (txt) => { lastKey = null; $("status").textContent = txt; };
 const log = (t) => { $("log").textContent += t + "\n"; };
 const PHASES = ["verify", "loader", "write", "reboot", "done"];
@@ -826,5 +838,9 @@ $("go").addEventListener("click", () => runInstall(null));
   layout();
 })();
 </script>
+<div class="tipbg" id="tip" hidden><div class="tipbox" role="dialog" aria-modal="true" aria-labelledby="tipt">
+  <h3 id="tipt" data-t="tip_t"></h3><p data-t="tip_b"></p>
+  <a class="tipgo" href="https://ko-fi.com/ruppert" target="_blank" rel="noopener" data-t="tip_go"></a><button class="tipx" id="tipx" data-t="tip_x"></button>
+</div></div>
 </body>
 </html>
