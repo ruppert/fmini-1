@@ -725,24 +725,40 @@ async function refreshPresets() {
   await readNames(); fillPreset(); await pull(true);
   if (PAGES[S.page].lib) buildLib();
 }
+/* the device asks on its panel (YES: it does the reset itself); args: [0, slot lo, hi] one preset, [3] every factory preset */
+async function askDevice(args, text) {
+  let asked = false;
+  try {
+    await withBusy(T("waitdev"), async () => {
+      const r = await req(CMD.FMINI_RESTORE, args, 1500);
+      if (r[1] !== 0 || r[2] !== 1) throw bad("refused");
+      asked = true;
+      const t0 = Date.now();
+      for (;;) {                                           /* YES (2), or NO / a silent 60 s (3) */
+        await sleep(300);
+        const st = (await req(CMD.FMINI_RESTORE, [1], 1500))[2];
+        if (st === 2) break;
+        if (st !== 1 || Date.now() - t0 > 90000) throw bad("refused");
+      }
+      busy(text);
+    });
+  } catch (e) {
+    if (asked) { try { await req(CMD.FMINI_RESTORE, [2], 1500); } catch (_) { /* (the device ends the question on its own) */ } }
+    throw e;
+  }
+  await req(CMD.FMINI_RESTORE, [2], 1500);
+}
 async function resetOne(k) {
   if (!S.canPatch) return;
-  if (!confirm(T("askreset", { n: String(k).padStart(3, "0") + " " + (S.names[k] || "") }))) return;
   try {
-    await withBusy(T("busyreset"), () => fmReset(k));
+    await askDevice([0, k & 127, k >> 7], T("busyreset"));
     await refreshPresets(); msg(T("resetdone"));
   } catch (e) { msg(T(e.code || "lost"), true); }
 }
 async function resetAllFactory() {
   if (!S.canPatch) return;
-  if (!confirm(T("askresetall"))) return;
   try {
-    await withBusy(T("busyreset"), async () => {
-      for (let k = 0; k < FACTORY_N; k++) {
-        await fmReset(k);
-        if (k % 10 === 9) busy(T("busyreset") + " " + (k + 1) + "/" + FACTORY_N);
-      }
-    });
+    await askDevice([3], T("busyreset"));
     await refreshPresets(); msg(T("resetdone"));
   } catch (e) { msg(T(e.code || "lost"), true); }
 }

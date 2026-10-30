@@ -278,6 +278,10 @@ static void fb_names_init(void)
 enum { FB_RS_IDLE = 0, FB_RS_ASK, FB_RS_OK, FB_RS_NO };
 #define FB_RS_TIMEOUT 60000u
 static uint8_t fb_rs;                         /* the state (the device's answer is in it) */
+/* what the question is for (1.14.1): a slot (< FB_NSLOT: its factory preset, done on the device at YES), FB_NSLOT (a backup:
+ * the editor writes the presets after OK) or FB_RS_ALL (every factory preset, done at YES) */
+#define FB_RS_ALL (FB_NSLOT + 1u)
+static uint32_t fb_rs_k = FB_NSLOT;
 static uint8_t fb_rs_yes;                     /* the question's answer as ALGORITHM sets it: 1 = YES (NO by default) */
 static uint32_t fb_rs_t;                      /* the last word from the editor or the user */
 static uint8_t fb_rs_state(void)
@@ -312,6 +316,19 @@ static int fb_forget(uint32_t k)
     n = fb_factory_rec(k, rec);
     fb_slot_init(k, rec, n);
     return 0;
+}
+
+/* the question's YES for a reset (fb_rs_k): one slot's or all the factory presets' (fb_forget). 0 = done */
+static int fb_rs_apply(void)
+{
+    uint32_t k;
+    if (fb_rs_k == FB_RS_ALL) {
+        for (k = 0; k < FB_NSLOT; k++)
+            if (fb_forget(k) != 0)
+                return -1;
+        return 0;
+    }
+    return fb_rs_k < FB_NSLOT ? fb_forget(fb_rs_k) : 0;
 }
 
 #endif /* FMINI_BANK_C */

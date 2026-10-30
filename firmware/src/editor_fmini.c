@@ -70,21 +70,30 @@ static void ed_fmini_rec_put(const uint8_t *a, uint32_t n)
  * 2 END (the restore is over: IDLE). State: 0 idle, 1 the question is up, 2 accepted (write now), 3 refused or timed out */
 static void ed_fmini_restore(const uint8_t *a, uint32_t n)
 {
-    uint32_t rc = 0;
-    if (n != 1u)
+    /* 0 ask: no args = a backup (the editor writes the 200 after YES); 0, slot lo, hi = that slot's factory preset (done
+     * on the device at YES); 3 ask: every factory preset (done at YES). 1 status, 2 end. rc 1: arguments */
+    uint32_t rc = 0, k = FB_NSLOT;
+    if (n == 3u && a[0] == 0u) {
+        k = (uint32_t)a[1] | (uint32_t)a[2] << 7;
+        if (k >= FB_NSLOT)
+            rc = 1;
+    } else if (n == 1u && a[0] == 3u)
+        k = FB_RS_ALL;
+    else if (n != 1u || a[0] > 3u || a[0] == 3u)
         rc = 1;
-    else if (a[0] == 0u) {
+    if (!rc && (a[0] == 0u || a[0] == 3u)) {
         uint8_t st = fb_rs_state();
         if (st != FB_RS_ASK && st != FB_RS_OK) {
             fb_rs = FB_RS_ASK;
             fb_rs_yes = 0;
+            fb_rs_k = k;
             fb_rs_touch();
             ui.force = 1;
         }
-    } else if (a[0] == 2u) {
+    } else if (!rc && a[0] == 2u) {
         fb_rs = FB_RS_IDLE;
         ui.force = 1;
-    } else if (a[0] != 1u)
+    } else if (!rc && a[0] != 1u)
         rc = 1;
     ed_b(n ? a[0] : 127u); ed_b(rc); ed_b(fb_rs_state());
 }

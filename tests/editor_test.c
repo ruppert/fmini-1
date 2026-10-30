@@ -1503,6 +1503,18 @@ static int restore_protocol(void)
         bad += check("  .. the record is the factory's name", nn > 0u && fr_find(rec, nn, FR_NAME, &d, &l) &&
                      l == strlen(FMINI_PRESETS[150].name) && !memcmp(d, FMINI_PRESETS[150].name, l));
     }
+    {   /* 1.14.1: the reset is asked on the device: RESTORE 0 with a slot, RESTORE 3 with every factory preset, then 2 ends */
+        uint8_t q1[3] = {0, 150 & 127, 150 >> 7}, q3[1] = {3}, bad1[3] = {0, 200 & 127, 200 >> 7};
+        request(ED_FMINI_RESTORE, q1, 3);
+        bad += check("RESTORE 0 + a slot: asked (rc 0, state 1)", host_wire[6] == 0u && host_wire[7] == 1u);
+        request(ED_FMINI_RESTORE, (const uint8_t[]){2}, 1);
+        request(ED_FMINI_RESTORE, bad1, 3);
+        bad += check("RESTORE 0 + a slot past 199: rc 1", host_wire[6] == 1u);
+        request(ED_FMINI_RESTORE, q3, 1);
+        bad += check("RESTORE 3: every factory preset asked (rc 0, state 1)", host_wire[6] == 0u && host_wire[7] == 1u);
+        request(ED_FMINI_RESTORE, (const uint8_t[]){2}, 1);
+        bad += check("RESTORE 2: ended (state 0)", host_wire[7] == 0u);
+    }
     {   /* FACTORY RESET: slot 7 is its factory preset again (the name Z gone), an out-of-range slot is refused */
         uint8_t kk[2] = {7, 0};
         request(ED_FMINI_RESET, kk, 2);

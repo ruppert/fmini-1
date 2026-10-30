@@ -650,14 +650,25 @@ static void fa_restore_dialog(void)
     uint32_t i;
     cv_rect(10, 40, 220, 160, FA_OR);
     cv_rect(12, 42, 216, 156, bgd);
-    if (fb_rs == FB_RS_OK) {                              /* accepted: the editor is writing the presets */
-        fa_pc_text(120, 84, &AF_L, "RESTORING", FA_OR, bgd);
-        fa_pc_text(120, 124, &AF_M, "ALL 200 PRESETS", FA_CR, bgd);
-        fa_pc_text(120, 170, &AF_S, "DO NOT TURN OFF", FA_MU, bgd);
-        return;
+    /* what it is about: a backup (all 200 presets), one preset's reset, or every factory preset's */
+    {
+        char q[24] = "ALL 200 PRESETS";
+        const char *top = fb_rs_k == FB_RS_ALL ? "RESET ALL" : fb_rs_k == FB_NSLOT ? "OVERWRITE" : "RESET";
+        if (fb_rs_k < FB_NSLOT) {
+            str_cpy(q, "PRESET ", 24);
+            fa_slot_num(q + 7, fb_rs_k);
+        } else if (fb_rs_k == FB_RS_ALL)
+            str_cpy(q, "200 FACTORY", 24);
+        if (fb_rs == FB_RS_OK) {                          /* accepted: the device is writing (a backup) or has reset */
+            fa_pc_text(120, 84, &AF_L, fb_rs_k == FB_NSLOT ? "RESTORING" : "RESETTING", FA_OR, bgd);
+            fa_pc_text(120, 124, &AF_M, q, FA_CR, bgd);
+            fa_pc_text(120, 170, &AF_S, "DO NOT TURN OFF", FA_MU, bgd);
+            return;
+        }
+        str_cpy(q + str_len(q), "?", 2);
+        fa_pc_text(120, 52, &AF_L, top, FA_RED, bgd);
+        fa_pc_text(120, 92, &AF_M, q, FA_CR, bgd);
     }
-    fa_pc_text(120, 52, &AF_L, "OVERWRITE", FA_RED, bgd);
-    fa_pc_text(120, 92, &AF_M, "ALL 200 PRESETS?", FA_CR, bgd);
     for (i = 0; i < 2u; i++) {
         uint8_t sel = (i == 1u) == (fb_rs_yes != 0);
         cv_rect(BX[i], 118, 80, 36, sel ? FA_OR : FA_LINE);
@@ -1838,8 +1849,11 @@ static void fa_input(void)
                     if ((pressed >> panel.btn[RS_BTN[k]]) & 1u)
                         fb_rs = FB_RS_NO;
             }
-            if ((pressed >> panel.btn[B_SAVE]) & 1u)
+            if ((pressed >> panel.btn[B_SAVE]) & 1u) {
                 fb_rs = fb_rs_yes ? FB_RS_OK : FB_RS_NO;
+                if (fb_rs == FB_RS_OK && fb_rs_k != FB_NSLOT && fb_rs_apply() != 0)   /* a reset: done here, at YES */
+                    fb_rs = FB_RS_NO;
+            }
             fb_rs_touch();
             ui.force = 1;
         }
