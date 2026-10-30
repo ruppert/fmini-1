@@ -166,12 +166,14 @@ const TX = {
     nonames: "Atualização disponível: este firmware envia só os nomes dos %n primeiros presets. Instale o FMini-1 v1.7.2 ou mais novo para ver todos.",
     noeng: "A trilha 1 não está com o motor FMINI.", lost: "A conexão com o aparelho foi perdida.", timeout: "O aparelho não respondeu.",
     badfile: "Arquivo de som inválido.", rnd: "Aleatorizar", amt: "Variação", abcopy: "Copiar A → B", abcopyb: "Copiar B → A", abtip: "Alterna entre dois ajustes para comparar",
-    lib: "PRESETS", libload: "Carregar", libempty: "— vazio —", libtitle: "Presets do aparelho (000–199)", factexp: "Exportar banco de fábrica",
+    lib: "PRESETS", libload: "Carregar", libempty: "— vazio —", libtitle: "Presets do aparelho (000–199)",
+    resetall: "Restaurar todos os presets de fábrica", resetone: "Restaurar", askreset: "Restaurar o preset %n para o de fábrica? O que está gravado nele será substituído.",
+    askresetall: "Restaurar os 100 presets de fábrica (000–099)? O que está gravado neles será substituído.", busyreset: "Restaurando os presets de fábrica… não desconecte o USB.",
+    resetdone: "Presets de fábrica restaurados.", resetfail: "O aparelho não conseguiu restaurar o preset.",
     bakexp: "Fazer backup (.bkp)", bakimp: "Restaurar backup (.bkp)", busybak: "Lendo os 200 presets…", bakdone: "Backup salvo.",
     busyrest: "Gravando os 200 presets… não desconecte o USB.", waitdev: "Confirme no aparelho: ALGORITHM = YES, depois SAVE. Qualquer botão de página cancela.",
     restdone: "Presets restaurados.", refused: "Restauração recusada no aparelho (ou sem resposta).", restfail: "Falhou ao gravar no aparelho. Os presets gravados até aqui ficaram; refaça a restauração.",
-    badbkp: "Arquivo de backup inválido.", recfail: "O aparelho não devolveu um preset.",
-    libhint: "000–099 are factory presets; 100–199 start as INIT. To store the sound that is playing into a slot, use SAVE on the device. Over MIDI (Program Change) only the numbers 0–127 are reachable.", busyfact: "Lendo o banco de fábrica…", busyread: "Lendo…", factdone: "Banco de fábrica exportado.", loaded: "Som carregado no aparelho.", saved: "Som salvo em arquivo." },
+    badbkp: "Arquivo de backup inválido.", recfail: "O aparelho não devolveu um preset.", busyread: "Lendo…", loaded: "Som carregado no aparelho.", saved: "Som salvo em arquivo." },
   en: { editor: "Editor", connect: "Connect", disconnect: "Disconnect", connecting: "Connecting…", disc: "Disconnected",
     conn: "Connected — FMini-1", save: "Save sound", open: "Open sound", home: "FMini-1 site",
     foot1: "Works in Chrome, Edge and Android (Web MIDI with SysEx). Edits change the sound that is playing; to keep it, use the device's own SAVE.",
@@ -187,19 +189,21 @@ const TX = {
     nonames: "Update available: this firmware sends only the names of the first %n presets. Install FMini-1 v1.7.2 or newer to see them all.",
     noeng: "Track 1 is not on the FMINI engine.", lost: "The connection to the device was lost.", timeout: "The device did not answer.",
     badfile: "Invalid sound file.", rnd: "Randomize", amt: "Amount", abcopy: "Copy A → B", abcopyb: "Copy B → A", abtip: "Switch between two settings to compare",
-    lib: "PRESETS", libload: "Load", libempty: "— empty —", libtitle: "Device presets (000–199)", factexp: "Export factory bank",
+    lib: "PRESETS", libload: "Load", libempty: "— empty —", libtitle: "Device presets (000–199)",
+    resetall: "Restore all factory presets", resetone: "Restore", askreset: "Restore preset %n to its factory preset? What is saved in it will be replaced.",
+    askresetall: "Restore the 100 factory presets (000–099)? What is saved in them will be replaced.", busyreset: "Restoring the factory presets… do not unplug USB.",
+    resetdone: "Factory presets restored.", resetfail: "The device could not restore the preset.",
     bakexp: "Make backup (.bkp)", bakimp: "Restore backup (.bkp)", busybak: "Reading the 200 presets…", bakdone: "Backup saved.",
     busyrest: "Writing the 200 presets… do not unplug USB.", waitdev: "Confirm on the device: ALGORITHM = YES, then SAVE. Any page button cancels.",
     restdone: "Presets restored.", refused: "Restore refused on the device (or no answer).", restfail: "The device refused a write. The presets written so far stay; run the restore again.",
-    badbkp: "Invalid backup file.", recfail: "The device did not return a preset.",
-    libhint: "“Save here” stores the sound that is playing in the device: the patch, the knobs, the tempo, the octave and the effect settings.", busyfact: "Reading the factory bank…", busyread: "Reading…", factdone: "Factory bank exported.", loaded: "Sound loaded into the device.", saved: "Sound saved to a file." },
+    badbkp: "Invalid backup file.", recfail: "The device did not return a preset.", busyread: "Reading…", loaded: "Sound loaded into the device.", saved: "Sound saved to a file." },
 };
 const LANG = /^pt/i.test(navigator.language || "") ? "pt" : "en";
 const T = (k, o) => { let t = TX[LANG][k] || k; for (const x in o || {}) t = t.replace("%" + x, o[x]); return t; };
 document.documentElement.lang = LANG === "pt" ? "pt-BR" : "en";
 
 /* ---------------------------------------------------------------- protocol --- */
-const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, PRESET: 8, NAMES: 10, TRACK: 27, FMINI_GET: 82, FMINI_PUT: 83, FMINI_PRESET: 84, FMINI_REC: 85, FMINI_RPUT: 86, FMINI_RESTORE: 87 };
+const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, PRESET: 8, NAMES: 10, TRACK: 27, FMINI_GET: 82, FMINI_PUT: 83, FMINI_PRESET: 84, FMINI_REC: 85, FMINI_RPUT: 86, FMINI_RESTORE: 87, FMINI_RESET: 88 };
 const FG = { R1: 0, R2: 1, R3: 2, W1: 3, W2: 4, W3: 5, F2: 6, F3: 7, L1: 8, L2: 9, L3: 10, LN: 11, SW1: 12, SW2: 13, TUNE: 14, MMIX: 15, KBD: 16, GLID: 17, SIZE: 32 };
 const FS = { O1: 1, O2: 2, O3: 4, NZ: 8, PINK: 16, MOSC: 32, MFLT: 64 }, FT = { GLIDE: 1, SQR: 2 };
 /* track parameters (core.h; all but E0..E7 are fixed ids) and globals */
@@ -691,25 +695,56 @@ async function withBusy(text, fn) {
   busy(text); const keep = touch.until; touch.until = Date.now() + 3600e3;
   try { return await fn(); } finally { touch.until = Date.now() + 600; busy(""); void keep; }
 }
-/* the PRESETS tab: the device's own 200 slots (0..99 factory, 100..199 INIT), named by NAMES and loaded with PRESET.
-   Nothing is written from here: a slot is written on the device itself (SAVE) */
+/* the PRESETS tab: the backup and restore of every preset, and FACTORY RESET (a preset back to its factory preset: the
+ * slots 000..099 for all of them, any one slot from the list) */
 async function buildLib() {
   const panel = $("panel"); panel.textContent = "";
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
   const btn = (text, fn, cls) => { const b = mk("button", cls || "btn", text); b.addEventListener("click", fn); return b; };
-  const g1 = mk("section", "grp"), row = mk("div", "libname"), hint = mk("div", "", T("libhint"));
-  hint.style.cssText = "margin-top:10px;color:var(--mute);font-size:13px";
-  g1.append(mk("h2", "", T("libtitle")), row, hint);
-  row.append(btn(T("factexp"), exportFactory), btn(T("bakexp"), backupAll), btn(T("bakimp"), () => $("file").click()));
-  const g2 = mk("section", "grp"); g2.append(mk("h2", "", T("lib")));
-  const grid = mk("div", "slots"); g2.append(grid); panel.append(g1, g2);
-  S.names.forEach((nm, i) => {
-    const c = mk("div", "slot" + (nm ? "" : " empty"));
-    c.append(mk("div", "sn", String(i).padStart(3, "0")), mk("div", "nm", nm || T("libempty")));
-    c.append(mk("div", "act")); c.lastChild.append(btn(T("libload"), () => loadPreset(i), "mini"));
-    grid.append(c);
-  });
+  const g1 = mk("section", "grp"), row = mk("div", "libname");
+  g1.append(mk("h2", "", T("libtitle")), row);
+  row.append(btn(T("bakexp"), backupAll), btn(T("bakimp"), () => $("file").click()));
+  const g2 = mk("section", "grp"); g2.append(mk("h2", "", "FACTORY RESET"));
+  const sel = mk("select"); sel.id = "resetsel"; sel.setAttribute("aria-label", T("resetone"));
+  S.names.forEach((n, i) => { const o = mk("option", "", String(i).padStart(3, "0") + "  " + n); o.value = i; sel.append(o); });
+  sel.value = S.slot < S.names.length ? S.slot : 0;
+  const r1 = mk("div", "libname"), r2 = mk("div", "libname");
+  r1.append(btn(T("resetall"), resetAllFactory));
+  r2.append(sel, btn(T("resetone"), () => resetOne(+sel.value)));
+  g2.append(r1, r2);
+  panel.append(g1, g2);
 }
+const FACTORY_N = 100;                                 /* the factory presets: 000..099 */
+async function fmReset(k) {
+  const r = await req(CMD.FMINI_RESET, [k & 127, k >> 7], 8000);
+  if (r[2] !== 0) throw bad("resetfail");
+}
+async function refreshPresets() {
+  await readNames(); fillPreset(); await pull(true);
+  if (PAGES[S.page].lib) buildLib();
+}
+async function resetOne(k) {
+  if (!S.canPatch) return;
+  if (!confirm(T("askreset", { n: String(k).padStart(3, "0") + " " + (S.names[k] || "") }))) return;
+  try {
+    await withBusy(T("busyreset"), () => fmReset(k));
+    await refreshPresets(); msg(T("resetdone"));
+  } catch (e) { msg(T(e.code || "lost"), true); }
+}
+async function resetAllFactory() {
+  if (!S.canPatch) return;
+  if (!confirm(T("askresetall"))) return;
+  try {
+    await withBusy(T("busyreset"), async () => {
+      for (let k = 0; k < FACTORY_N; k++) {
+        await fmReset(k);
+        if (k % 10 === 9) busy(T("busyreset") + " " + (k + 1) + "/" + FACTORY_N);
+      }
+    });
+    await refreshPresets(); msg(T("resetdone"));
+  } catch (e) { msg(T(e.code || "lost"), true); }
+}
+
 /* BACKUP (protocol 4): every preset of the device, as its record (hex), in one .bkp file (JSON). RESTORE: the device asks
  * first (its own question, NO by default); only on YES are the 200 records written */
 const hexOf = (b) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
@@ -772,24 +807,6 @@ async function restoreAll(o) {
   if (PAGES[S.page].lib) buildLib();
   msg(T("restdone"));
 }
-async function exportFactory() {
-  const before = currentSound("");
-  try {
-    const slots = await withBusy(T("busyfact"), async () => {
-      const out = [];
-      for (let k = 0; k < 100; k++) {                     /* the factory bank: slots 0..99 (100..199 are INIT) */
-        await req(CMD.PRESET, [S.fmini, k & 127, k >> 7], 1500); await sleep(30);
-        const d = await req(CMD.DUMP, [], 1500), q = await req(CMD.FMINI_GET, [0, 0], 1500);
-        const p = []; for (let i = 0; i < S.pCount; i++) p.push(rv(d, 2 + 2 * i));
-        out.push({ slot: k, sound: soundObject(S.names[k], q.slice(3, 3 + FG.SIZE), p) });
-      }
-      return out;
-    });
-    download({ fmini1: 1, factory: 1, slots }, "fmini-1-factory-bank.json"); msg(T("factdone"));
-  } catch (e) { fail(e); return; }
-  try { await pull(true); applySnap(objectToSnap(before)); } catch (e) { fail(e); }   /* (the sound that was playing comes back) */
-}
-
 for (const el of document.querySelectorAll("[data-t]")) el.textContent = T(el.dataset.t);
 $("connect").textContent = T("connect"); setStatus(false, T("disc")); $("rnd").textContent = T("rnd"); abShow();
 tabs(); build();

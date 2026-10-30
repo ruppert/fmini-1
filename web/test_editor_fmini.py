@@ -199,16 +199,13 @@ with sync_playwright() as pw:
     # ---- phase 3: the device's presets (the PRESETS tab), A/B, randomize
     pg.on("dialog", lambda d: d.accept())
     pg.click("#tabs button:text-is('PRESETS')")
-    pg.wait_for_selector(".slot")
-    check("PRESETS: the 200 slots of the device (100 factory, 100 INIT)", pg.locator(".slot").count() == 200)
-    check("  .. no SAVE, erase or U-bank buttons on them (a slot is written on the device)", pg.locator(".slot button", has_text="Save").count() == 0 and pg.locator(".slot button", has_text="Erase").count() == 0)
-    check("  .. slot 150 is INIT", pg.locator(".slot").nth(150).locator(".nm").inner_text() == "INIT")
-    pg.locator(".slot").nth(7).locator("button", has_text="Load").click()
+    pg.wait_for_selector("#resetsel")
+    check("PRESETS: the 200 presets are listed for FACTORY RESET", pg.locator("#resetsel option").count() == 200)
+    check("  .. slot 150 is INIT", pg.locator("#resetsel option").nth(150).inner_text().endswith("INIT"))
+    check("  .. no cards, no SAVE / erase / U-bank buttons (a slot is written on the device)", pg.locator(".slot").count() == 0 and pg.locator("button:has-text('Save here')").count() == 0)
+    pg.select_option("#preset", "150")
     pg.wait_for_timeout(900)
-    check("Load: slot 007 is on the track (its factory patch)", fa(82, [0, 0])[3:35] == fa(82, [2, 7])[3:35])
-    pg.locator(".slot").nth(150).locator("button", has_text="Load").click()
-    pg.wait_for_timeout(900)
-    check("Load: slot 150 (INIT) is on the track", pg.evaluate("__fmini.S.slot") == 150)
+    check("Load: slot 150 (INIT) is on the track (the PRESET list)", pg.evaluate("__fmini.S.slot") == 150)
     fa(83, [0, 0, *[5] * 32])
     pg.click("#tabs button:text-is('CTRL')")
     # A/B
@@ -232,19 +229,11 @@ with sync_playwright() as pw:
     pg.click("#rnd"); pg.wait_for_timeout(600)
     after = fa(82, [0, 0])[3:35]
     check("Randomize: the patch on the device changed and OSC 1 is still on", after != before and after[12] & 1 and all(0 <= x <= 127 for x in after))
-    # the factory bank
-    with pg.expect_download(timeout=60000) as dl:
-        pg.click("#tabs button:text-is('PRESETS')"); pg.wait_for_selector(".slot")
-        pg.click("button:has-text('Export factory bank')")
-    f3 = Path("/tmp/claude_fmini_factory.json"); dl.value.save_as(f3)
-    fb = json.loads(f3.read_text())
-    check("Export factory bank: 100 patches, each with the factory patch bytes", len(fb["slots"]) == 100 and fb["slots"][9]["sound"]["patch"] == fa(82, [2, 9])[3:35])
     pg.wait_for_timeout(1200)
-    check("  .. the sound that was playing is restored", fa(82, [0, 0])[3:35] == after)
     check("  .. and the page is usable again (not busy)", not pg.evaluate("document.body.classList.contains('busy')"))
 
     # ---- phase 4: backup (.bkp) and restore: the device answers YES here (FM_RESTORE_ANSWER: the bridge)
-    pg.click("#tabs button:text-is('PRESETS'), #tabs button:text-is('PRESETS')"); pg.wait_for_selector(".slot")
+    pg.click("#tabs button:text-is('PRESETS'), #tabs button:text-is('PRESETS')"); pg.wait_for_selector("#resetsel")
     with pg.expect_download(timeout=120000) as dl:
         pg.click("button:has-text('Fazer backup'), button:has-text('Make backup')")
     bk = Path("/tmp/claude_fmini_backup.bkp"); dl.value.save_as(bk)
@@ -252,6 +241,7 @@ with sync_playwright() as pw:
     bj = json.loads(bk.read_text())
     check("  .. all 200 presets, each as its record", bj.get("fmini1bkp") == 1 and len(bj["slots"]) == 200 and all(x["rec"][:2] == "01" for x in bj["slots"]))
     orig7 = pg.evaluate("__fmini.S.names[7]")
+    orig100 = pg.evaluate("__fmini.S.names.slice(0, 100)")
     mod = json.loads(bk.read_text())
     mod["slots"][7]["rec"] = "01" + mod["slots"][7]["rec"][2:4] + "5a" + mod["slots"][7]["rec"][6:]     # slot 7's name: starts with Z
     mp = Path("/tmp/claude_fmini_mod.bkp"); mp.write_text(json.dumps(mod))
@@ -262,6 +252,22 @@ with sync_playwright() as pw:
     pg.wait_for_function("!/Z/.test(__fmini.S.names[7] || '')", timeout=180000)
     check("  .. and the original backup puts the name back", pg.evaluate("__fmini.S.names[7]") == orig7)
     pg.wait_for_timeout(300)
+
+    # ---- FACTORY RESET: slot 7 (changed by the file) one at a time, then all the factory presets
+    pg.set_input_files("#file", str(mp))
+    pg.wait_for_function("() => !document.body.classList.contains('busy') && __fmini.S.names[7].startsWith('Z')", timeout=180000)
+    pg.click("#tabs button:text-is('PRESETS')"); pg.wait_for_selector("#resetsel")
+    pg.select_option("#resetsel", "7")
+    pg.click("button:text-is('Restore'), button:text-is('Restaurar')")
+    pg.wait_for_function("(v) => __fmini.S.names[7] === v", arg=orig7, timeout=60000)
+    check("FACTORY RESET one: slot 7 is its factory preset again (the name Z is gone)", pg.evaluate("__fmini.S.names[7]") == orig7)
+    pg.set_input_files("#file", str(mp))
+    pg.wait_for_function("() => !document.body.classList.contains('busy') && __fmini.S.names[7].startsWith('Z')", timeout=180000)
+    pg.click("#tabs button:text-is('PRESETS')"); pg.wait_for_selector("#resetsel")
+    pg.click("button:text-is('Restore all factory presets'), button:text-is('Restaurar todos os presets de fábrica')")
+    pg.wait_for_function("(v) => !document.body.classList.contains('busy') && __fmini.S.names[7] === v", arg=orig7, timeout=300000)
+    check("FACTORY RESET all: the 100 factory presets are back, slot 7 included", pg.evaluate("__fmini.S.names.slice(0, 100)") == orig100)
+    check("  .. and the INIT slots are still INIT", pg.evaluate("__fmini.S.names[150]") == "INIT")
 
     # firmware up to 1.7.1 cut the NAMES reply at 664 bytes: the page says an update is available and still works
     CUT[0] = True

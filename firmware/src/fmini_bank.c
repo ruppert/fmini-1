@@ -288,4 +288,30 @@ static uint8_t fb_rs_state(void)
 }
 static void fb_rs_touch(void) { fb_rs_t = fm1_ms; }
 
+/* FACTORY RESET (protocol 4): the slot's saved record forgotten, so it reads its factory record (INIT for 100..199) from
+ * now on, and a later firmware's factory bank shows. 0 = done */
+static int fb_forget(uint32_t k)
+{
+    uint8_t rec[FB_SLOT];
+    uint32_t n;
+    if (k >= FB_NSLOT)
+        return -1;
+#if FELUCCA_FLASH
+    {
+        uint32_t o = k / FB_PER_OBJ, j = k % FB_PER_OBJ, i;
+        if (!fb_obj_read(o))
+            fb_obj_clear(o);
+        for (i = 0; i < FB_SLOT; i++)
+            fb_obj_buf[4u + j * FB_SLOT + i] = 0;
+        if (st_save(OBJ_PRESET0 + o, fb_obj_buf, FB_PAYLOAD) != 0)
+            return -1;
+    }
+#else
+    fb_host_n[k] = 0;
+#endif
+    n = fb_factory_rec(k, rec);
+    fb_slot_init(k, rec, n);
+    return 0;
+}
+
 #endif /* FMINI_BANK_C */

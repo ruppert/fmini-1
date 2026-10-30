@@ -14,7 +14,7 @@
  * kept besides the track's values (FMini-1: the tempo, the octave, the FX pop-ups' globals), as stored: BPM (40..240),
  * OCT (octave + 4: 1..7), the FX page's G_RSIZE G_DRREV G_CRATE G_DRLVL + 1 (1..128), then G_RTYPE G_RDAMP G_DTIME G_DFDBK
  * G_ENGGO G_CDEPTH G_INFO G_MIDI + 1; 0 = the preset has none (older). rc 2: not an FMINI preset. */
-enum { ED_FMINI_GET = 82, ED_FMINI_PUT, ED_FMINI_PRESET, ED_FMINI_REC, ED_FMINI_RPUT, ED_FMINI_RESTORE };   /* 85..87: the backup (protocol 4) */
+enum { ED_FMINI_GET = 82, ED_FMINI_PUT, ED_FMINI_PRESET, ED_FMINI_REC, ED_FMINI_RPUT, ED_FMINI_RESTORE, ED_FMINI_RESET };   /* 85..88: the backup, the factory reset (protocol 4) */
 enum { ED_FMINI_TRACK = 0, ED_FMINI_FACTORY = 2, ED_FMINI_USER = 3 };
 
 
@@ -88,11 +88,22 @@ static void ed_fmini_restore(const uint8_t *a, uint32_t n)
     ed_b(n ? a[0] : 127u); ed_b(rc); ed_b(fb_rs_state());
 }
 
+/* 88 FMINI_RESET: slot (two 7-bit bytes) -> slot, rc. The slot's saved preset is forgotten: it is its factory preset again
+ * (INIT for 100..199). rc: 0 done, 1 arguments, 4 the flash refused */
+static void ed_fmini_reset(const uint8_t *a, uint32_t n)
+{
+    uint32_t k = n == 2u ? (uint32_t)a[0] | (uint32_t)a[1] << 7 : FB_NSLOT, rc = 1;
+    if (k < FB_NSLOT)
+        rc = fb_forget(k) == 0 ? 0u : 4u;
+    ed_b(n ? a[0] : 127u); ed_b(n > 1u ? a[1] : 127u); ed_b(rc);
+}
+
 static int ed_fmini_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
 {
     if (cmd == ED_FMINI_REC) { ed_fmini_rec_get(a, n); return 1; }
     if (cmd == ED_FMINI_RPUT) { ed_fmini_rec_put(a, n); return 1; }
     if (cmd == ED_FMINI_RESTORE) { ed_fmini_restore(a, n); return 1; }
+    if (cmd == ED_FMINI_RESET) { ed_fmini_reset(a, n); return 1; }
     uint32_t i, rc = 0;
     uint8_t pk[FG_SIZE];
     if (cmd == ED_FMINI_PRESET) {                           /* slot -> slot, rc, 14 x v14 */

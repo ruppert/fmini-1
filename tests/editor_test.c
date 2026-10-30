@@ -1489,6 +1489,14 @@ static int restore_protocol(void)
     bad += check("  .. no answer for 60 s: NO (state 3)", restore_op(1) == 3u);
     restore_op(2);
     bad += check("RESTORE: arguments checked (rc 1)", (request(ED_FMINI_RESTORE, (const uint8_t[]){5}, 1), host_wire[6] == 1u));
+    {   /* FACTORY RESET: slot 7 is its factory preset again (the name Z gone), an out-of-range slot is refused */
+        uint8_t kk[2] = {7, 0};
+        request(ED_FMINI_RESET, kk, 2);
+        bad += check("FACTORY RESET: slot 7 is its factory preset again", host_wire[7] == 0u && strcmp(ENGINES[ENGI_FMINI]->presets[7].name, "Z") != 0 && fb_read(7, back) > 0u && back[2] != 'Z');
+        kk[0] = 200 & 127; kk[1] = 200 >> 7;             /* 200 as two 7-bit bytes */
+        request(ED_FMINI_RESET, kk, 2);
+        bad += check("  .. a slot past 199 is refused (rc 1)", host_wire[7] == 1u);
+    }
     return bad;
 }
 
