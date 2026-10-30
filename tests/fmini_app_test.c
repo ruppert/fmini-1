@@ -281,7 +281,7 @@ int main(int argc, char **argv)
                 if (song.g[FA_XG[fxk]] != clamp(x->fx[fxk], GP[FA_XG[fxk]].min, GP[FA_XG[fxk]].max) || x->fx[fxk] > GP[FA_XG[fxk]].max) {
                     printf("patch %u: FX %u = %d (%d)\n", k, fxk, song.g[FA_XG[fxk]], x->fx[fxk]); bad++;
                 }
-            if (song.octave != x->oct || (((k >= 50u && k < 60u) || (k >= 130u && k < 140u)) && x->oct != -1)) { printf("patch %u: octave %d\n", k, song.octave); bad++; }
+            if (song.octave != x->oct || ((k >= 130u && k < 140u) && x->oct != -1)) { printf("patch %u: octave %d\n", k, song.octave); bad++; }
             if (k >= 30u && k < 40u && song.octave != -1) { printf("patch %u: a bass comes in with OCT-1 (%d)\n", k, song.octave); bad++; }
             if ((k == 0u || k == 2u || k == 10u) && (fmini_patch[0][FG_SW1] & FS_MOSC)) { printf("patch %u: MOD OSC is off\n", k); bad++; }
             if (k == 0u && (song.octave != 1 || TSEL->p[P_E0] != 61 || fmini_patch[0][FG_GLID] != 50)) {      /* CUTOFF -0.2 (the ladder's dial, 1.7.0), GLIDE 3.9 (-10 %), OCT+ */
@@ -300,9 +300,9 @@ int main(int argc, char **argv)
         if (TSEL->p[P_E7] != 14 || TSEL->p[P_AMODE] != FMINI_X[14].arp[1] || song.g[G_RSIZE] != FMINI_X[14].fx[1] || song.octave != 0) {
             printf("Program Change 14: slot %d arp %d\n", TSEL->p[P_E7], TSEL->p[P_AMODE]); return 1;
         }
-        ui.mpc[0] = (uint8_t)(0x80u | 55u);              /* 55 BRASS SWELL: OCT-1 */
+        ui.mpc[0] = (uint8_t)(0x80u | 35u);              /* 35 a bass: OCT-1 (the brass 50-59 are OCT 0 since 1.14.1) */
         midi_pc_poll();
-        if (TSEL->p[P_E7] != 55 || song.octave != -1 || TSEL->p[P_AMODE] != 0) { printf("Program Change 55: octave %d\n", song.octave); return 1; }
+        if (TSEL->p[P_E7] != 35 || song.octave != -1 || TSEL->p[P_AMODE] != FMINI_X[35].arp[1] * FMINI_X[35].arp[0]) { printf("Program Change 35: octave %d\n", song.octave); return 1; }
         song.octave = 0;
         TSEL->p[P_AMODE] = 0;
         TSEL->user = 0;

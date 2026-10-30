@@ -218,40 +218,40 @@ def pads(b):                             # 40-49: pads and strings
 
 def brass(b):                            # 50-59: all come in with OCT-1
     b.add("MOOG BRASS", "brass", (o("8", "SAW", 95), o("8", "SAW", 95, 10), o("16", "SQR", 60, -6)),
-          cutoff=401, emph=3.0, cntr=co(2.6), kbd=70, fenv=(70, 300, 50), env=(35, 300, 118, 200), poly=True, oct=-1,
+          cutoff=401, emph=3.0, cntr=co(2.6), kbd=70, fenv=(70, 300, 50), env=(35, 300, 118, 200), poly=True,
           send=(0, 40, 0, 40), rv=("HALL", 60, 80), ch=("STEREO", 40, 0.4), pat=5)
     b.add("JUMP BRASS", "brass", (o("8", "SAW", 100, -14), o("8", "SAW", 100, 14), o("4", "SAW", 50)),
-          cutoff=428, emph=2.4, cntr=co(3.0), kbd=70, fenv=(25, 550, 40), env=(18, 500, 95, 300), poly=True, oct=-1,
+          cutoff=428, emph=2.4, cntr=co(3.0), kbd=70, fenv=(25, 550, 40), env=(18, 500, 95, 300), poly=True,
           send=(15, 70, 0, 50), rv=("PLATE", 60, 85), ch=("JUNO", 70, 0.4), pat=5)
     b.add("TRUMPET", "brass", (o("8", "SAW", 100), o("8", "SQR", 70, 6), o("4", "SAW", 40)), noise=5, pink=True,
-          cutoff=476, emph=2.8, cntr=co(2.6), kbd=90, fenv=(45, 200, 50), env=(30, 300, 118, 140), glide=25, oct=-1,
+          cutoff=476, emph=2.8, cntr=co(2.6), kbd=90, fenv=(45, 200, 50), env=(30, 300, 118, 140), glide=25,
           vib=30, mosc=True, lfo=(5.5, "SIN", 900, "OFF"),
           send=(20, 0, 25, 35), rv=("ROOM", 50, 80), dl=("ANALOG", 250, 30), pat=4)
     b.add("FRENCH HORN", "brass", (o("8", "TRI", 100), o("4", "SAW", 40), o("16", "SQR", 45)),
-          cutoff=323, emph=2.4, cntr=co(1.6), kbd=60, fenv=(120, 500, 60), env=(100, 400, 118, 400), poly=True, oct=-1,
+          cutoff=323, emph=2.4, cntr=co(1.6), kbd=60, fenv=(120, 500, 60), env=(100, 400, 118, 400), poly=True,
           vib=14, mosc=True, lfo=(5.0, "SIN", 1000, "OFF"),
           send=(0, 35, 0, 70), rv=("HALL", 110, 45), pat=5)
     b.add("BRASS STAB", "brass", (o("8", "SAW", 105), o("8", "SAW", 105, 12), o("8", "SQR", 70, -12)),
-          cutoff=520, emph=2.8, cntr=co(3.0), kbd=70, fenv=(0, 220, 0), env=(2, 260, 0, 140), poly=True, oct=-1,
+          cutoff=520, emph=2.8, cntr=co(3.0), kbd=70, fenv=(0, 220, 0), env=(2, 260, 0, 140), poly=True,
           send=(40, 0, 55, 40), rv=("ROOM", 40, 85), dl=("ANALOG", 250, 35), pat=6)
     b.add("BRASS SWELL", "brass", (o("8", "SAW", 100), o("8", "SQR", 80, -9), o("4", "SAW", 45, 6)), noise=6, pink=True,
-          cutoff=376, emph=3.5, cntr=co(3.6), kbd=70, fenv=(650, 700, 75), env=(550, 600, 118, 700), poly=True, oct=-1,
+          cutoff=376, emph=3.5, cntr=co(3.6), kbd=70, fenv=(650, 700, 75), env=(550, 600, 118, 700), poly=True,
           vib=28, mosc=True, lfo=(5.6, "SIN", 1200, "OFF"),
           send=(40, 30, 35, 60), rv=("PLATE", 80, 80), dl=("ANALOG", 375, 30), dr=("SOFT", 70, 64), pat=5)
     b.add("HORN RIFF", "brass", (o("8", "SAW", 100), o("8", "SAW", 100, 8), o("16", "SQR", 60)),
-          cutoff=457, emph=2.6, cntr=co(2.8), kbd=70, fenv=(10, 250, 25), env=(8, 300, 60, 120), poly=True, oct=-1,
+          cutoff=457, emph=2.6, cntr=co(2.8), kbd=70, fenv=(10, 250, 25), env=(8, 300, 60, 120), poly=True,
           send=(25, 40, 40, 40), rv=("PLATE", 45, 85), dl=("ANALOG", 250, 30),
           arp=A("CHORD", "1/8", 1, 0.45, 18, 127), arp_on=True, pat=13)
     b.add("TROMBONE", "brass", (o("8", "SAW", 100), o("16", "SAW", 70, 5), o("8", "SQR", 50, -5)),
-          cutoff=302, emph=2.5, cntr=co(2.0), kbd=60, fenv=(60, 400, 55), env=(50, 300, 118, 220), glide=90, oct=-1,
+          cutoff=302, emph=2.5, cntr=co(2.0), kbd=60, fenv=(60, 400, 55), env=(50, 300, 118, 220), glide=90,
           vib=22, mosc=True, lfo=(5.0, "SIN", 1000, "OFF"),
           send=(10, 0, 15, 45), rv=("HALL", 65, 70), pat=4)
     b.add("FLUGEL", "brass", (o("8", "TRI", 100), o("4", "SAW", 30), osc_off()),
-          cutoff=428, emph=2.1, cntr=co(1.2), kbd=70, fenv=(40, 400, 70), env=(40, 300, 118, 300), poly=True, oct=-1,
+          cutoff=428, emph=2.1, cntr=co(1.2), kbd=70, fenv=(40, 400, 70), env=(40, 300, 118, 300), poly=True,
           vib=18, mosc=True, lfo=(5.4, "SIN", 800, "OFF"),
           send=(0, 60, 0, 60), rv=("HALL", 70, 75), ch=("STEREO", 60, 0.3), pat=5)
     b.add("FANFARE", "brass", (o("8", "SAW", 100), o("4", "SAW", 90), o("16", "SQR", 75)),
-          cutoff=1020, emph=2.7, cntr=co(1.6), kbd=80, fenv=(0, 700, 70), env=(12, 400, 120, 450), poly=True, oct=-1,
+          cutoff=1020, emph=2.7, cntr=co(1.6), kbd=80, fenv=(0, 700, 70), env=(12, 400, 120, 450), poly=True,
           send=(55, 40, 30, 75), rv=("HALL", 110, 80), dl=("ANALOG", 375, 30), ch=("STEREO", 50, 0.35), dr=("TUBE", 80, 64), pat=5)
 
 

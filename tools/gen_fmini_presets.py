@@ -194,7 +194,7 @@ def check(bank):
         assert x["g"][8] or x["g"][9] or x["g"][10] or x["g"][11], "%s: nothing in the mixer" % x["name"]
     n_arp = sum(x["arp"][0] for x in P)
     assert os.environ.get("FMINI_PARTIAL") or 44 <= n_arp <= 56, "ARP on in %d of 200 patches (about a quarter wanted)" % n_arp
-    for i in list(range(50, 60)) + list(range(130, 140)):
+    for i in range(130, 140):
         assert P[i]["oct"] == -1, "%03d %s: a brass patch comes in with OCT-1" % (i, P[i]["name"])
 
 
