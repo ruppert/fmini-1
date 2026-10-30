@@ -111,10 +111,20 @@ int main(int argc, char **argv)
         apply_preset_to(TSEL, 5);                       /* 1.14.0: SAVE writes the slot being played (150, an INIT slot) */
         TSEL->p[P_E7] = 150;
         fmini_poll();
+        fa_gl_close(); fa_ar = 0; fa_sc = 0; fa_sq = 0; fmg_fx = 0;   /* the SAVE dialog alone on the screen */
         fa_sv_open();
         if (!fa_sv || fa_sv_slot != 150) { printf("save: open\n"); return 1; }
         str_cpy(fa_sv_name, "MY PATCH", 13);
-        fa_sv_do();
+        ui.force = 1; fa_draw(); dump(dir, 77);                       /* the name dialog (bigger text) */
+        fa_sv_press();                                  /* SAVE: the question, NO by default: nothing written yet */
+        if (!fa_sv || !fa_sv_conf || fa_sv_yes || str_eq(ENGINES[ENGI_FMINI]->presets[150].name, "MY PATCH")) { printf("save: no question\n"); return 1; }
+        ui.force = 1; fa_draw(); dump(dir, 78);                       /* the question: NO selected */
+        fa_sv_press();                                  /* SAVE on NO: back to the name, still open */
+        if (!fa_sv || fa_sv_conf || str_eq(ENGINES[ENGI_FMINI]->presets[150].name, "MY PATCH")) { printf("save: NO did not go back\n"); return 1; }
+        fa_sv_press();                                  /* SAVE again, then ALGORITHM to YES */
+        fa_sv_yes = 1;
+        ui.force = 1; fa_draw(); dump(dir, 79);                       /* YES selected */
+        fa_sv_press();                                  /* SAVE on YES writes the slot */
         if (fa_sv || TSEL->p[P_E7] != 150 || !str_eq(ENGINES[ENGI_FMINI]->presets[150].name, "MY PATCH")) { printf("save: not stored\n"); return 1; }
         TSEL->p[P_E7] = (int16_t)(FMINI_NSLOT - 1u);
         fm1_ms += 500u;

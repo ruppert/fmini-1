@@ -137,6 +137,15 @@ static void fa_ctext(int32_t cx, int32_t ytop, const aafont_t *f, const char *s,
 {
     cv_text_on(cx - text_w(f, s) / 2, ytop - fa_cap_y(f), f, s, fg, fa_bg(ytop));
 }
+/* text on a pop-up's own background (fa_ctext's antialiasing is against the panel's gradient) */
+static void fa_pc_text(int32_t cx, int32_t ytop, const aafont_t *f, const char *s, uint16_t fg, uint16_t bg)
+{
+    cv_text_on(cx - text_w(f, s) / 2, ytop - fa_cap_y(f), f, s, fg, bg);
+}
+static void fa_pl_text(int32_t x, int32_t ytop, const aafont_t *f, const char *s, uint16_t fg, uint16_t bg)
+{
+    cv_text_on(x, ytop - fa_cap_y(f), f, s, fg, bg);
+}
 static void fa_ltext(int32_t x, int32_t ytop, const aafont_t *f, const char *s, uint16_t fg)
 {
     cv_text_on(x, ytop - fa_cap_y(f), f, s, fg, fa_bg(ytop));
@@ -509,6 +518,7 @@ static void fa_slot_num(char *l, uint32_t k)
 /* SAVE: a small dialog. PRESETS picks the slot U01..U32, SELECT moves along the name and ALGORITHM changes the letter,
  * SAVE writes it, any page button cancels */
 static uint8_t fa_sv;                                     /* 1: the dialog is open */
+static uint8_t fa_sv_conf, fa_sv_yes;                     /* 1: the OVERWRITE question is up; yes: ALGORITHM put it on YES (NO by default) */
 static uint8_t fa_sv_slot, fa_sv_pos;
 static char fa_sv_name[13];
 static uint32_t fa_msg_until;                             /* "SAVED U05" shown until fm1_ms passes this */
@@ -527,6 +537,7 @@ static void fa_sv_fill(void)                              /* the slot's name, as
 static void fa_sv_open(void)
 {
     fa_sv = 1;
+    fa_sv_conf = 0;
     fa_sv_pos = 0;
     fa_sv_slot = (uint8_t)fa_cur_slot();                  /* the slot being played: SAVE overwrites it */
     fa_sv_fill();
@@ -545,6 +556,7 @@ static void fa_sv_do(void)
 {
     uint32_t k = fa_sv_slot, n = str_len(fa_sv_name);
     int rc;
+    fa_sv_conf = 0;
     while (n && fa_sv_name[n - 1u] == ' ')                /* no trailing blanks */
         fa_sv_name[--n] = 0;
     rc = fa_save_slot(k, fa_sv_name);
@@ -557,31 +569,75 @@ static void fa_sv_do(void)
         str_cpy(fa_msg, "SAVE ERROR", 16), fa_msg_until = fm1_ms + 1500u;
     ui.force = 1;
 }
+static void fa_sv_press(void)                             /* SAVE in the dialog: the question, then YES writes / NO goes back */
+{
+    if (!fa_sv_conf) {
+        fa_sv_conf = 1;
+        fa_sv_yes = 0;
+        ui.force = 1;
+        return;
+    }
+    if (fa_sv_yes)
+        fa_sv_do();
+    else {
+        fa_sv_conf = 0;
+        ui.force = 1;
+    }
+}
 static int fa_msg_on(void) { return fa_msg_until && (int32_t)(fm1_ms - fa_msg_until) < 0; }
 
 static void fa_dialog(void)
 {
     uint32_t k = fa_sv_slot, i;
-    char l[4], hdr[20];
+    char l[4];
     const uint16_t bgd = FA_RGB(0x1B, 0x19, 0x17);
-    cv_rect(16, 62, 208, 112, FA_OR);
-    cv_rect(18, 64, 204, 108, bgd);
+    cv_rect(10, 26, 220, 188, FA_OR);
+    cv_rect(12, 28, 216, 184, bgd);
     fa_slot_num(l, k);
-    fa_ctext(120, 72, &AF_S, "SAVE PRESET", FA_CR);
-    str_cpy(hdr, l, 4);
-    fa_ltext(28, 92, &AF_M, hdr, FA_OR);
-    fa_ltext(28 + text_w(&AF_M, hdr) + 8, 95, &AF_X, "OVERWRITE", FA_RED);   /* every slot holds a preset: SAVE replaces it */
-    for (i = 0; i < 12u; i++) {                           /* the name, letter by letter, the cursor underlined */
-        char c[2] = {fa_sv_name[i] ? fa_sv_name[i] : ' ', 0};
-        int32_t x = 28 + (int32_t)i * 14;
-        cv_rect(x, 124, 13, 1, i == fa_sv_pos ? FA_OR : FA_LINE);
-        if (i == fa_sv_pos)
-            cv_rect(x, 125, 13, 1, FA_OR);
-        if (c[0] != ' ')
-            fa_ctext(x + 6, 108, &AF_M, c, i == fa_sv_pos ? FA_OR : FA_CR);
+    fa_pc_text(120, 36, &AF_M, "SAVE PRESET", FA_CR, bgd);
+    fa_pl_text(22, 62, &AF_L, l, FA_OR, bgd);                    /* every slot holds a preset: SAVE replaces it */
+    fa_pl_text(22 + text_w(&AF_L, l) + 10, 70, &AF_M, "OVERWRITE", FA_RED, bgd);
+    {   int32_t x = 20;                                   /* the name, letter by letter (each cell as wide as its letter), the cursor underlined */
+        for (i = 0; i < 12u; i++) {
+            char c[2] = {fa_sv_name[i] ? fa_sv_name[i] : ' ', 0};
+            int32_t w = text_w(&AF_L, c), cw = c[0] == ' ' ? text_w(&AF_L, "M") : w;
+            cv_rect(x, 118, cw, 1, i == fa_sv_pos ? FA_OR : FA_LINE);
+            if (i == fa_sv_pos)
+                cv_rect(x, 119, cw, 1, FA_OR);
+            if (c[0] != ' ')
+                fa_pl_text(x + (cw - w) / 2, 100, &AF_L, c, i == fa_sv_pos ? FA_OR : FA_CR, bgd);
+            x += cw;
+        }
     }
-    fa_ctext(120, 140, &AF_X, "PRESETS SLOT   SELECT/ALGO NAME", FA_MU);
-    fa_ctext(120, 154, &AF_X, "SAVE = WRITE   ANY PAGE = CANCEL", FA_MU);
+    fa_pc_text(120, 146, &AF_S, "PRESETS SLOT   SELECT/ALGO NAME", FA_MU, bgd);
+    fa_pc_text(120, 170, &AF_S, "SAVE = NEXT   ANY PAGE = CANCEL", FA_MU, bgd);
+}
+
+/* SAVE again: the question. NO is the default; ALGORITHM turns it to YES, SAVE on YES writes the slot, SAVE on NO
+ * goes back to the name */
+static void fa_confirm_dialog(void)
+{
+    const uint16_t bgd = FA_RGB(0x1B, 0x19, 0x17);
+    char l[4], nm[24];
+    uint32_t i;
+    static const int32_t BX[2] = {34, 126};              /* NO, YES: the boxes */
+    static const char *const BL[2] = {"NO", "YES"};
+    fa_slot_num(l, fa_sv_slot);
+    str_cpy(nm, l, 24);
+    str_cpy(nm + str_len(nm), " ", 24 - str_len(nm));
+    str_cpy(nm + str_len(nm), fa_sv_name, 24 - str_len(nm));
+    cv_rect(10, 46, 220, 148, FA_OR);
+    cv_rect(12, 48, 216, 144, bgd);
+    fa_pc_text(120, 58, &AF_L, "OVERWRITE?", FA_RED, bgd);
+    fa_pc_text(120, 98, &AF_M, nm, FA_CR, bgd);
+    for (i = 0; i < 2u; i++) {
+        uint8_t sel = (i == 1u) == (fa_sv_yes != 0);
+        cv_rect(BX[i], 130, 80, 36, sel ? FA_OR : FA_LINE);
+        if (!sel)
+            cv_rect(BX[i] + 2, 132, 76, 32, bgd);
+        fa_pc_text(BX[i] + 40, 139, &AF_L, BL[i], sel ? bgd : FA_CR, bgd);
+    }
+    fa_pc_text(120, 176, &AF_S, "ALGO: YES / NO   SAVE: OK", FA_MU, bgd);
 }
 
 /* ARP: a pop-up like SAVE's. KNOB 1..4 are MODE, RATE, OCT, GATE; SELECT picks a line (the fifth is the tempo) and
@@ -1292,7 +1348,7 @@ static void fa_scene(void)
     else if (fa_ar)
         fa_ar_dialog();
     else if (fa_sv)
-        fa_dialog();
+        fa_sv_conf ? fa_confirm_dialog() : fa_dialog();
     else if (fmg_fx)
         fa_fx_dialog();
     else if (fa_msg_on()) {
@@ -1328,7 +1384,7 @@ static uint32_t fa_signature(void)
     for (i = 0; i < 8u; i++)                                 /* the pop-ups' others, and which pop-up is open */
         h = (h ^ (uint32_t)song.g[FA_GID2[i]]) * 16777619u;
     h = (h ^ fmg_fx) * 16777619u;
-    h = (h ^ fa_sv_slot ^ (uint32_t)fa_sv_pos << 8 ^ (uint32_t)t->user << 16 ^ (uint32_t)fa_msg_on() << 24) * 16777619u;
+    h = (h ^ fa_sv_slot ^ (uint32_t)fa_sv_pos << 8 ^ (uint32_t)(fa_sv_conf | fa_sv_yes << 1) << 12 ^ (uint32_t)t->user << 16 ^ (uint32_t)fa_msg_on() << 24) * 16777619u;
     for (i = 0; i < 12u; i++)
         h = (h ^ (uint8_t)fa_sv_name[i]) * 16777619u;
     h = (h ^ fa_sq ^ (uint32_t)fa_sq_rec << 1 ^ (uint32_t)fa_sq_cur << 2 ^ (uint32_t)song.playing << 8 ^ (uint32_t)fa_sq_title_on() << 7 ^
@@ -1687,7 +1743,7 @@ static void fa_buttons(uint32_t pressed)
         fa_sq_rec = 0;
         fa_gl_close();
         if (fa_sv)
-            fa_sv_do();
+            fa_sv_press();
         else
             fa_sv_open();
         return;
@@ -1891,6 +1947,14 @@ static void fa_input(void)
                 fa_ar_turn(k, s);
                 fa_ar_row = (uint8_t)k;
             }
+        return;
+    }
+    if (fa_sv && fa_sv_conf) {                            /* the question: ALGORITHM is YES / NO, the rest waits */
+        (void)panel_enc(EN_SELECT);
+        if ((s = panel_enc(EN_ALGO)) != 0)
+            fa_sv_yes = s > 0;
+        for (k = 0; k < 4u; k++)
+            (void)panel_enc(EN_K1 + k);
         return;
     }
     if (fa_sv) {                                          /* the SAVE dialog: name editing; the knobs wait */
