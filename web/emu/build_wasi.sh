@@ -9,7 +9,7 @@ cd "$(dirname "$0")/../.."
 : "${WASI_SDK:?set WASI_SDK to a wasi-sdk directory (wasi-sdk-25.0-x86_64-linux)}"
 OUT=${OUT:-docs/emu}
 [ -f build/gen/felucca_tables.h ] || { echo "emu: run ./build.sh once first (build/gen)"; exit 1; }
-VERSION=$(sed -n 's/^#define FMINI_VERSION "\([^"]*\)".*/\1/p' firmware/src/fmini_app.c | head -n 1)
+VERSION=$(sed -n 's/^#define FMINI_VERSION "\([^"]*\)".*/\1/p' firmware/src/core.h | head -n 1)
 mkdir -p "$OUT/fonts"
 "$WASI_SDK/bin/clang" --sysroot="$WASI_SDK/share/wasi-sysroot" --target=wasm32-wasi -mexec-model=reactor \
     ${EMU_OPT:--O2} -ffp-contract=off -std=gnu99 -w "-DFELUCCA_VERSION=\"$VERSION\"" \

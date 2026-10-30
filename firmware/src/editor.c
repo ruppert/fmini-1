@@ -453,6 +453,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(0x43); ed_b(1); ed_b(ML_N);   /* 1.5: MIDI LEARN's map (cmds 78, 79; editor_learn.c) */
         ed_b(0x4B); ed_b(1); ed_b(NCOND);   /* 1.5.5: a step's condition (1..11) after its nudge */
         ed_b(0x45); ed_b(1); ed_b(ED_PAL_N);   /* 1.6: CUSTOM, the user's palette: 5 colours (cmds 80, 81; editor_palette.c) */
+        ed_b(0x49); ed_b(1); ed_b(FMINI_VER_MAJ); ed_b(FMINI_VER_MIN); ed_b(FMINI_VER_PATCH);   /* FMini-1 1.14.2: the firmware version (the editor compares it with its own) */
         ed_b(0x47); ed_b(1); ed_b(FG_SIZE);   /* FMini-1: the FMINI patch, FG_SIZE bytes (cmds 82, 83; editor_fmini.c) */
         ed_b(0x48); ed_b(1); ed_b(1);   /* FMini-1 1.6.1: the octave on 82 / 83, and cmd 84 (what a user preset keeps besides the values) */
         break;

@@ -378,7 +378,7 @@ def main():
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     global STEM
-    m0 = re.search(r'#define FMINI_VERSION "v(\d+\.\d+\.\d+)"', (FW / "src" / "fmini_app.c").read_text())
+    m0 = re.search(r'#define FMINI_VERSION "v(\d+\.\d+\.\d+)"', (FW / "src" / "core.h").read_text())
     STEM = "fmini-1-fm1-" + (m0[1] if m0 else "dev")     # the FMini-1-fm1 package: fmini-1-fm1-<version>.fwsc
     if a.release:                   # one digit each: the identity has room for two (X.Y.Z and X.Y.Z.W keep X.Y's)
         m = re.fullmatch(r"(\d)\.(\d)(?:\.\d){0,2}(-[A-Za-z0-9]+)?", a.release)

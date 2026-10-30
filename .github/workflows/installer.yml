@@ -45,7 +45,7 @@ jobs:
 
       - name: Make the installer page
         run: |
-          VERSION=$(sed -n 's/^#define FMINI_VERSION "v\(.*\)"/\1/p' firmware/src/fmini_app.c)
+          VERSION=$(sed -n 's/^#define FMINI_VERSION "v\(.*\)"/\1/p' firmware/src/core.h)
           mkdir -p _site
           python3 web/make_fmini_installer.py "$(ls build/fmini-1-fm1-*.fwsc | head -1)" _site/index.html "$VERSION"
           cp "$(ls build/fmini-1-fm1-*.fwsc | head -1)" "_site/fmini-1-$VERSION.fwsc"

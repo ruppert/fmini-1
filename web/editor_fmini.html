@@ -162,6 +162,7 @@ const TX = {
     noedit: "Este firmware não parece ser o FMini-1. O editor é só para o FMini-1.",
     oldfw: "Este FMini-1 tem um firmware antigo. Atualize pelo instalador atual e conecte de novo.",
     getlink: "Abrir o instalador atual",
+    fwnew: "Há uma versão nova do firmware do FMini-1 (v%l). Seu aparelho tem %c. Atualize pelo instalador do site.", fwold: "uma versão anterior", fwok: "Abrir o instalador", fwclose: "Fechar",
     noext: "Atualização disponível: instale o FMini-1 v1.6.1 ou mais novo para editar a oitava e guardar tempo, oitava e efeitos na biblioteca.",
     noenv: "Atualização necessária: este firmware não tem o editor de osciladores e chaves. Instale a versão mais nova pelo site para editar tudo.",
     nonames: "Atualização disponível: este firmware envia só os nomes dos %n primeiros presets. Instale o FMini-1 v1.7.2 ou mais novo para ver todos.",
@@ -185,6 +186,7 @@ const TX = {
     noedit: "This firmware does not look like the FMini-1. The editor is for the FMini-1 only.",
     oldfw: "This FMini-1 runs an old firmware. Update it with the current installer and connect again.",
     getlink: "Open the current installer",
+    fwnew: "A new FMini-1 firmware is out (v%l). Your device has %c. Update it with the installer on the site.", fwold: "an earlier version", fwok: "Open the installer", fwclose: "Close",
     noext: "Update available: install FMini-1 v1.6.1 or newer to edit the octave and keep tempo, octave and effects in the library.",
     noenv: "Update needed: this firmware has no oscillator / switch editing. Install the newest version from the site to edit everything.",
     nonames: "Update available: this firmware sends only the names of the first %n presets. Install FMini-1 v1.7.2 or newer to see them all.",
@@ -215,6 +217,8 @@ const v14 = (n) => { n = Math.max(-8192, Math.min(8191, Math.round(n))) + 8192; 
 const rv = (a, i) => (a[i] | (a[i + 1] << 7)) - 8192;
 const cstr = (a, i) => { let s = ""; while (i < a.length && a[i]) s += String.fromCharCode(a[i++]); return [s, i + 1]; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/* the newest firmware this page knows: keep it equal to FMINI_VER_MAJ/MIN/PATCH in firmware/src/core.h (the device reports its own, tag 0x49) */
+const FW_LATEST = [1, 14, 2], FW_LATEST_TXT = "1.14.2";
 
 const dev = { access: null, inp: null, out: null, waiter: null, chain: Promise.resolve(), open: false };
 
@@ -490,6 +494,7 @@ async function connect() {
     await handshake();
     setStatus(true, T("conn")); $("connect").textContent = T("disconnect"); $("connect").disabled = false;
     startPoll();
+    fwCheck();
   } catch (e) {
     if (e instanceof Error) {
       closePorts(); msg(T(e.code || (e.message === "timeout" ? "timeout" : "none")), true);
@@ -500,6 +505,25 @@ async function connect() {
     }
     setStatus(false, T("disc")); $("connect").textContent = T("connect"); $("connect").disabled = false;
   }
+}
+/* the device runs an older firmware than this page: a pop-up with the link to the installer */
+function fwCheck() {
+  const v = S.fwver;
+  const older = !v || v[0] < FW_LATEST[0] || (v[0] === FW_LATEST[0] && (v[1] < FW_LATEST[1] || (v[1] === FW_LATEST[1] && v[2] < FW_LATEST[2])));
+  if (!older) return;
+  const box = document.createElement("div");
+  box.id = "fwpop";
+  box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px";
+  const card = document.createElement("div");
+  card.style.cssText = "background:var(--panel,#fff);color:var(--ink,#111);border:1px solid var(--line,#999);border-radius:8px;max-width:420px;padding:20px;font:15px/1.4 system-ui,sans-serif";
+  const now = v ? "v" + v.join(".") : T("fwold");
+  const p = document.createElement("p"); p.textContent = T("fwnew", { l: FW_LATEST_TXT, c: now });
+  const row = document.createElement("div"); row.style.cssText = "display:flex;gap:8px;justify-content:flex-end;margin-top:14px";
+  const go = document.createElement("a"); go.href = "https://ruppert.github.io/fmini-1/"; go.target = "_blank"; go.rel = "noopener"; go.className = "btn pri"; go.textContent = T("fwok");
+  const x = document.createElement("button"); x.className = "btn"; x.textContent = T("fwclose");
+  x.onclick = () => box.remove();
+  row.append(x, go); card.append(p, row); box.append(card); box.onclick = (e) => { if (e.target === box) box.remove(); };
+  document.body.append(box);
 }
 const bad = (code) => { const e = new Error(code); e.code = code; return e; };
 async function handshake() {
@@ -518,6 +542,8 @@ async function handshake() {
   S.canPatch = a.length >= 6 && [3, 6].some((k) => a[a.length - k] === 0x47 && a[a.length - k + 1] === 1 && a[a.length - k + 2] === FG.SIZE);
   S.pCount = pCount; S.gCount = gCount;
   S.extras = S.canPatch && a.length >= 6 && a[a.length - 3] === 0x48 && a[a.length - 2] === 1 && a[a.length - 1] === 1;
+  /* the firmware version (tag 0x49, 1.14.2): 5 bytes before the 0x47 block; null on firmware before it */
+  S.fwver = a.length >= 11 && a[a.length - 11] === 0x49 && a[a.length - 10] === 1 ? [a[a.length - 9], a[a.length - 8], a[a.length - 7]] : null;
   if (!S.canPatch) msg(T("noenv")); else if (!S.extras) msg(T("noext"));
   await req(CMD.TRACK, [0]);
   /* descriptors of what the page edits (labels come from the page; ranges and enum names from the device) */

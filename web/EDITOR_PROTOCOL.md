@@ -1061,6 +1061,8 @@ scales the fine code over 0..127. An editor that reads F2 / F3 as the coarse law
 The sanitiser allows F2 / F3 up to 180 and SW2 up to 7. While the GLIDE switch is on `P_GLIDE` (38) holds the same time (a `PUT` does not copy it:
 set both, as the page does).
 
+**1.14.2 (INFO `49 01 major minor patch`, before `47 01 32`):** the firmware's version (`FMINI_VERSION` in `core.h`). The web editor compares it with its own and shows a pop-up with the installer's link when the device is older (or has no tag, firmware before 1.14.2).
+
 **1.6.1 (INFO `48 01 01`, after `47 01 32`):** the keys' octave. `FMINI_GET` of target 0 ends with the octave + 4 (1..7) after the SLOT,
 and `FMINI_PUT` takes it as an optional byte after the 32 (outside 1..7 it is ignored). `FMINI_PRESET` reads what a user preset keeps
 besides the track's values (`UP_GET` has those): on the FMini-1 a preset stores the tempo, the octave and the FX pop-ups'

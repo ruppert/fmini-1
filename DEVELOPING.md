@@ -198,7 +198,7 @@ first (a test with the number to hit), then the code.
 - On a push to `main` that touches `firmware/`, `web/`, `tools/`, `assets/`, `docs/emu/`, `docs/fmini-ad*`, `build.sh` or the workflow,
   `.github/workflows/installer.yml` builds the firmware and publishes the page, the package (`fmini-1-X.Y.Z.fwsc`), the editor and the
   emulator to <https://ruppert.github.io/fmini-1/> (a few minutes). Documents at the root do not trigger it.
-- **Release checklist:** bump `FMINI_VERSION`; build; run the tests; regenerate `docs/emu` and `docs/index.html`; refresh the
+- **Release checklist:** bump `FMINI_VER_MAJ/MIN/PATCH` in `core.h` and `FW_LATEST` in `web/editor_fmini.html`; build; run the tests; regenerate `docs/emu` and `docs/index.html`; refresh the
   screenshots if screens changed (`tools/readme_shots.c`, then `tools/gen_readme_art.py` and the `assets/site/*.webp` it implies);
   update the protocol doc and the site text; commit; push `main`; give the owner the `.fwsc`. The owner creates the
   GitHub Release by hand. Unless the owner says otherwise, nothing has been tested on a real FM-1: say so.
@@ -226,7 +226,7 @@ For example a tonewheel-organ instrument for the FM-1. A checklist, in the order
    and Felucca's authorship stays in the headers; add the new work to `CREDITS.md`). Use a product name without a trademark.
 2. **Identity**: `FELUCCA_ID` in `firmware/src/felucca.c` is the package identity the installer checks (`FM-1_900` here; the
    installer page accepts `FM-1_9xx`, `web/make_fmini_installer.py`); give the new firmware its own, then the product name, version
-   (`FMINI_VERSION`), splash (`tools/gen_splash.py`, `assets/`), `web/site_fmini.html`, README and the workflow's Pages URL.
+   (`FMINI_VERSION` in `core.h`), splash (`tools/gen_splash.py`, `assets/`), `web/site_fmini.html`, README and the workflow's Pages URL.
 3. **The engine**: a new `eng_<name>.c` included in `engines.c`, a new entry **appended** to `ENGINES[]`, `NENGINES` and an `ENGI_`
    constant; fill `engine_t` (eight EDIT parameters, presets, `note_on`, `render`, `block` for free-running state, `mem` for state
    that belongs to a part). Start by copying `eng_fmini.c`'s skeleton: its patch bytes, `fmini_set_patch` / `fmini_eff` hand-off,
