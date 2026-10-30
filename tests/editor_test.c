@@ -1493,6 +1493,16 @@ static int restore_protocol(void)
     bad += check("  .. no answer for 60 s: NO (state 3)", restore_op(1) == 3u);
     restore_op(2);
     bad += check("RESTORE: arguments checked (rc 1)", (request(ED_FMINI_RESTORE, (const uint8_t[]){5}, 1), host_wire[6] == 1u));
+    {   /* 1.14.1: every slot resets, the factory ones too: 150 back to its factory record, the name read back from it */
+        uint8_t kk[2] = {150 & 127, 150 >> 7}, rec[FB_SLOT];
+        const uint8_t *d = 0;
+        uint32_t l = 0, nn;
+        request(ED_FMINI_RESET, kk, 2);
+        bad += check("FACTORY RESET 150: rc 0", host_wire[7] == 0u);
+        nn = fb_read(150, rec);
+        bad += check("  .. the record is the factory's name", nn > 0u && fr_find(rec, nn, FR_NAME, &d, &l) &&
+                     l == strlen(FMINI_PRESETS[150].name) && !memcmp(d, FMINI_PRESETS[150].name, l));
+    }
     {   /* FACTORY RESET: slot 7 is its factory preset again (the name Z gone), an out-of-range slot is refused */
         uint8_t kk[2] = {7, 0};
         request(ED_FMINI_RESET, kk, 2);

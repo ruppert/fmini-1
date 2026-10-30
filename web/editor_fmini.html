@@ -167,7 +167,7 @@ const TX = {
     nonames: "Atualização disponível: este firmware envia só os nomes dos %n primeiros presets. Instale o FMini-1 v1.7.2 ou mais novo para ver todos.",
     noeng: "A trilha 1 não está com o motor FMINI.", lost: "A conexão com o aparelho foi perdida.", timeout: "O aparelho não respondeu.",
     badfile: "Arquivo de som inválido.", rnd: "Aleatorizar", amt: "Variação", abcopy: "Copiar A → B", abcopyb: "Copiar B → A", abtip: "Alterna entre dois ajustes para comparar",
-    lib: "PRESETS", libload: "Carregar", libempty: "— vazio —", libtitle: "Backup",
+    lib: "PRESETS", libload: "Carregar", libempty: "— vazio —", libtitle: "Backup", indiv: "Restaurar Presets individuais:",
     resetall: "Restaurar todos os presets de fábrica", resetone: "Restaurar", askreset: "Restaurar o preset %n para o de fábrica? O que está gravado nele será substituído.",
     askresetall: "Restaurar os 200 presets de fábrica (000–199)? O que está gravado neles será substituído.", busyreset: "Restaurando os presets de fábrica… não desconecte o USB.",
     resetdone: "Presets de fábrica restaurados.", resetfail: "O aparelho não conseguiu restaurar o preset.",
@@ -190,7 +190,7 @@ const TX = {
     nonames: "Update available: this firmware sends only the names of the first %n presets. Install FMini-1 v1.7.2 or newer to see them all.",
     noeng: "Track 1 is not on the FMINI engine.", lost: "The connection to the device was lost.", timeout: "The device did not answer.",
     badfile: "Invalid sound file.", rnd: "Randomize", amt: "Amount", abcopy: "Copy A → B", abcopyb: "Copy B → A", abtip: "Switch between two settings to compare",
-    lib: "PRESETS", libload: "Load", libempty: "— empty —", libtitle: "Backup",
+    lib: "PRESETS", libload: "Load", libempty: "— empty —", libtitle: "Backup", indiv: "Restore individual presets:",
     resetall: "Restore all factory presets", resetone: "Restore", askreset: "Restore preset %n to its factory preset? What is saved in it will be replaced.",
     askresetall: "Restore the 200 factory presets (000–199)? What is saved in them will be replaced.", busyreset: "Restoring the factory presets… do not unplug USB.",
     resetdone: "Factory presets restored.", resetfail: "The device could not restore the preset.",
@@ -712,7 +712,7 @@ async function buildLib() {
   const r1 = mk("div", "libname"), r2 = mk("div", "libname");
   r1.append(btn(T("resetall"), resetAllFactory));
   r2.append(sel, btn(T("resetone"), () => resetOne(+sel.value)));
-  g2.append(r1, r2);
+  g2.append(r1, mk("p", "", T("indiv")), r2);
   panel.append(g1, g2);
 }
 const FACTORY_N = 200;                                 /* the factory presets: 000..199 */
