@@ -5,6 +5,8 @@
 #define EDITOR_TEST_NO_MAIN 1
 #include "editor_test.c"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 int main(void)
 {
     char line[2048];
@@ -25,6 +27,8 @@ int main(void)
         while (sscanf(p, "%2x%n", &v, &k) == 1 && n < sizeof a) { a[n++] = (uint8_t)v; p += k; }
         if (n < 6u) { puts(""); continue; }
         got = request(a[4], a + 5, n - 6u);                  /* (F0 7D 46 4C cmd args F7) */
+        if (getenv("FM_RESTORE_ANSWER") && fb_rs == FB_RS_ASK)   /* test only: the device's answer to the restore question */
+            fb_rs = strcmp(getenv("FM_RESTORE_ANSWER"), "yes") == 0 ? FB_RS_OK : FB_RS_NO;
         for (i = 0; i < got; i++)
             printf("%02x", host_wire[i]);
         puts("");

@@ -1039,6 +1039,9 @@ tests `tests/editor_test.c` (fmini_patches) and `web/test_editor_fmini.py` (the 
 | 82 FMINI_GET | target, index | target, index, rc, then (rc 0) the 32 patch bytes, and for target 0 the track's SLOT (`P_E7`, protocol 3: 0..99 = F1..F100, 100..199 = INIT slots, 200 = OWN) as two 7-bit bytes, low first, then the octave + 4 |
 | 83 FMINI_PUT | 0, track, 32 patch bytes [, octave + 4] | target, index, rc |
 | 84 FMINI_PRESET (1.6.1) | slot 0..31 | slot, rc, then 14 x v14 (below) |
+| 85 FMINI_REC (protocol 4) | slot (two 7-bit bytes, 0..199) | slot, rc, length (two 7-bit bytes), then the record: each byte as two nibbles, low nibble first. The preset's whole record: name, patch, FMINI_X block, params (the saved one, or the factory's). rc 1: a slot past 199 |
+| 86 FMINI_RPUT (protocol 4) | slot (two 7-bit bytes), length (two 7-bit bytes), the record as nibbles | slot, rc. Written only while the device has said YES (state 2 of 87). rc: 0 written, 1 arguments, 2 not accepted on the device, 3 not a preset record, 4 the flash refused |
+| 87 FMINI_RESTORE (protocol 4) | op: 0 ask, 1 status, 2 end | op, rc, state. The device shows its question (OVERWRITE ALL 200 PRESETS?, NO by default: ALGORITHM to YES, SAVE accepts; a page button or SAVE on NO refuses). State: 0 idle, 1 the question is up, 2 accepted (write now), 3 refused or no answer for 60 s. Ask when the state is 1 or 2 changes nothing; end (2) returns to idle |
 
 Targets: 0 a track's own patch (index 0..3), 2 a factory patch (index 0..99, read only; `PUT` answers rc 1), 3 a user preset's
 patch (slot 0..31, read only; rc 2 when the slot is empty or holds another engine; a preset stored without its own patch gives
@@ -1320,3 +1323,15 @@ bus reset (send `INFO` and `WATCH` again after reconnecting), and a backup in pr
 `FMINI_GET` track reply carries the SLOT as two bytes (`lo7`, `hi7`) before the octave, so the octave is its last byte. An editor
 that reads an older reply must refuse the device (the web editor shows the notice with the link to the current installer).
 `NAMES` (cmd 10) of FMINI carries the count as two bytes too (`lo7`, `hi7`, low first), since 200 does not fit in one: the names follow, then the two titles. The reply of 200 names is about 2.6 KB. `PRESET` (cmd 8) takes the preset number as two 7-bit bytes (low first) when it is 128 or more, so the editor reaches all 200 slots; the one-byte form still works for 0..127. MIDI Program Change reaches only 0..127 (a 7-bit program number): slots 128..199 are loaded from the page, the FM-1 panel's PRESETS list, or a PRESET command.
+
+## Backup and restore of the presets (85-87; protocol 4)
+
+A backup is every preset of the device (0..199), each as its record, in one `.bkp` file (JSON: `fmini1bkp: 1`, `protocol: 4`,
+`slots: [{slot, rec}]`, `rec` the record in hex). The web editor makes it with `FMINI_REC` 200 times, and restores it in this
+order: `FMINI_RESTORE` 0 (the device shows its question), `FMINI_RESTORE` 1 until the state is 2 (accepted) or 3 (refused, or no
+answer for 60 s: then nothing is written), `FMINI_RPUT` for each slot (0..199), `FMINI_RESTORE` 2. Nothing is written without the
+device's YES: `FMINI_RPUT` answers rc 2 before it and after the end. A record the device does not take (rc 3) stops the restore;
+the presets written before it stay. The question's default is NO, so a restore is never a single slip.
+
+The test bridge (`tests/editor_bridge.c`) answers the question itself when `FM_RESTORE_ANSWER` is set (`yes` or `no`): it is a
+test hook, not a device behaviour.

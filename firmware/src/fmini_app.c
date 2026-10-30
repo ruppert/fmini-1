@@ -640,6 +640,34 @@ static void fa_confirm_dialog(void)
     fa_pc_text(120, 176, &AF_S, "ALGO: YES / NO   SAVE: OK", FA_MU, bgd);
 }
 
+/* RESTORE: the editor asks to write all the presets. NO is the default; ALGORITHM turns it to YES, SAVE on YES accepts
+ * (then the progress), SAVE on NO or a page button refuses */
+static void fa_restore_dialog(void)
+{
+    const uint16_t bgd = FA_RGB(0x1B, 0x19, 0x17);
+    static const int32_t BX[2] = {34, 126};              /* NO, YES: the boxes */
+    static const char *const BL[2] = {"NO", "YES"};
+    uint32_t i;
+    cv_rect(10, 40, 220, 160, FA_OR);
+    cv_rect(12, 42, 216, 156, bgd);
+    if (fb_rs == FB_RS_OK) {                              /* accepted: the editor is writing the presets */
+        fa_pc_text(120, 84, &AF_L, "RESTORING", FA_OR, bgd);
+        fa_pc_text(120, 124, &AF_M, "ALL 200 PRESETS", FA_CR, bgd);
+        fa_pc_text(120, 170, &AF_S, "DO NOT TURN OFF", FA_MU, bgd);
+        return;
+    }
+    fa_pc_text(120, 52, &AF_L, "OVERWRITE", FA_RED, bgd);
+    fa_pc_text(120, 92, &AF_M, "ALL 200 PRESETS?", FA_CR, bgd);
+    for (i = 0; i < 2u; i++) {
+        uint8_t sel = (i == 1u) == (fb_rs_yes != 0);
+        cv_rect(BX[i], 118, 80, 36, sel ? FA_OR : FA_LINE);
+        if (!sel)
+            cv_rect(BX[i] + 2, 120, 76, 32, bgd);
+        fa_pc_text(BX[i] + 40, 127, &AF_L, BL[i], sel ? bgd : FA_CR, bgd);
+    }
+    fa_pc_text(120, 176, &AF_S, "ALGO: YES / NO   SAVE: OK", FA_MU, bgd);
+}
+
 /* ARP: a pop-up like SAVE's. KNOB 1..4 are MODE, RATE, OCT, GATE; SELECT picks a line (the fifth is the tempo) and
  * ALGORITHM changes it; ARP again, HOME or a page button closes it. The arpeggio goes on after closing */
 static uint8_t fa_ar;                                     /* 1: the pop-up is open */
@@ -1339,7 +1367,9 @@ static void fa_scene(void)
         fa_ltext(14 + w + 6, 214, &AF_N, nm, FA_CR);
         fa_battery(226, 227);
     }
-    if (fa_gl == 1u || fa_gl == 2u)
+    if (fb_rs_state() == FB_RS_ASK || fb_rs == FB_RS_OK)
+        fa_restore_dialog();                              /* the restore question / its progress: over everything */
+    else if (fa_gl == 1u || fa_gl == 2u)
         fa_gl_dialog();
     else if (fa_sc)
         fa_sc_dialog();
@@ -1357,6 +1387,8 @@ static void fa_scene(void)
         cv_rect(120 - mw / 2 + 2, 98, mw - 4, 22, FA_RGB(0x1B, 0x19, 0x17));
         fa_ctext(120, 102, &AF_M, fa_msg, FA_OR);
     }
+    if (fb_rs_state() == FB_RS_ASK || fb_rs == FB_RS_OK)
+        return;                                          /* the restore question is up: no other pop-up over it */
     if (fa_tp)
         fa_tp_draw();
     if (fa_pp_on())
@@ -1367,7 +1399,7 @@ static uint32_t fa_signature(void)
 {
     const track_t *t = TSEL;
     uint32_t h = 2166136261u, i;
-    h = (h ^ fa_page) * 16777619u;
+    h = (h ^ fa_page ^ (uint32_t)fb_rs_state() << 8 ^ (uint32_t)fb_rs_yes << 12) * 16777619u;
     for (i = 0; i < FMG_NPG; i++)
         h = (h ^ fmg_cur[i]) * 16777619u;
     for (i = 0; i < FG_SIZE; i++)
@@ -1794,6 +1826,26 @@ static void fa_input(void)
     uint32_t pressed = fm1_input_edges(0), k;
     int32_t s;
     (void)fm1_input_note_edges();
+    if (fb_rs_state() == FB_RS_ASK || fb_rs == FB_RS_OK) {  /* the restore question (or its progress): nothing else */
+        if (fb_rs == FB_RS_ASK) {
+            if ((s = panel_enc(EN_ALGO)) != 0)
+                fb_rs_yes = s > 0;
+            {   static const uint8_t RS_BTN[5] = {B_LFO, B_EDIT, B_SCL, B_FX, B_ENV};   /* the page buttons: NO */
+                for (k = 0; k < 5u; k++)
+                    if ((pressed >> panel.btn[RS_BTN[k]]) & 1u)
+                        fb_rs = FB_RS_NO;
+            }
+            if ((pressed >> panel.btn[B_SAVE]) & 1u)
+                fb_rs = fb_rs_yes ? FB_RS_OK : FB_RS_NO;
+            fb_rs_touch();
+            ui.force = 1;
+        }
+        (void)panel_enc(EN_SELECT);
+        (void)panel_enc(EN_PRESET);
+        for (k = 0; k < 4u; k++)
+            (void)panel_enc(EN_K1 + k);
+        return;
+    }
     midi_take();                                            /* MIDI IN notes */
     midi_pc_poll();                                         /* Program Change: a patch */
     fmini_poll();                                            /* SLOT turned: its patch */

@@ -11,7 +11,7 @@
 #define ED_HDR0 0x7D
 #define ED_HDR1 0x46
 #define ED_HDR2 0x4C
-#define ED_PROTO 3u                  /* editor protocol version: 3 = FMini-1 1.14.0 (presets: 100 overwritable, no U bank) */
+#define ED_PROTO 4u                  /* editor protocol version: 3 = FMini-1 1.14.0 (presets: 200 slots, no U bank); 4 = backup and restore (cmds 85..87) */
 enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, ED_PRESET, ED_PROJECT, ED_NAMES,
        ED_SMP_BEGIN, ED_SMP_WRITE, ED_SMP_END, ED_SMP_ERASE, ED_SMP_INFO,   /* 10..14: the sample slots (1.13: gone; SMP_INFO
                                                                             * still answers: 0 slots, so the editor shows none) */

@@ -272,4 +272,20 @@ static void fb_names_init(void)
     }
 }
 
+/* RESTORE (1.14.1-protocol 4): the editor writes all 200 records only after the user has answered on the device (the
+ * question, NO by default: fmini_app.c). ASK: the question is up; OK: accepted, records may be written; NO: refused.
+ * Without a word from the editor for 60 s the question is NO and an accepted restore ends (IDLE). */
+enum { FB_RS_IDLE = 0, FB_RS_ASK, FB_RS_OK, FB_RS_NO };
+#define FB_RS_TIMEOUT 60000u
+static uint8_t fb_rs;                         /* the state (the device's answer is in it) */
+static uint8_t fb_rs_yes;                     /* the question's answer as ALGORITHM sets it: 1 = YES (NO by default) */
+static uint32_t fb_rs_t;                      /* the last word from the editor or the user */
+static uint8_t fb_rs_state(void)
+{
+    if ((fb_rs == FB_RS_ASK || fb_rs == FB_RS_OK) && (uint32_t)(fm1_ms - fb_rs_t) >= FB_RS_TIMEOUT)
+        fb_rs = fb_rs == FB_RS_ASK ? FB_RS_NO : FB_RS_IDLE;
+    return fb_rs;
+}
+static void fb_rs_touch(void) { fb_rs_t = fm1_ms; }
+
 #endif /* FMINI_BANK_C */

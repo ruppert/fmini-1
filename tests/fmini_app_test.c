@@ -124,6 +124,23 @@ int main(int argc, char **argv)
         fa_sv_press();                                  /* SAVE again, then ALGORITHM to YES */
         fa_sv_yes = 1;
         ui.force = 1; fa_draw(); dump(dir, 79);                       /* YES selected */
+        /* the restore question on the panel: NO by default, ALGORITHM to YES, SAVE accepts; a page button refuses */
+        fb_rs = FB_RS_ASK; fb_rs_yes = 0; fb_rs_t = fm1_ms; ui.force = 1;
+        fframes(32);
+        fa_draw(); ui.force = 1; fa_draw(); dump(dir, 81);
+        fpress(B_SAVE);
+        if (fb_rs != FB_RS_NO) { printf("restore: SAVE on NO did not refuse (%d)\n", fb_rs); return 1; }
+        fb_rs = FB_RS_ASK; fb_rs_yes = 0; fb_rs_t = fm1_ms;
+        panel.enc[EN_ALGO] = 1; panel.dir[EN_ALGO] = 1;   /* (the panel's ALGORITHM encoder: as PANEL_DEFAULT) */
+        fturn(EN_ALGO, 1);
+        fframes(32);
+        if (!fb_rs_yes || fb_rs != FB_RS_ASK) { printf("restore: ALGORITHM did not go to YES (yes %d state %d enc %u dir %d host %d)\n", fb_rs_yes, fb_rs, panel.enc[EN_ALGO], panel.dir[EN_ALGO], (int)host_enc[panel.enc[EN_ALGO]]); return 1; }
+        ui.force = 1; fa_draw(); dump(dir, 82);
+        fpress(B_SAVE);
+        if (fb_rs != FB_RS_OK) { printf("restore: SAVE on YES did not accept (%d)\n", fb_rs); return 1; }
+        fframes(32); ui.force = 1; fa_draw(); dump(dir, 83);
+        fb_rs = FB_RS_IDLE;
+        fframes(32);
         fa_sv_press();                                  /* SAVE on YES writes the slot */
         if (fa_sv || TSEL->p[P_E7] != 150 || !str_eq(ENGINES[ENGI_FMINI]->presets[150].name, "MY PATCH")) { printf("save: not stored\n"); return 1; }
         TSEL->p[P_E7] = (int16_t)(FMINI_NSLOT - 1u);

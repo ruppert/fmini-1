@@ -127,7 +127,7 @@
     <button class="btn sq" id="next" aria-label="+">▶</button>
     <button class="btn" id="save" data-t="save"></button>
     <button class="btn" id="load" data-t="open"></button>
-    <input type="file" id="file" accept=".json,application/json" hidden>
+    <input type="file" id="file" accept=".bkp,.json,application/json" hidden>
   </div>
   <div class="tools">
     <button class="btn" id="rnd"></button>
@@ -167,6 +167,10 @@ const TX = {
     noeng: "A trilha 1 não está com o motor FMINI.", lost: "A conexão com o aparelho foi perdida.", timeout: "O aparelho não respondeu.",
     badfile: "Arquivo de som inválido.", rnd: "Aleatorizar", amt: "Variação", abcopy: "Copiar A → B", abcopyb: "Copiar B → A", abtip: "Alterna entre dois ajustes para comparar",
     lib: "PRESETS", libload: "Carregar", libempty: "— vazio —", libtitle: "Presets do aparelho (000–199)", factexp: "Exportar banco de fábrica",
+    bakexp: "Fazer backup (.bkp)", bakimp: "Restaurar backup (.bkp)", busybak: "Lendo os 200 presets…", bakdone: "Backup salvo.",
+    busyrest: "Gravando os 200 presets… não desconecte o USB.", waitdev: "Confirme no aparelho: ALGORITHM = YES, depois SAVE. Qualquer botão de página cancela.",
+    restdone: "Presets restaurados.", refused: "Restauração recusada no aparelho (ou sem resposta).", restfail: "Falhou ao gravar no aparelho. Os presets gravados até aqui ficaram; refaça a restauração.",
+    badbkp: "Arquivo de backup inválido.", recfail: "O aparelho não devolveu um preset.",
     libhint: "000–099 are factory presets; 100–199 start as INIT. To store the sound that is playing into a slot, use SAVE on the device. Over MIDI (Program Change) only the numbers 0–127 are reachable.", busyfact: "Lendo o banco de fábrica…", busyread: "Lendo…", factdone: "Banco de fábrica exportado.", loaded: "Som carregado no aparelho.", saved: "Som salvo em arquivo." },
   en: { editor: "Editor", connect: "Connect", disconnect: "Disconnect", connecting: "Connecting…", disc: "Disconnected",
     conn: "Connected — FMini-1", save: "Save sound", open: "Open sound", home: "FMini-1 site",
@@ -184,6 +188,10 @@ const TX = {
     noeng: "Track 1 is not on the FMINI engine.", lost: "The connection to the device was lost.", timeout: "The device did not answer.",
     badfile: "Invalid sound file.", rnd: "Randomize", amt: "Amount", abcopy: "Copy A → B", abcopyb: "Copy B → A", abtip: "Switch between two settings to compare",
     lib: "PRESETS", libload: "Load", libempty: "— empty —", libtitle: "Device presets (000–199)", factexp: "Export factory bank",
+    bakexp: "Make backup (.bkp)", bakimp: "Restore backup (.bkp)", busybak: "Reading the 200 presets…", bakdone: "Backup saved.",
+    busyrest: "Writing the 200 presets… do not unplug USB.", waitdev: "Confirm on the device: ALGORITHM = YES, then SAVE. Any page button cancels.",
+    restdone: "Presets restored.", refused: "Restore refused on the device (or no answer).", restfail: "The device refused a write. The presets written so far stay; run the restore again.",
+    badbkp: "Invalid backup file.", recfail: "The device did not return a preset.",
     libhint: "“Save here” stores the sound that is playing in the device: the patch, the knobs, the tempo, the octave and the effect settings.", busyfact: "Reading the factory bank…", busyread: "Reading…", factdone: "Factory bank exported.", loaded: "Sound loaded into the device.", saved: "Sound saved to a file." },
 };
 const LANG = /^pt/i.test(navigator.language || "") ? "pt" : "en";
@@ -191,7 +199,7 @@ const T = (k, o) => { let t = TX[LANG][k] || k; for (const x in o || {}) t = t.r
 document.documentElement.lang = LANG === "pt" ? "pt-BR" : "en";
 
 /* ---------------------------------------------------------------- protocol --- */
-const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, PRESET: 8, NAMES: 10, TRACK: 27, FMINI_GET: 82, FMINI_PUT: 83, FMINI_PRESET: 84 };
+const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, PRESET: 8, NAMES: 10, TRACK: 27, FMINI_GET: 82, FMINI_PUT: 83, FMINI_PRESET: 84, FMINI_REC: 85, FMINI_RPUT: 86, FMINI_RESTORE: 87 };
 const FG = { R1: 0, R2: 1, R3: 2, W1: 3, W2: 4, W3: 5, F2: 6, F3: 7, L1: 8, L2: 9, L3: 10, LN: 11, SW1: 12, SW2: 13, TUNE: 14, MMIX: 15, KBD: 16, GLID: 17, SIZE: 32 };
 const FS = { O1: 1, O2: 2, O3: 4, NZ: 8, PINK: 16, MOSC: 32, MFLT: 64 }, FT = { GLIDE: 1, SQR: 2 };
 /* track parameters (core.h; all but E0..E7 are fixed ids) and globals */
@@ -498,7 +506,7 @@ async function handshake() {
   const eng = []; for (let k = 0; k < nEng; k++) { let s; [s, i] = cstr(a, i); eng.push(s); }
   /* protocol: after the engine names, NTRK, then tag 0x56 (version 1) and the protocol number, then CHAIN_ROWS */
   const proto = a[i + 1] === 0x56 && a[i + 2] === 1 ? a[i + 3] : 0;
-  if (proto < 3) throw bad("oldfw");
+  if (proto < 4) throw bad("oldfw");
   S.fmini = eng.indexOf("FMINI");
   if (S.fmini < 0) S.fmini = eng.indexOf("FMUG");          /* firmware up to 1.7.0 named the engine FMUG */
   if (S.fmini < 0) throw bad("noedit");
@@ -519,12 +527,15 @@ async function handshake() {
     const names = []; if (fmt === 8) while (j < r.length && names.length < 24) { let s; [s, j] = cstr(r, j); names.push(s); }
     S.desc[key] = { fmt, min, max, def, label: lab, names: fmt === 8 ? names : null };
   }
+  await readNames();
+  fillPreset(); tabs(); build();
+  await pull(true);
+}
+async function readNames() {
   const nm = await req(CMD.NAMES, [S.fmini]);
   S.names = []; { let j = 1; const n = nm[j] | nm[j + 1] << 7; j += 2; for (let k = 0; k < n; k++) { let s; [s, j] = cstr(nm, j); S.names.push(s); }
     const got = S.names.filter(Boolean).length;            /* (firmware up to 1.7.1 cut the reply at 664 bytes: about 72 of the 100 names) */
     if (got < n) msg(T("nonames", { n: got })); }
-  fillPreset(); tabs(); build();
-  await pull(true);
 }
 function fillPreset() {
   const pr = $("preset"); pr.textContent = "";
@@ -628,6 +639,7 @@ $("file").addEventListener("change", async (e) => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   try {
     const o = JSON.parse(await f.text());
+    if (o.fmini1bkp === 1) { try { await restoreAll(o); } catch (err) { msg(T(err.code || "lost"), true); } return; }
     if (!validSound(o)) throw 0;
     if (!S.canPatch) throw 0;
     applySnap(objectToSnap(o)); msg(T("loaded"));
@@ -688,7 +700,7 @@ async function buildLib() {
   const g1 = mk("section", "grp"), row = mk("div", "libname"), hint = mk("div", "", T("libhint"));
   hint.style.cssText = "margin-top:10px;color:var(--mute);font-size:13px";
   g1.append(mk("h2", "", T("libtitle")), row, hint);
-  row.append(btn(T("factexp"), exportFactory));
+  row.append(btn(T("factexp"), exportFactory), btn(T("bakexp"), backupAll), btn(T("bakimp"), () => $("file").click()));
   const g2 = mk("section", "grp"); g2.append(mk("h2", "", T("lib")));
   const grid = mk("div", "slots"); g2.append(grid); panel.append(g1, g2);
   S.names.forEach((nm, i) => {
@@ -697,6 +709,68 @@ async function buildLib() {
     c.append(mk("div", "act")); c.lastChild.append(btn(T("libload"), () => loadPreset(i), "mini"));
     grid.append(c);
   });
+}
+/* BACKUP (protocol 4): every preset of the device, as its record (hex), in one .bkp file (JSON). RESTORE: the device asks
+ * first (its own question, NO by default); only on YES are the 200 records written */
+const hexOf = (b) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+const bytesOf = (h) => Uint8Array.from(h.match(/../g) || [], (x) => parseInt(x, 16));
+async function fmRec(k) {
+  const r = await req(CMD.FMINI_REC, [k & 127, k >> 7], 3000);
+  if (r[2] !== 0) throw bad("recfail");
+  const n = r[3] | r[4] << 7, out = new Uint8Array(n);
+  for (let i = 0; i < n; i++) out[i] = r[5 + 2 * i] | (r[6 + 2 * i] << 4);
+  return out;
+}
+async function backupAll() {
+  if (!S.canPatch) return;
+  try {
+    const slots = await withBusy(T("busybak"), async () => {
+      const out = [];
+      for (let k = 0; k < 200; k++) {
+        out.push({ slot: k, rec: hexOf(await fmRec(k)) });
+        if (k % 20 === 19) busy(T("busybak") + " " + (k + 1) + "/200");
+      }
+      return out;
+    });
+    download({ fmini1bkp: 1, protocol: 4, slots }, "fmini-1-backup.bkp");
+    msg(T("bakdone"));
+  } catch (e) { msg(T(e.code || "lost"), true); }
+}
+async function restoreAll(o) {
+  const ok = Array.isArray(o.slots) && o.slots.length === 200 &&
+    o.slots.every((x, i) => x && x.slot === i && typeof x.rec === "string" && /^([0-9a-f]{2}){1,128}$/.test(x.rec));
+  if (!ok) throw bad("badbkp");
+  const recs = o.slots.map((x) => bytesOf(x.rec));
+  let asked = false;
+  try {
+    await withBusy(T("waitdev"), async () => {
+      const r = await req(CMD.FMINI_RESTORE, [0], 1500);
+      if (r[1] !== 0 || r[2] !== 1) throw bad("refused");
+      asked = true;
+      const t0 = Date.now();
+      for (;;) {                                           /* the device answers: YES (2), or NO / a silent 60 s (3) */
+        await sleep(300);
+        const st = (await req(CMD.FMINI_RESTORE, [1], 1500))[2];
+        if (st === 2) break;
+        if (st !== 1 || Date.now() - t0 > 90000) throw bad("refused");
+      }
+      busy(T("busyrest"));
+      for (let k = 0; k < 200; k++) {
+        const rec = recs[k], a = [k & 127, k >> 7, rec.length & 127, rec.length >> 7];
+        for (const b of rec) a.push(b & 15, b >> 4);
+        const w = await req(CMD.FMINI_RPUT, a, 8000);
+        if (w[2] !== 0) throw bad("restfail");
+        if (k % 20 === 19) busy(T("busyrest") + " " + (k + 1) + "/200");
+      }
+    });
+  } catch (e) {
+    if (asked) { try { await req(CMD.FMINI_RESTORE, [2], 1500); } catch (_) { /* (the device ends the question on its own) */ } }
+    throw e;
+  }
+  await req(CMD.FMINI_RESTORE, [2], 1500);
+  await readNames(); fillPreset(); await pull(true);
+  if (PAGES[S.page].lib) buildLib();
+  msg(T("restdone"));
 }
 async function exportFactory() {
   const before = currentSound("");

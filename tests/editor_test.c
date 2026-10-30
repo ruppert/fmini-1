@@ -1422,12 +1422,82 @@ static int names_complete(void)
     return bad;
 }
 
+/* the backup and restore (protocol 4, cmds 85..87): a record reads back whole, nothing is written before the device has said
+ * YES, a written record is the one sent, a bad one is refused, NO and a silent device (60 s) refuse */
+static uint32_t rec_get(uint32_t k, uint8_t *rec)
+{
+    uint32_t n = request(ED_FMINI_REC, (const uint8_t[]){(uint8_t)(k & 127u), (uint8_t)(k >> 7)}, 2), len, i;
+    if (n < 11u || host_wire[7] != 0)
+        return 0;
+    len = host_wire[8] | host_wire[9] << 7;
+    if (len > FB_SLOT || n != 11u + 2u * len)
+        return 0;
+    for (i = 0; i < len; i++)
+        rec[i] = (uint8_t)(host_wire[10u + 2u * i] | host_wire[11u + 2u * i] << 4);
+    return len;
+}
+static uint32_t rec_put(uint32_t k, const uint8_t *rec, uint32_t len)
+{
+    uint8_t a[4 + 2 * FB_SLOT];
+    uint32_t i;
+    a[0] = (uint8_t)(k & 127u); a[1] = (uint8_t)(k >> 7); a[2] = (uint8_t)(len & 127u); a[3] = (uint8_t)(len >> 7);
+    for (i = 0; i < len; i++) {
+        a[4u + 2u * i] = rec[i] & 15u;
+        a[5u + 2u * i] = rec[i] >> 4;
+    }
+    request(ED_FMINI_RPUT, a, 4u + 2u * len);
+    return host_wire[7];                                 /* rc (payload: slot, slot, rc) */
+}
+static uint32_t restore_op(uint32_t op)                  /* -> the state; rc in host_wire[6] */
+{
+    uint8_t a = (uint8_t)op;
+    request(ED_FMINI_RESTORE, &a, 1);
+    return host_wire[7];
+}
+static int restore_protocol(void)
+{
+    int bad = 0;
+    uint8_t rec[FB_SLOT], mod[FB_SLOT], back[FB_SLOT];
+    uint32_t len, n2, k = 7, st;
+    reset();
+    fb_names_init();
+    len = rec_get(k, rec);
+    bad += check("BACKUP: a slot's record reads back whole (the factory's when never saved)", len > 0u && fr_valid(rec, len));
+    n2 = rec_get(200u, back);
+    bad += check("  .. and a slot past the 200 is refused", n2 == 0u);
+    bad += check("RESTORE: idle at first", restore_op(1) == 0u);
+    bad += check("  .. nothing is written before the question (rc 2)", rec_put(k, rec, len) == 2u);
+    bad += check("  .. the question goes up (state 1)", restore_op(0) == 1u);
+    bad += check("  .. and still nothing is written while it is up", rec_put(k, rec, len) == 2u);
+    fb_rs = FB_RS_NO;                                    /* the device: NO (or a page button) */
+    bad += check("  .. NO: state 3, and nothing is written", restore_op(1) == 3u && rec_put(k, rec, len) == 2u);
+    bad += check("  .. the question can come up again (state 1)", restore_op(0) == 1u);
+    fb_rs = FB_RS_OK;                                    /* the device: YES */
+    st = restore_op(1);
+    bad += check("  .. YES: state 2 (write now)", st == 2u);
+    memcpy(mod, rec, len);
+    mod[2] = 'Z';                                        /* the name block's first letter: tag 1, length, the text */
+    bad += check("  .. a record written back is the one sent", rec_put(k, mod, len) == 0u);
+    n2 = rec_get(k, back);
+    bad += check("  .. and reads back as sent (the name starts with Z)", n2 == len && back[2] == 'Z' && ENGINES[ENGI_FMINI]->presets[k].name[0] == 'Z');
+    mod[1] = 250;                                        /* a block longer than the record: not a preset */
+    bad += check("  .. a damaged record is refused (rc 3)", rec_put(k, mod, len) == 3u);
+    bad += check("  .. and the other slots are untouched", rec_get(8u, back) > 0u);
+    bad += check("  .. END: idle (state 0), and writes stop again (rc 2)", restore_op(2) == 0u && rec_put(k, rec, len) == 2u);
+    restore_op(0);
+    fb_rs_t = fm1_ms - FB_RS_TIMEOUT - 1u;               /* the device says nothing for 60 s */
+    bad += check("  .. no answer for 60 s: NO (state 3)", restore_op(1) == 3u);
+    restore_op(2);
+    bad += check("RESTORE: arguments checked (rc 1)", (request(ED_FMINI_RESTORE, (const uint8_t[]){5}, 1), host_wire[6] == 1u));
+    return bad;
+}
+
 #ifndef EDITOR_TEST_NO_MAIN                              /* (robust_test.c, fuzz_*.c: this file is their base) */
 int main(void)
 {
     int bad = preferences() + motion_locks() + framing() + uart_recovery() + steps() + song_protocol() + malformed_saves() +
               fm6_patches() + fmini_patches() + user_preset_roundtrip() + live_sync() + usb_burst() + menu_protocol() + drum_kit_retired() +
-              learn_protocol() + custom_palette() + names_complete();
+              learn_protocol() + custom_palette() + names_complete() + restore_protocol();
     printf("%s\n", bad ? "EDITOR TEST FAILED" : "editor test passed");
     return bad != 0;
 }

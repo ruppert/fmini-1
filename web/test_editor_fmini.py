@@ -13,7 +13,9 @@ SHOTS = Path(sys.argv[2]) if len(sys.argv) > 2 else None
 if not BRIDGE:
     BRIDGE = "/tmp/editor_bridge"
     subprocess.run(["cc", "-O1", "-w", "-Ibuild/gen", "-Ifirmware/src", "-o", BRIDGE, "tests/editor_bridge.c", "-lm"], cwd=ROOT, check=True)
-proc = subprocess.Popen([BRIDGE], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, cwd=ROOT)
+import os
+proc = subprocess.Popen([BRIDGE], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, cwd=ROOT,
+                        env=dict(os.environ, FM_RESTORE_ANSWER="yes"))   # the device's answer to the restore question (the panel is not here)
 log = []
 
 def fw(cmd, args=()):
@@ -240,6 +242,26 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(1200)
     check("  .. the sound that was playing is restored", fa(82, [0, 0])[3:35] == after)
     check("  .. and the page is usable again (not busy)", not pg.evaluate("document.body.classList.contains('busy')"))
+
+    # ---- phase 4: backup (.bkp) and restore: the device answers YES here (FM_RESTORE_ANSWER: the bridge)
+    pg.click("#tabs button:text-is('PRESETS'), #tabs button:text-is('PRESETS')"); pg.wait_for_selector(".slot")
+    with pg.expect_download(timeout=120000) as dl:
+        pg.click("button:has-text('Fazer backup'), button:has-text('Make backup')")
+    bk = Path("/tmp/claude_fmini_backup.bkp"); dl.value.save_as(bk)
+    check("Backup: a .bkp file", dl.value.suggested_filename.endswith(".bkp"))
+    bj = json.loads(bk.read_text())
+    check("  .. all 200 presets, each as its record", bj.get("fmini1bkp") == 1 and len(bj["slots"]) == 200 and all(x["rec"][:2] == "01" for x in bj["slots"]))
+    orig7 = pg.evaluate("__fmini.S.names[7]")
+    mod = json.loads(bk.read_text())
+    mod["slots"][7]["rec"] = "01" + mod["slots"][7]["rec"][2:4] + "5a" + mod["slots"][7]["rec"][6:]     # slot 7's name: starts with Z
+    mp = Path("/tmp/claude_fmini_mod.bkp"); mp.write_text(json.dumps(mod))
+    pg.set_input_files("#file", str(mp))
+    pg.wait_for_function("/restaur|restor/i.test(document.getElementById('msg').textContent)", timeout=180000)
+    check("Restore: the device's presets are the file's (slot 7 starts with Z)", pg.evaluate("__fmini.S.names[7]").startswith("Z"))
+    pg.set_input_files("#file", str(bk))
+    pg.wait_for_function("!/Z/.test(__fmini.S.names[7] || '')", timeout=180000)
+    check("  .. and the original backup puts the name back", pg.evaluate("__fmini.S.names[7]") == orig7)
+    pg.wait_for_timeout(300)
 
     # firmware up to 1.7.1 cut the NAMES reply at 664 bytes: the page says an update is available and still works
     CUT[0] = True
