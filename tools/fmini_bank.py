@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FMini-1: the factory bank. 00-09 a showcase, 10-19 hard leads, 20-29 soft leads, 30-39 basses, 40-49 pads and strings,
+# FMini-1: the factory bank (200: 000-099 and 100-199, the same ten groups each). 00-09 a showcase, 10-19 hard leads, 20-29 soft leads, 30-39 basses, 40-49 pads and strings,
 # 50-59 synth brass (OCT-1), 60-69 plucks, 70-79 keys, 80-89 atmospheres and drones, 90-99 effects.
 # tools/gen_fmini_presets.py turns it into firmware/src/eng_fmini_presets.h; tools/preset_lab.py plays and measures it.
 #
@@ -420,6 +420,367 @@ def sfx(b):                              # 90-99: effects
           send=(0, 100, 60, 90), rv=("CLOUD", 110, 80), dl=("REVERSE", 560, 50), pat=7)
 
 
+# ---- 100..199 (1.14.1): the second hundred, the same ten groups in the same order (110-119 hard leads, ...).
+# Their names are not the first hundred's, and their sounds are written from the same parts: the groups stay the reference.
+
+def show2(b):                            # 100-109: showcase
+    b.add("SUNRISE", "lead", (o("8", "SAW", 90), o("8", "SAW", 90, 9), o("16", "TRI", 60)),
+          cutoff=1200, emph=3.2, cntr=co(2.2), kbd=64, fenv=(0, 300, 60), env=(4, 350, 115, 220),
+          vib=25, mosc=False, lfo=(5.8, "SIN", 350, "OFF"), glide=60,
+          send=(25, 0, 50, 50), rv=("HALL", 65, 80), dl=("ANALOG", 330, 40), dr=("TUBE", 60, 64), pat=4)
+    b.add("NIGHT SWIM", "pad", (o("8", "SAW", 75), o("8", "SAW", 75, 15), o("4", "TRI", 50, -15)),
+          cutoff=880, emph=2.0, cntr=0, kbd=64, fenv=(200, 800, 90), env=(600, 700, 115, 900), poly=True,
+          vib=10, lfo=(4.2, "SIN", 600, "OFF"), send=(0, 70, 20, 60), rv=("CLOUD", 70, 80), ch=("MULTI", 60, 0.4), pat=5)
+    b.add("GLASS ARP", "pluck", (o("8", "TRI", 100), o("8", "SQR", 60, 12), o("4", "TRI", 40)),
+          cutoff=1600, emph=2.4, cntr=co(2.0), kbd=90, fenv=(0, 150, 0), env=(1, 260, 0, 180), poly=True,
+          send=(0, 30, 60, 50), rv=("PLATE", 55, 90), dl=("DIGITAL", 250, 45), ch=("STEREO", 50, 0.3),
+          arp=A("UPDN", "1/16", 2, 0.4, 0, 127), arp_on=True, pat=13)
+    b.add("MINI BASS", "bass", (o("16", "SAW", 120), o("16", "SQR", 100, 7), o("32", "SQR", 80)),
+          cutoff=260, emph=4.0, cntr=co(2.8), kbd=40, fenv=(0, 180, 30), env=(2, 240, 60, 120),
+          send=(30, 0, 0, 20), rv=("ROOM", 30, 80), dr=("TUBE", 70, 64), pat=2)
+    b.add("VELVET EP", "keys", (o("8", "TRI", 100), o("4", "TRI", 55), o("2", "TRI", 25)),
+          cutoff=1100, emph=2.2, cntr=co(1.5), kbd=90, fenv=(0, 500, 20), env=(2, 1400, 15, 300), poly=True,
+          send=(0, 60, 0, 30), rv=("ROOM", 35, 85), ch=("JUNO", 70, 0.7), pat=6)
+    b.add("TIN WHISTLE", "lead", (o("4", "SHK", 90), o("4", "SAW", 40, 5), o("8", "PW", 30)),
+          cutoff=1900, emph=3.9, cntr=co(1.0), kbd=100, fenv=(10, 400, 70), env=(15, 500, 110, 200),
+          vib=40, lfo=(5.2, "TRI", 250, "OFF"), glide=20,
+          send=(0, 0, 40, 60), rv=("SPRING", 45, 85), pat=4)
+    b.add("BRASS RISE", "brass", (o("8", "SAW", 95), o("8", "SAW", 95, 12), o("16", "SAW", 70, -12)),
+          cutoff=720, emph=3.4, cntr=co(2.6), kbd=70, fenv=(120, 700, 80), env=(60, 500, 116, 420), poly=True, oct=-1,
+          vib=15, lfo=(5.0, "SIN", 500, "OFF"), send=(10, 50, 0, 40), rv=("HALL", 60, 80), ch=("STEREO", 45, 0.6), pat=5)
+    b.add("STACCATO", "pluck", (o("8", "TRI", 100), o("4", "TRI", 70, 3), o("16", "SQR", 30)),
+          cutoff=1350, emph=2.0, cntr=co(2.2), kbd=80, fenv=(0, 120, 0), env=(1, 200, 0, 130), poly=True,
+          send=(0, 20, 0, 55), rv=("ROOM", 40, 90), pat=13)
+    b.add("MONO SYNC", "lead", (o("8", "SAW", 100), o("8", "SAW", 100, 27), o("16", "SQR", 40)),
+          cutoff=1300, emph=4.1, cntr=co(2.6), kbd=90, fenv=(0, 350, 40), env=(2, 280, 110, 200), glide=90,
+          vib=20, lfo=(6.2, "TRI", 300, "OFF"), send=(40, 0, 40, 40), rv=("PLATE", 50, 85), dl=("TAPE", 300, 35),
+          dr=("TUBE", 80, 66), pat=4)
+
+    b.add("SOUL KEYS", "keys", (o("8", "SQR", 80), o("8", "TRI", 70, 9), o("4", "TRI", 45)),
+          cutoff=1180, emph=2.4, cntr=co(1.8), kbd=90, fenv=(0, 350, 40), env=(3, 900, 40, 350), poly=True,
+          send=(10, 40, 0, 40), rv=("PLATE", 55, 85), ch=("STEREO", 40, 0.5), pat=6)
+
+
+def hard2(b):                            # 110-119: intense, aggressive, big
+    b.add("OVERDRIVE", "lead", (o("8", "SAW", 105), o("8", "SAW", 105, -13), o("8", "SQR", 70, 4)),
+          cutoff=980, emph=5.2, cntr=co(1.8), kbd=90, fenv=(0, 500, 60), env=(1, 260, 120, 240),
+          vib=22, lfo=(5.7, "SIN", 450, "OFF"), glide=110,
+          send=(75, 0, 45, 30), rv=("PLATE", 40, 80), dl=("TAPE", 275, 32), dr=("TUBE", 90, 70), pat=4)
+    b.add("MACHINE", "lead", (o("8", "SQR", 100), o("8", "SQR", 100, 19), o("4", "SAW", 55)),
+          cutoff=1560, emph=4.9, cntr=co(2.0), kbd=100, fenv=(0, 250, 90), env=(0, 180, 120, 150),
+          lfo=(9.0, "SQR", 0, "OFF"), trem=30,
+          send=(40, 0, 30, 35), rv=("ROOM", 45, 75), dl=("DIGITAL", 188, 40), dr=("TUBE", 70, 70), pat=4)
+    b.add("SAW WALL", "lead", (o("8", "SAW", 110), o("8", "SAW", 110, 22), o("8", "SAW", 90, -22)),
+          cutoff=720, emph=4.4, cntr=co(2.2), kbd=75, fenv=(0, 400, 50), env=(3, 500, 115, 350), poly=False,
+          vib=30, mosc=True, lfo=(5.4, "SIN", 600, "OFF"), send=(55, 0, 40, 40), rv=("HALL", 55, 80),
+          dl=("ANALOG", 300, 42), pat=4)
+    b.add("STRIKE", "lead", (o("8", "SHK", 100), o("4", "SQR", 80, 14), o("16", "SAW", 60)),
+          cutoff=1100, emph=5.6, cntr=co(3.0), kbd=85, fenv=(0, 150, 0), env=(0, 220, 80, 120),
+          send=(50, 30, 40, 30), rv=("SPRING", 55, 80), dr=("TUBE", 85, 72), pat=13)
+    b.add("BIG HOOK", "lead", (o("8", "SAW", 100), o("8", "PW", 90, 7), o("4", "SQR", 60, -7)),
+          cutoff=1000, emph=4.5, cntr=co(2.4), kbd=80, fenv=(20, 600, 70), env=(6, 400, 120, 300),
+          vib=18, lfo=(5.1, "SIN", 500, "OFF"), glide=40,
+          send=(45, 20, 40, 45), rv=("HALL", 70, 75), ch=("JUNO", 70, 0.6), dl=("SLAP", 150, 40), pat=4)
+    b.add("ANGRY BUZZ", "lead", (o("8", "SAW", 100), o("8", "SAW", 100, 2), o("8", "SQR", 100, -2)),
+          cutoff=600, emph=6.0, cntr=co(3.4), kbd=60, fenv=(0, 350, 40), env=(2, 300, 110, 180), poly=False,
+          lfo=(14.0, "SQR", 0, "OFF"), trem=60,
+          send=(85, 0, 25, 25), rv=("ROOM", 30, 70), dr=("TUBE", 100, 60), pat=4)
+    b.add("CRUNCH", "lead", (o("4", "SAW", 105), o("4", "SQR", 80, 9), o("8", "SAW", 50, -9)),
+          cutoff=1800, emph=5.0, cntr=co(2.9), kbd=95, fenv=(0, 220, 30), env=(1, 200, 115, 150), glide=50,
+          vib=12, lfo=(6.8, "SAW", 200, "OFF"),
+          send=(70, 0, 20, 30), rv=("SPRING", 40, 80), dl=("DIGITAL", 188, 30), dr=("TUBE", 95, 66), pat=4)
+    b.add("CONTROL", "lead", (o("8", "SAW", 100), o("16", "SAW", 90, 5), o("4", "SQR", 70, -5)),
+          cutoff=850, emph=4.7, cntr=co(2.0), kbd=85, fenv=(0, 600, 65), env=(3, 380, 120, 260), glide=80,
+          send=(35, 0, 60, 40), rv=("PLATE", 50, 80), dl=("P-PONG", 250, 45), pat=4)
+    b.add("SIREN LEAD", "lead", (o("8", "SQR", 100), o("8", "SQR", 100, 14), osc_off()),
+          cutoff=1700, emph=3.6, cntr=co(1.6), kbd=100, fenv=(10, 300, 110), env=(10, 200, 118, 160), glide=160,
+          lfo=(0.5, "TRI", 0, "OFF"), pit=st_pit(1.5),
+          send=(25, 0, 40, 40), rv=("PLATE", 45, 85), pat=4)
+    b.add("MOSQUITO", "lead", (o("2", "SAW", 90), o("4", "SQR", 45, 17), osc_off()),
+          cutoff=2100, emph=5.8, cntr=co(2.2), kbd=100, fenv=(0, 90, 80), env=(0, 120, 100, 90),
+          vib=50, lfo=(9.5, "SIN", 0, "OFF"), send=(30, 0, 30, 35), rv=("ROOM", 35, 90), dl=("DIGITAL", 120, 30), pat=4)
+
+
+def soft2(b):                            # 120-129: gentler, singing, mellow
+    b.add("MELLOW MAN", "lead", (o("8", "TRI", 100), o("8", "TRI", 80, 5), o("16", "SAW", 35)),
+          cutoff=1060, emph=2.1, cntr=co(1.3), kbd=80, fenv=(60, 600, 75), env=(120, 500, 115, 350),
+          vib=40, lfo=(5.0, "SIN", 500, "OFF"), glide=120,
+          send=(0, 60, 20, 55), rv=("HALL", 60, 75), ch=("STEREO", 60, 0.6), pat=4)
+    b.add("FLUTE SOFT", "lead", (o("8", "SHK", 60), o("8", "TRI", 90, 2), osc_off()),
+          cutoff=1550, emph=1.5, cntr=co(1.0), kbd=100, fenv=(120, 500, 100), env=(180, 350, 118, 300),
+          vib=55, lfo=(5.3, "SIN", 600, "OFF"),
+          send=(0, 40, 0, 65), rv=("ROOM", 40, 90), pat=4)
+    b.add("HONEY LEAD", "lead", (o("8", "SAW", 85), o("8", "SAW", 85, 8), o("4", "TRI", 40)),
+          cutoff=900, emph=2.7, cntr=co(1.6), kbd=70, fenv=(80, 900, 80), env=(60, 600, 115, 420), glide=70,
+          vib=32, lfo=(4.8, "SIN", 700, "OFF"),
+          send=(10, 40, 50, 55), rv=("HALL", 65, 80), dl=("ANALOG", 420, 36), pat=4)
+    b.add("MOONLIGHT", "lead", (o("8", "TRI", 100), o("4", "TRI", 50, 4), osc_off()),
+          cutoff=1280, emph=1.9, cntr=co(1.0), kbd=85, fenv=(200, 800, 90), env=(250, 800, 110, 700),
+          vib=28, lfo=(4.5, "SIN", 800, "OFF"),
+          send=(0, 55, 35, 70), rv=("CLOUD", 60, 85), ch=("JUNO", 55, 0.5), pat=4)
+    b.add("SOFT CLAR", "lead", (o("8", "SQR", 75), o("8", "PW", 50, 6), o("16", "TRI", 40)),
+          cutoff=1000, emph=2.6, cntr=co(1.4), kbd=75, fenv=(90, 700, 70), env=(90, 500, 116, 380),
+          vib=22, lfo=(5.1, "TRI", 400, "OFF"), glide=40,
+          send=(0, 30, 0, 45), rv=("ROOM", 35, 85), pat=4)
+    b.add("VOICE OOH", "lead", (o("8", "PW", 80), o("8", "TRI", 60, 12), osc_off()),
+          cutoff=1320, emph=2.3, cntr=co(1.2), kbd=85, fenv=(150, 900, 85), env=(200, 700, 112, 500),
+          vib=35, lfo=(4.9, "SIN", 600, "OFF"),
+          send=(0, 60, 0, 60), rv=("HALL", 70, 75), ch=("STEREO", 50, 0.4), pat=4)
+    b.add("WARM SQR", "lead", (o("8", "SQR", 90), o("8", "SQR", 90, 6), o("16", "SAW", 40)),
+          cutoff=760, emph=2.9, cntr=co(1.5), kbd=70, fenv=(40, 800, 80), env=(30, 600, 110, 400),
+          vib=15, mosc=True, lfo=(5.0, "SIN", 300, "OFF"), glide=30,
+          send=(15, 40, 40, 40), rv=("PLATE", 50, 80), pat=4)
+    b.add("SILK PAD LD", "lead", (o("4", "SAW", 70), o("4", "SAW", 70, 10), o("8", "TRI", 40)),
+          cutoff=1450, emph=2.0, cntr=co(1.1), kbd=90, fenv=(200, 900, 70), env=(150, 500, 116, 550),
+          vib=18, lfo=(4.4, "SIN", 500, "OFF"), glide=60,
+          send=(0, 50, 30, 60), rv=("HALL", 60, 80), ch=("MULTI", 50, 0.3), pat=4)
+    b.add("BELL LEAD", "lead", (o("4", "TRI", 90), o("4", "TRI", 60, 700), osc_off()),
+          cutoff=1800, emph=1.6, cntr=co(1.5), kbd=100, fenv=(0, 1200, 0), env=(1, 1600, 0, 900),
+          send=(0, 20, 60, 70), rv=("PLATE", 70, 90), dl=("DIGITAL", 375, 45), pat=4)
+    b.add("DREAM FLUTE", "lead", (o("8", "SHK", 40), o("8", "SAW", 60, -4), o("4", "TRI", 50)),
+          cutoff=1400, emph=2.2, cntr=co(1.2), kbd=100, fenv=(250, 800, 90), env=(300, 600, 118, 500),
+          vib=60, lfo=(3.8, "TRI", 900, "OFF"),
+          send=(0, 40, 40, 70), rv=("CLOUD", 65, 85), pat=4)
+
+
+def bass2(b):                            # 130-139: mono, round to fat
+    b.add("SUB SINE", "bass", (o("16", "TRI", 127), o("32", "TRI", 60), osc_off()),
+          cutoff=180, emph=1.0, cntr=0, kbd=50, fenv=(0, 120, 0), env=(1, 350, 90, 90),
+          send=(0, 0, 0, 0), rv=("ROOM", 20, 80), pat=2)
+    b.add("ROUND 808", "bass", (o("16", "SQR", 110), o("32", "SQR", 60, 4), osc_off()),
+          cutoff=260, emph=2.5, cntr=co(2.2), kbd=40, fenv=(0, 500, 0), env=(1, 800, 0, 350),
+          pit=st_pit(-2), penv=st_pit(-6), send=(20, 0, 0, 20), rv=("ROOM", 25, 80), pat=2)
+    b.add("RUBBER SUB", "bass", (o("8", "SAW", 110), o("8", "SAW", 110, 8), o("16", "SQR", 60)),
+          cutoff=390, emph=3.6, cntr=co(2.6), kbd=50, fenv=(0, 180, 30), env=(1, 260, 55, 110),
+          send=(20, 0, 15, 15), rv=("ROOM", 25, 85), dr=("SOFT", 60, 64), pat=2)
+    b.add("OCTAVE PLK", "bass", (o("16", "SAW", 110), o("8", "SAW", 90, 0), osc_off()),
+          cutoff=440, emph=3.1, cntr=co(2.9), kbd=60, fenv=(0, 150, 0), env=(1, 220, 0, 90),
+          send=(10, 0, 10, 10), rv=("ROOM", 20, 90), pat=2, arp_on=True,
+          arp=A("UP", "1/16", 2, 0.5, 0, 127))
+    b.add("WOBBLE", "bass", (o("16", "SAW", 115), o("16", "SQR", 80, 11), osc_off()),
+          cutoff=300, emph=5.4, cntr=co(2.4), kbd=40, fenv=(0, 400, 40), env=(1, 350, 100, 120),
+          lfo=(3.5, "TRI", 0, "OFF"), mflt=True, vib=0, send=(30, 0, 0, 20), rv=("ROOM", 20, 80), dr=("TUBE", 70, 64), pat=2)
+    b.add("STEP BASS", "bass", (o("16", "SAW", 115), o("16", "SAW", 115, -6), o("32", "SQR", 40)),
+          cutoff=280, emph=3.9, cntr=co(2.7), kbd=50, fenv=(0, 220, 20), env=(1, 260, 60, 110),
+          arp=A("UP", "1/16", 1, 0.6, 0, 127), arp_on=True, send=(15, 0, 0, 10), rv=("ROOM", 20, 80), pat=2)
+    b.add("REED BASS", "bass", (o("8", "PW", 110), o("16", "PW", 60, 6), osc_off()),
+          cutoff=520, emph=2.2, cntr=co(1.8), kbd=60, fenv=(10, 300, 40), env=(5, 300, 85, 160),
+          vib=12, lfo=(5.0, "SIN", 300, "OFF"), send=(0, 0, 0, 25), rv=("ROOM", 30, 80), pat=2)
+    b.add("TUBE BASS", "bass", (o("16", "SAW", 105), o("8", "TRI", 60, -5), osc_off()),
+          cutoff=340, emph=3.4, cntr=co(2.2), kbd=50, fenv=(0, 260, 30), env=(3, 340, 70, 120),
+          send=(45, 0, 0, 15), rv=("ROOM", 20, 80), dr=("TUBE", 80, 66), pat=2)
+    b.add("DOUBLE SAW", "bass", (o("16", "SAW", 110), o("16", "SAW", 110, 15), o("8", "SQR", 50)),
+          cutoff=230, emph=4.4, cntr=co(3.0), kbd=40, fenv=(0, 300, 30), env=(1, 300, 90, 140),
+          send=(20, 0, 0, 15), rv=("ROOM", 20, 80), pat=2)
+    b.add("PLUCK BASS", "bass", (o("8", "TRI", 115), o("8", "SQR", 80, 5), o("16", "TRI", 40)),
+          cutoff=600, emph=3.0, cntr=co(3.0), kbd=60, fenv=(0, 120, 0), env=(1, 180, 0, 70),
+          send=(0, 0, 25, 25), rv=("ROOM", 25, 85), dl=("ANALOG", 250, 30), pat=2)
+
+
+def pad2(b):                             # 140-149: pads and strings
+    b.add("VELVET PAD", "pad", (o("8", "SAW", 80), o("8", "SAW", 80, 12), o("16", "TRI", 50)),
+          cutoff=900, emph=2.1, cntr=0, kbd=64, fenv=(500, 900, 90), env=(700, 800, 116, 900), poly=True,
+          vib=12, lfo=(4.0, "SIN", 700, "OFF"), send=(0, 80, 0, 70), rv=("HALL", 80, 80), ch=("MULTI", 70, 0.4), pat=5)
+    b.add("AURORA", "pad", (o("8", "TRI", 85), o("8", "SAW", 60, 17), o("4", "TRI", 40, -17)),
+          cutoff=1400, emph=1.8, cntr=0, kbd=60, fenv=(800, 1200, 100), env=(900, 1000, 120, 1200), poly=True,
+          vib=22, mosc=True, lfo=(0.3, "SIN", 0, "OFF"), send=(0, 60, 30, 90), rv=("CLOUD", 85, 75), dl=("TAPE", 500, 50), pat=5)
+    b.add("MIST STR", "pad", (o("8", "SAW", 75), o("8", "SAW", 75, 9), o("8", "SAW", 60, -9)),
+          cutoff=1080, emph=2.5, cntr=0, kbd=64, fenv=(400, 700, 100), env=(500, 600, 116, 800), poly=True,
+          vib=20, lfo=(5.0, "SIN", 600, "OFF"), send=(0, 70, 0, 60), rv=("HALL", 70, 80), ch=("STEREO", 70, 0.5), pat=5)
+    b.add("SWELL PAD", "pad", (o("8", "SAW", 90), o("16", "SAW", 60, 5), o("8", "TRI", 40)),
+          cutoff=760, emph=2.0, cntr=co(0.8), kbd=60, fenv=(1200, 1500, 110), env=(1500, 900, 118, 1000), poly=True,
+          lfo=(0.15, "TRI", 0, "OFF"), mflt=True, send=(0, 40, 40, 90), rv=("CLOUD", 90, 70), pat=5)
+    b.add("OBOE PAD", "pad", (o("8", "PW", 80), o("8", "PW", 60, 7), o("4", "SAW", 35)),
+          cutoff=1200, emph=2.6, cntr=co(1.0), kbd=70, fenv=(300, 900, 80), env=(400, 800, 112, 700), poly=True,
+          vib=30, lfo=(4.6, "SIN", 500, "OFF"), send=(0, 50, 0, 60), rv=("HALL", 75, 75), ch=("JUNO", 55, 0.5), pat=5)
+    b.add("CHOIR SOFT", "pad", (o("8", "TRI", 90), o("8", "TRI", 90, 14), o("16", "SAW", 40)),
+          cutoff=1000, emph=2.2, cntr=0, kbd=64, fenv=(600, 1000, 95), env=(800, 900, 118, 1100), poly=True,
+          vib=25, lfo=(4.4, "SIN", 500, "OFF"), send=(0, 60, 0, 80), rv=("CLOUD", 80, 80), pat=5)
+    b.add("HEAVEN", "pad", (o("8", "SAW", 85), o("8", "SAW", 85, 20), o("16", "SAW", 60, -20)),
+          cutoff=1250, emph=2.4, cntr=co(0.6), kbd=64, fenv=(1000, 1400, 100), env=(1100, 1000, 118, 1300), poly=True,
+          vib=34, mosc=True, lfo=(0.2, "SIN", 0, "OFF"), send=(0, 80, 60, 100), rv=("HALL", 95, 70), pat=5)
+    b.add("GLOW PAD", "pad", (o("8", "TRI", 90), o("8", "TRI", 90, 8), o("4", "TRI", 50, -8)),
+          cutoff=1700, emph=1.5, cntr=0, kbd=70, fenv=(500, 1000, 110), env=(600, 900, 118, 900), poly=True,
+          vib=18, lfo=(3.0, "SIN", 500, "OFF"), send=(0, 60, 40, 80), rv=("PLATE", 80, 85), dl=("DIGITAL", 500, 40), pat=5)
+    b.add("MIDNIGHT ST", "pad", (o("8", "SAW", 70), o("8", "PW", 60, 12), o("16", "SAW", 45, -5)),
+          cutoff=640, emph=2.8, cntr=co(0.8), kbd=60, fenv=(700, 900, 90), env=(800, 800, 116, 900), poly=True,
+          vib=16, lfo=(4.7, "SIN", 400, "OFF"), send=(10, 60, 0, 70), rv=("HALL", 70, 70), ch=("MULTI", 60, 0.4), pat=5)
+    b.add("BREATHE", "pad", (o("8", "PN", 40), o("8", "SAW", 80), o("16", "TRI", 50, 6)),
+          cutoff=920, emph=2.0, cntr=co(0.5), kbd=64, fenv=(900, 1400, 100), env=(1000, 1000, 112, 1100), poly=True,
+          lfo=(0.12, "TRI", 0, "OFF"), mflt=True, noise=10, send=(0, 40, 0, 90), rv=("CLOUD", 90, 70), pat=5)
+
+
+def brass2(b):                           # 150-159
+    b.add("BIG BRASS", "brass", (o("8", "SAW", 95), o("8", "SAW", 95, 10), o("16", "SQR", 60)),
+          cutoff=760, emph=3.0, cntr=co(2.4), kbd=70, fenv=(80, 600, 85), env=(50, 500, 118, 380), poly=True,
+          vib=12, lfo=(5.3, "SIN", 400, "OFF"), send=(15, 60, 0, 40), rv=("HALL", 60, 80), ch=("STEREO", 40, 0.5), pat=5)
+    b.add("MUTE TRP", "brass", (o("8", "SAW", 90), o("8", "PW", 60, 7), o("16", "SAW", 40, -7)),
+          cutoff=1100, emph=4.0, cntr=co(2.8), kbd=70, fenv=(20, 400, 60), env=(30, 350, 110, 200), poly=True,
+          send=(20, 0, 30, 30), rv=("ROOM", 40, 80), pat=5)
+    b.add("SAX BRASS", "brass", (o("8", "SAW", 85), o("8", "SQR", 60, 6), o("16", "TRI", 40)),
+          cutoff=880, emph=2.9, cntr=co(2.0), kbd=70, fenv=(120, 700, 75), env=(100, 500, 115, 400), poly=True,
+          vib=30, lfo=(5.0, "SIN", 500, "OFF"), send=(10, 40, 0, 45), rv=("HALL", 60, 80), pat=5)
+    b.add("STAB 2", "brass", (o("8", "SAW", 105), o("8", "SAW", 105, 11), o("4", "SQR", 45)),
+          cutoff=1400, emph=3.6, cntr=co(3.2), kbd=80, fenv=(0, 180, 0), env=(0, 260, 0, 160), poly=True,
+          send=(30, 0, 25, 25), rv=("PLATE", 50, 85), pat=5)
+    b.add("HORN SECT", "brass", (o("8", "SAW", 95), o("8", "SAW", 95, 16), o("8", "TRI", 40)),
+          cutoff=660, emph=3.2, cntr=co(2.2), kbd=60, fenv=(160, 700, 70), env=(120, 450, 118, 360), poly=True,
+          vib=20, mosc=False, lfo=(5.1, "SIN", 500, "OFF"), send=(15, 50, 0, 40), rv=("HALL", 65, 75), pat=5)
+    b.add("SYNTH HORN", "brass", (o("8", "SQR", 95), o("8", "SAW", 90, 9), o("16", "SAW", 60, -9)),
+          cutoff=900, emph=4.2, cntr=co(2.6), kbd=70, fenv=(40, 500, 80), env=(40, 420, 118, 300), poly=False,
+          glide=50, send=(35, 0, 40, 35), rv=("PLATE", 45, 80), dr=("TUBE", 70, 66), pat=5)
+    b.add("POWER BRS", "brass", (o("8", "SAW", 100), o("8", "SAW", 100, 13), o("4", "SAW", 50)),
+          cutoff=1000, emph=3.4, cntr=co(2.4), kbd=70, fenv=(60, 500, 90), env=(70, 450, 120, 360), poly=True,
+          vib=10, lfo=(5.6, "SIN", 300, "OFF"), send=(25, 0, 30, 40), rv=("HALL", 70, 80), ch=("STEREO", 55, 0.7), pat=5)
+    b.add("MUTED HRN", "brass", (o("8", "PW", 85), o("8", "SAW", 60, -8), o("16", "SAW", 35)),
+          cutoff=720, emph=3.8, cntr=co(2.2), kbd=60, fenv=(30, 300, 50), env=(40, 300, 100, 220), poly=True,
+          send=(10, 0, 20, 30), rv=("ROOM", 35, 80), pat=5)
+    b.add("OCT BRASS", "brass", (o("8", "SAW", 90), o("4", "SAW", 75, 7), o("16", "SQR", 45)),
+          cutoff=1200, emph=3.1, cntr=co(2.5), kbd=70, fenv=(100, 600, 85), env=(60, 480, 116, 420), poly=True,
+          vib=14, lfo=(5.2, "SIN", 400, "OFF"), send=(15, 40, 0, 45), rv=("HALL", 60, 80), pat=5)
+    b.add("BRASS DRONE", "brass", (o("16", "SAW", 90), o("16", "SAW", 90, 13), o("8", "SQR", 45)),
+          cutoff=600, emph=2.6, cntr=co(1.8), kbd=60, fenv=(400, 900, 100), env=(500, 700, 118, 800), poly=True,
+          vib=20, lfo=(4.8, "SIN", 500, "OFF"), send=(0, 50, 0, 60), rv=("HALL", 70, 75), pat=5)
+
+
+def pluck2(b):                           # 160-169: plucks and mallets (poly)
+    b.add("HARP 2", "pluck", (o("8", "TRI", 100), o("4", "TRI", 70, 5), o("8", "SAW", 30)),
+          cutoff=1200, emph=1.8, cntr=co(2.0), kbd=90, fenv=(0, 300, 0), env=(1, 800, 0, 400), poly=True,
+          send=(0, 40, 0, 60), rv=("HALL", 60, 80), pat=13)
+    b.add("KOTO", "pluck", (o("8", "SQR", 90), o("8", "SQR", 80, 12), o("16", "TRI", 40)),
+          cutoff=1700, emph=2.4, cntr=co(2.2), kbd=80, fenv=(0, 400, 0), env=(1, 500, 0, 300), poly=True,
+          send=(0, 20, 20, 60), rv=("ROOM", 50, 85), dl=("TAPE", 300, 35), pat=13)
+    b.add("MARIMBA 2", "pluck", (o("8", "TRI", 0), o("4", "TRI", 90), o("16", "TRI", 40)),
+          cutoff=1900, emph=1.2, cntr=co(1.0), kbd=90, fenv=(0, 200, 0), env=(1, 300, 0, 150), poly=True,
+          send=(0, 0, 0, 40), rv=("ROOM", 30, 90), pat=13)
+    b.add("CLAV FUNK", "pluck", (o("8", "SQR", 100), o("8", "SAW", 60, 4), o("4", "PW", 40)),
+          cutoff=1300, emph=4.4, cntr=co(3.2), kbd=80, fenv=(0, 90, 0), env=(0, 140, 0, 80), poly=True,
+          send=(20, 0, 10, 20), rv=("ROOM", 25, 85), pat=13)
+    b.add("STEEL PLUCK", "pluck", (o("8", "SAW", 100), o("8", "TRI", 70, 7), o("4", "TRI", 40)),
+          cutoff=1100, emph=3.1, cntr=co(2.6), kbd=70, fenv=(0, 160, 0), env=(1, 260, 0, 150), poly=True,
+          send=(10, 0, 40, 40), rv=("SPRING", 40, 85), dl=("DIGITAL", 250, 35), pat=13)
+    b.add("ACOUSTIC", "pluck", (o("8", "TRI", 90), o("8", "SAW", 35, 2), o("4", "TRI", 45)),
+          cutoff=1500, emph=1.5, cntr=co(1.4), kbd=90, fenv=(0, 500, 0), env=(1, 700, 0, 350), poly=True,
+          send=(0, 20, 0, 50), rv=("ROOM", 35, 90), pat=13)
+    b.add("TICK PLK", "pluck", (o("4", "SQR", 100), o("2", "SHK", 50), osc_off()),
+          cutoff=2200, emph=2.7, cntr=co(3.5), kbd=90, fenv=(0, 60, 0), env=(0, 90, 0, 50), poly=True,
+          send=(10, 0, 30, 30), rv=("ROOM", 25, 90), dl=("DIGITAL", 188, 25), pat=13)
+    b.add("BANJO", "pluck", (o("8", "SAW", 95), o("8", "SQR", 60, -3), o("4", "TRI", 50)),
+          cutoff=1450, emph=3.4, cntr=co(2.4), kbd=80, fenv=(0, 220, 0), env=(0, 320, 0, 160), poly=True,
+          send=(0, 0, 0, 40), rv=("PLATE", 45, 85), pat=13)
+    b.add("PLUCK ARP", "pluck", (o("8", "TRI", 100), o("8", "SAW", 60, 9), o("4", "TRI", 30)),
+          cutoff=1400, emph=2.5, cntr=co(2.0), kbd=80, fenv=(0, 160, 0), env=(1, 240, 0, 110), poly=True,
+          send=(0, 20, 50, 45), rv=("PLATE", 50, 85), dl=("P-PONG", 375, 40),
+          arp=A("UPDN", "1/16", 2, 0.45, 0, 127), arp_on=True, pat=13)
+    b.add("CHIME BOX", "pluck", (o("4", "TRI", 0), o("2", "TRI", 100), osc_off()),
+          cutoff=2400, emph=0.6, cntr=0, kbd=100, fenv=(0, 500, 0), env=(0, 900, 0, 500), poly=True,
+          send=(0, 20, 30, 60), rv=("ROOM", 40, 90), pat=13)
+
+
+def keys2(b):                            # 170-179: keys and organs (poly)
+    b.add("CLAV SOFT", "keys", (o("8", "SQR", 85), o("8", "PW", 40, 6), osc_off()),
+          cutoff=1050, emph=2.6, cntr=co(2.2), kbd=90, fenv=(0, 200, 10), env=(1, 500, 10, 200), poly=True,
+          send=(0, 30, 0, 30), rv=("ROOM", 30, 85), pat=6)
+    b.add("WURLI 2", "keys", (o("8", "TRI", 100), o("4", "TRI", 40, 3), o("16", "SAW", 20)),
+          cutoff=1350, emph=2.8, cntr=co(2.0), kbd=90, fenv=(0, 600, 20), env=(1, 1200, 20, 260), poly=True,
+          send=(20, 40, 0, 30), rv=("ROOM", 40, 85), ch=("JUNO", 50, 0.5), pat=6)
+    b.add("HARPSI 2", "keys", (o("8", "SAW", 90), o("8", "SAW", 90, 9), o("4", "SQR", 40)),
+          cutoff=1800, emph=3.8, cntr=co(2.2), kbd=100, fenv=(0, 130, 0), env=(0, 400, 0, 120), poly=True,
+          send=(0, 0, 0, 40), rv=("ROOM", 35, 90), pat=6)
+    b.add("DRAWBAR", "keys", (o("8", "TRI", 0), o("4", "TRI", 100), o("16", "TRI", 90)),
+          cutoff=2200, emph=0.8, cntr=0, kbd=100, fenv=(0, 100, 127), env=(4, 100, 127, 80), poly=True,
+          lfo=(6.0, "SIN", 0, "OFF"), trem=25, send=(0, 80, 0, 50), rv=("HALL", 45, 75), ch=("STEREO", 80, 6.0), pat=6)
+    b.add("PIPE ORG", "keys", (o("8", "TRI", 90), o("4", "TRI", 80), o("2", "TRI", 60)),
+          cutoff=2000, emph=0.4, cntr=0, kbd=100, fenv=(0, 100, 127), env=(60, 100, 127, 150), poly=True,
+          vib=0, send=(0, 40, 0, 70), rv=("HALL", 85, 70), pat=7)
+    b.add("ELEC PIANO", "keys", (o("8", "TRI", 90), o("8", "SQR", 40, 4), o("4", "TRI", 35)),
+          cutoff=1250, emph=2.3, cntr=co(2.0), kbd=90, fenv=(0, 300, 15), env=(1, 1600, 12, 280), poly=True,
+          send=(0, 50, 0, 30), rv=("PLATE", 45, 90), dr=("SOFT", 40, 64), pat=6)
+    b.add("MELLOTRON", "keys", (o("8", "SAW", 70), o("8", "SAW", 70, 11), o("4", "SAW", 40, -11)),
+          cutoff=1000, emph=2.0, cntr=0, kbd=90, fenv=(120, 700, 110), env=(240, 600, 118, 500), poly=True,
+          vib=18, mosc=False, lfo=(5.0, "SIN", 400, "OFF"), send=(0, 60, 0, 60), rv=("HALL", 60, 80), pat=6)
+    b.add("MALLET KEY", "keys", (o("4", "TRI", 0), o("2", "TRI", 90), o("8", "TRI", 45)),
+          cutoff=2100, emph=1.4, cntr=co(1.0), kbd=100, fenv=(0, 300, 0), env=(0, 700, 0, 250), poly=True,
+          send=(0, 20, 30, 50), rv=("ROOM", 40, 90), pat=6)
+    b.add("CHORUS EP", "keys", (o("8", "TRI", 100), o("8", "TRI", 90, 12), o("4", "TRI", 40)),
+          cutoff=1150, emph=2.2, cntr=co(1.8), kbd=90, fenv=(0, 500, 10), env=(2, 1400, 10, 300), poly=True,
+          send=(0, 40, 0, 35), rv=("ROOM", 35, 85), ch=("STEREO", 85, 0.9), pat=6)
+    b.add("HAMMOND", "keys", (o("8", "TRI", 100), o("4", "TRI", 100), o("2", "TRI", 60)),
+          cutoff=2300, emph=0.5, cntr=0, kbd=100, fenv=(0, 80, 127), env=(4, 90, 127, 60), poly=True,
+          lfo=(6.2, "SIN", 0, "OFF"), trem=15, send=(20, 60, 0, 40), rv=("ROOM", 40, 80), ch=("JUNO", 80, 6.2), pat=7)
+
+
+def atmo2(b):                            # 180-189: textures and drones
+    b.add("DEEP WELL", "atmo", (o("16", "SAW", 85), o("16", "SAW", 85, 15), o("8", "TRI", 40)), noise=15, pink=True,
+          cutoff=260, emph=3.2, cntr=co(2.0), kbd=40, fenv=(2000, 3000, 70), env=(2000, 2500, 118, 3000), poly=True,
+          vib=40, lfo=(0.1, "SIN", 0, "OFF"), send=(0, 70, 50, 90), rv=("CLOUD", 90, 60), dl=("TAPE", 500, 55), pat=5)
+    b.add("GHOST CHOIR", "atmo", (o("8", "TRI", 60), o("8", "PW", 40, 9), o("16", "SAW", 25)), noise=20, pink=True,
+          cutoff=1100, emph=1.4, cntr=0, kbd=60, fenv=(1500, 2500, 90), env=(2000, 2500, 110, 3000), poly=True,
+          vib=60, lfo=(0.2, "TRI", 0, "OFF"), send=(0, 60, 30, 100), rv=("CLOUD", 100, 60), pat=5)
+    b.add("PULSE DRONE", "atmo", (o("8", "PW", 90), o("8", "PW", 70, 13), o("16", "SQR", 40)),
+          cutoff=500, emph=4.2, cntr=co(1.6), kbd=40, fenv=(1000, 1500, 100), env=(1500, 2000, 118, 2000), poly=True,
+          lfo=(0.2, "SIN", 0, "OFF"), mflt=True, send=(10, 60, 0, 90), rv=("HALL", 90, 60), pat=5)
+    b.add("OCEAN", "atmo", (osc_off(), osc_off(), osc_off()), noise=90, pink=True,
+          cutoff=600, emph=2.0, cntr=0, kbd=0, fenv=(2000, 3500, 80), env=(3000, 3000, 118, 3500),
+          lfo=(0.07, "SIN", 0, "OFF"), mflt=True, trem=80,
+          send=(0, 40, 0, 110), rv=("CLOUD", 110, 60), pat=7)
+    b.add("STARFIELD", "atmo", (o("2", "SAW", 60), o("2", "SAW", 60, 21), o("4", "TRI", 40)), noise=30,
+          cutoff=2000, emph=3.6, cntr=co(1.0), kbd=50, fenv=(3000, 4000, 60), env=(3000, 3500, 110, 3000), poly=True,
+          vib=80, lfo=(0.3, "SIN", 0, "OFF"), send=(0, 50, 60, 100), rv=("CLOUD", 95, 80), dl=("REVERSE", 500, 40), pat=5)
+    b.add("MOTHER", "atmo", (o("16", "TRI", 100), o("16", "TRI", 90, 19), o("8", "SAW", 35)),
+          cutoff=350, emph=1.6, cntr=0, kbd=40, fenv=(1500, 2000, 100), env=(2500, 2500, 118, 3000), poly=True,
+          vib=40, lfo=(0.12, "SIN", 0, "OFF"), send=(0, 60, 0, 90), rv=("HALL", 95, 60), pat=5)
+    b.add("FOG BELLS", "atmo", (o("4", "TRI", 90), o("2", "TRI", 60, 510), osc_off()), noise=40, pink=True,
+          cutoff=1800, emph=2.4, cntr=co(0.8), kbd=60, fenv=(800, 2500, 60), env=(1000, 3000, 80, 3500), poly=True,
+          lfo=(0.4, "SIN", 0, "OFF"), mflt=True, send=(0, 40, 50, 110), rv=("CLOUD", 100, 70), pat=5)
+    b.add("MACHINE HUM", "atmo", (o("16", "SAW", 80), o("16", "SAW", 80, 3), o("32", "SQR", 40)), noise=30,
+          cutoff=280, emph=5.0, cntr=co(1.4), kbd=30, fenv=(500, 800, 100), env=(500, 1500, 118, 1200),
+          lfo=(0.5, "TRI", 0, "OFF"), trem=40, send=(0, 40, 0, 60), rv=("ROOM", 50, 60), pat=7)
+    b.add("VOID", "atmo", (o("16", "SQR", 70), o("16", "SQR", 70, 25), osc_off()), noise=50,
+          cutoff=400, emph=6.2, cntr=co(2.6), kbd=30, fenv=(1800, 2400, 90), env=(2000, 3000, 118, 3000),
+          mflt=True, lfo=(0.08, "TRI", 0, "OFF"), send=(20, 40, 40, 100), rv=("CLOUD", 100, 60), pat=7)
+    b.add("TIDAL", "atmo", (o("8", "PW", 80), o("8", "SAW", 60, 7), o("16", "TRI", 45)), noise=60, pink=True,
+          cutoff=720, emph=2.8, cntr=co(1.2), kbd=40, fenv=(2500, 3000, 80), env=(3000, 3000, 118, 3500), poly=True,
+          lfo=(0.1, "SIN", 0, "OFF"), mflt=True, send=(0, 50, 0, 100), rv=("CLOUD", 100, 60), pat=5)
+
+
+def fx2(b):                              # 190-199: effects
+    b.add("RISER", "fx", (o("8", "SAW", 90), o("8", "SAW", 90, 12), osc_off()), noise=60,
+          cutoff=200, emph=4.0, cntr=co(4.8), kbd=0, fenv=(6000, 6000, 0), env=(5000, 1000, 110, 600), pit=st_pit(12),
+          send=(0, 40, 0, 60), rv=("HALL", 80, 80), pat=7)
+    b.add("IMPACT", "fx", (o("16", "SQR", 80), osc_off(), osc_off()), noise=100, pink=True,
+          cutoff=180, emph=1.5, cntr=co(3.5), kbd=0, fenv=(0, 900, 0), env=(0, 1800, 0, 1600),
+          send=(20, 0, 0, 90), rv=("HALL", 110, 40), pat=7)
+    b.add("RAYGUN", "fx", (o("4", "SAW", 100), o("2", "SQR", 40, 30), osc_off()),
+          cutoff=1100, emph=6.4, cntr=co(4.0), kbd=0, fenv=(0, 300, 0), env=(0, 400, 0, 250), penv=st_pit(-12),
+          send=(30, 0, 40, 40), rv=("PLATE", 50, 85), dl=("DIGITAL", 188, 45), pat=7)
+    b.add("STATIC", "fx", (osc_off(), osc_off(), osc_off()), noise=127,
+          cutoff=900, emph=3.0, cntr=0, kbd=0, fenv=(0, 500, 40), env=(10, 300, 90, 200),
+          lfo=(12.0, "S&H", 0, "OFF"), trem=90, send=(0, 0, 0, 60), rv=("ROOM", 40, 70), pat=7)
+    b.add("CARPET", "fx", (o("16", "SAW", 70), osc_off(), osc_off()), noise=80, pink=True,
+          cutoff=500, emph=5.3, cntr=co(2.8), kbd=0, fenv=(0, 600, 60), env=(200, 800, 90, 500),
+          lfo=(0.8, "SIN", 0, "OFF"), mflt=True, send=(0, 40, 0, 60), rv=("HALL", 70, 70), pat=7)
+    b.add("SPACESHIP", "fx", (o("8", "SQR", 80), o("8", "SQR", 80, 33), osc_off()),
+          cutoff=1200, emph=4.5, cntr=co(2.0), kbd=0, fenv=(0, 200, 90), env=(50, 400, 110, 400),
+          lfo=(0.7, "TRI", 0, "OFF"), pit=st_pit(0.5), send=(0, 0, 40, 60), rv=("CLOUD", 80, 80), pat=7)
+    b.add("BEEP BOOP", "fx", (o("8", "SQR", 100), osc_off(), osc_off()),
+          cutoff=2200, emph=3.0, cntr=0, kbd=0, fenv=(0, 60, 0), env=(0, 80, 0, 40), poly=True,
+          arp=A("UP", "1/32", 3, 0.6, 0, 127), arp_on=True, send=(0, 0, 25, 25), rv=("ROOM", 25, 85), pat=13)
+    b.add("GLITCH FX", "fx", (o("32", "SHK", 100), osc_off(), osc_off()), noise=90,
+          cutoff=900, emph=4.2, cntr=co(3.0), kbd=0, fenv=(0, 80, 0), env=(0, 120, 0, 90),
+          arp=A("RND", "1/32", 4, 0.5, 0, 90), arp_on=True, send=(40, 0, 40, 50), rv=("SPRING", 50, 70), pat=13)
+    b.add("TAPE STOP", "fx", (o("8", "SAW", 90), o("8", "SAW", 90, 5), osc_off()),
+          cutoff=1100, emph=3.3, cntr=co(2.4), kbd=0, fenv=(0, 1200, 0), env=(0, 1500, 0, 900), penv=st_pit(-10),
+          send=(20, 0, 40, 60), rv=("ROOM", 55, 80), dl=("TAPE", 450, 60), pat=7)
+    b.add("SUB DROP", "fx", (o("16", "SQR", 110), osc_off(), osc_off()),
+          cutoff=300, emph=2.0, cntr=co(2.0), kbd=0, fenv=(0, 1500, 0), env=(0, 2000, 0, 1200), penv=st_pit(-24),
+          send=(15, 0, 0, 50), rv=("HALL", 80, 60), pat=7)
+
+
+# the arpeggiator on for these of the second hundred (with the 1.14.0 ones: about a quarter of 200)
+ARP2 = ['VELVET EP', 'MINI BASS', 'TIN WHISTLE', 'MACHINE', 'CRUNCH', 'MOONLIGHT', 'DREAM FLUTE', 'ROUND 808', 'RUBBER SUB', 'DOUBLE SAW', 'AURORA', 'GLOW PAD', 'STAB 2', 'SAX BRASS', 'HARP 2', 'KOTO', 'BANJO', 'WURLI 2', 'HARPSI 2', 'STARFIELD', 'FOG BELLS', 'RAYGUN', 'SPACESHIP']
+
+
 def build(b):
     showcase(b)
     hard_leads(b)
@@ -431,9 +792,24 @@ def build(b):
     keys(b)
     atmospheres(b)
     sfx(b)
+    show2(b)
+    hard2(b)
+    soft2(b)
+    bass2(b)
+    pad2(b)
+    brass2(b)
+    pluck2(b)
+    keys2(b)
+    atmo2(b)
+    fx2(b)
+    for x in b.p[100:]:
+        if x["name"] in ARP2:
+            x["arp"][0] = 1
+    for x in b.p[130:140]:          # 130-139 (the second hundred's basses): OCT-1, as the first hundred's
+        x["oct"] = -1
     if os.environ.get("FMINI_PARTIAL"):
-        while len(b.p) < 100:       # a development filler: the groups still to write
+        while len(b.p) < 200:       # a development filler: the groups still to write
             i = len(b.p)
             b.add("TEMP %02d" % i, "lead", (o("8", "SAW", 100), o("8", "SAW", 100, 11), osc_off()), cutoff=1500, emph=3.0,
-                  cntr=co(2), env=(5, 300, 100, 150), poly=(i % 3 == 0), oct=-1 if 50 <= i < 60 else 0, arp_on=(i % 4 == 0))
+                  cntr=co(2), env=(5, 300, 100, 150), poly=(i % 3 == 0), oct=-1 if 50 <= i < 60 or 130 <= i < 140 else 0, arp_on=(i % 4 == 0))
     return b

@@ -39,9 +39,9 @@ int main(void)
     fbchk(fr_find(rec, n, FR_EXTRA, &d, &l) && l == sizeof(fmini_x_t) && !memcmp(d, &FMINI_X[0], sizeof(fmini_x_t)),
           "slot 0's extras are the factory extras");
 
-    /* INIT (slot 100): sawtooth on oscillator 1 alone, nothing else */
+    /* INIT (past the last factory slot: no slot has it now, 1.14.1): sawtooth on oscillator 1 alone, nothing else */
     n = fb_factory_rec(FMINI_NFACTORY, rec);
-    fbchk(fr_find(rec, n, FR_NAME, &d, &l) && l == 4 && !memcmp(d, "INIT", 4), "slot 100 is INIT");
+    fbchk(fr_find(rec, n, FR_NAME, &d, &l) && l == 4 && !memcmp(d, "INIT", 4), "past the factory slots is INIT");
     fbchk(fr_find(rec, n, FR_PATCH, &d, &l) && l == FG_SIZE, "INIT has a patch");
     if (fr_find(rec, n, FR_PATCH, &d, &l)) {
         const uint8_t *p = d;
@@ -62,10 +62,10 @@ int main(void)
               "INIT: cutoff open, sustain full, no filter envelope, no sends");
     }
 
-    /* the RAM names: every slot named, INIT from slot 100 */
+    /* the RAM names: every slot named by its factory patch (1.14.1: 200 factory patches, no INIT slot) */
     fb_names_init();
-    fbchk(!strcmp(fb_name[0], "MINI LEAD") && !strcmp(fb_name[FMINI_NFACTORY], "INIT") && !strcmp(fb_name[FB_NSLOT - 1], "INIT"),
-          "the RAM name list: slot 0 and the INIT slots");
+    fbchk(!strcmp(fb_name[0], "MINI LEAD") && !strcmp(fb_name[100], FMINI_PRESETS[100].name) && !strcmp(fb_name[FB_NSLOT - 1], FMINI_PRESETS[FB_NSLOT - 1].name),
+          "the RAM name list: slot 0 and the last slots");
 
     /* the load waits: a SLOT loads once it has been still for 50 ms; each turn starts the count again */
     {

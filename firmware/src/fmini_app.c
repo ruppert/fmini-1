@@ -502,9 +502,9 @@ static void fa_wave_boxes(uint32_t pg, uint32_t cur)
 }
 
 /* ------------------------------------------------------- presets --- */
-static uint8_t fa_base;                                   /* the factory patch last loaded (0..99): the one PRESETS goes on from, edited or not (an edit makes SLOT OWN) */
-/* 1.14.0: no user bank. The 200 slots are the presets, all of them the same way (0..99 factory, 100..199 INIT at
- * first, then whatever was saved): PRESETS walks them, SAVE writes one (fmini_bank.c) */
+static uint8_t fa_base;                                   /* the factory patch last loaded (0..199): the one PRESETS goes on from, edited or not (an edit makes SLOT OWN) */
+/* 1.14.1: no user bank. The 200 slots are the presets, all of them the same way (000..199, all factory patches, then
+ * whatever was saved): PRESETS walks them, SAVE writes one (fmini_bank.c) */
 static int fa_on_user(void) { return 0; }                 /* (kept for the callers: a track is never on a user preset now) */
 /* the slot number on the screen: three digits, 000..199 */
 static void fa_slot_num(char *l, uint32_t k)
@@ -1205,7 +1205,7 @@ static void fa_gl_dialog(void)
     }
 }
 
-/* the patch shown: a factory one by its number 00..99 and name, or a saved one (U01..) ; the last factory patch loaded
+/* the patch shown: a factory one by its number 000..199 and name, or a saved one (U01..) ; the last factory patch loaded
  * stays shown while its sound is edited (SLOT OWN), so there is always a number */
 static int16_t fa_last_sl = -2;                           /* SLOT as last seen: -1 = not a factory patch (edited / saved one) */
 static uint8_t fa_primed;                                 /* the first frame has been seen: no pop-up at power-on */
@@ -1358,7 +1358,7 @@ static void fa_scene(void)
         if (pg == 0u)
             fa_voices(cur == 8u);
     }
-    {   /* the foot: the patch's number (00..99, or U01.. of a saved one) and name, the battery at the right */
+    {   /* the foot: the patch's number (000..199, or U01.. of a saved one) and name, the battery at the right */
         int32_t w;
         char nm[16];
         fa_preset_label(b, nm);

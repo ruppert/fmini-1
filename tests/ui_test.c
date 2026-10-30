@@ -1391,7 +1391,7 @@ static int test_categories(void)
     for (e = 0; e < NENGINES; e++) {
         const char *c = PRESET_CAT[e];
         if (!eng_ok(e) || e == ENGI_DIGITAL) continue;    /* (DIGITAL: FELUCCA_FM4 builds only, its sounds no category) */
-        ok &= e == ENGI_FMINI ? str_len(c) == FMINI_NFACTORY : str_len(c) == ENGINES[e]->npresets;   /* (FMINI: the 100 factory letters; INIT slots are OTHER) */
+        ok &= e == ENGI_FMINI ? str_len(c) == FMINI_NFACTORY : str_len(c) == ENGINES[e]->npresets;   /* (FMINI: the 200 factory letters, none OTHER) */
         for (k = 0; k < ENGINES[e]->npresets; k++)
             ok &= preset_cat(e, k) >= CAT_BASS && preset_cat(e, k) <= CAT_OTHER;
     }
@@ -1419,14 +1419,11 @@ static int test_categories(void)
     turn(EN_K4, 20);
     bad += check("  .. right to OTHER and no further (no wrap)", list_mode() == LIST_N - 1u && str_eq(list_name(list_mode()), "OTHER"));
 #if !FELUCCA_FM4                                           /* (DIGITAL's presets: OTHER's) */
-    {
-        track_t before = *TSEL;
-        ui.msg_t = 0;
-        turn(EN_PRESET, 1);
-        /* 1.14.0: OTHER holds FMINI's INIT slots (100..199): the PRESETS knob goes there and loads one */
-        bad += check("  OTHER: FMINI's INIT slots, the knob loads one of them",
-                     track_cat(TSEL) == CAT_OTHER && TSEL->eng_req == ENGI_FMINI && TSEL->p[P_E7] >= (int32_t)FMINI_NFACTORY);
-        (void)before;
+    {   /* 1.14.1: FMINI's 200 factory patches all have a category: none is OTHER (no INIT slots any more) */
+        uint32_t k2, other = 0;
+        for (k2 = 0; k2 < FMINI_NFACTORY && PRESET_CAT[ENGI_FMINI][k2]; k2++)
+            other += PRESET_CAT[ENGI_FMINI][k2] == 'O';
+        bad += check("  FMINI: no patch is OTHER", other == 0 && k2 == FMINI_NFACTORY);
     }
 #endif
     {   /* the settings: the category's byte, unknown = none; FAV clears it */

@@ -2,7 +2,8 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Editor protocol: the FMINI patch (FMini-1; EDITOR_PROTOCOL.md "FMINI patches", cmds 82, 83). The patch is the 32
  * bytes of eng_fmini.c (FG_*: ranges, waves, tuning, mixer, switches, TUNE, MOD MIX, KBD, GLIDE), every byte 0..127.
- * Targets: 0 a track's own patch (index 0..3), 2 a factory patch (0..FMINI_NFACTORY-1, read only), 3 a user preset's
+ * Targets: 0 a track's own patch (index 0..3), 2 a factory patch (0..FMINI_NFACTORY-1 = 199, read only; 1.14.1: the index
+ * is then two 7-bit bytes, low first, when it is past 127: a GET of 3 bytes replies target, lo, hi, rc, patch), 3 a user preset's
  * patch (0..UP_SLOTS-1, read only; the preset must be an FMINI one: rc 2 otherwise; a preset stored without its own patch
  * gives the factory patch its SLOT names, as loading it does).
  * GET: target, index -> target, index, rc, [FG_SIZE bytes]. For a track the reply ends with its SLOT (P_E7, 0..127:
@@ -89,7 +90,7 @@ static void ed_fmini_restore(const uint8_t *a, uint32_t n)
 }
 
 /* 88 FMINI_RESET: slot (two 7-bit bytes) -> slot, rc. The slot's saved preset is forgotten: it is its factory preset again
- * (INIT for 100..199). rc: 0 done, 1 arguments, 4 the flash refused */
+ * (every slot has one now). rc: 0 done, 1 arguments, 4 the flash refused */
 static void ed_fmini_reset(const uint8_t *a, uint32_t n)
 {
     uint32_t k = n == 2u ? (uint32_t)a[0] | (uint32_t)a[1] << 7 : FB_NSLOT, rc = 1;
@@ -121,15 +122,17 @@ static int ed_fmini_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
         }
         return 1;
     }
+    uint32_t ix;
     if (cmd != ED_FMINI_GET && cmd != ED_FMINI_PUT)
         return 0;
     if (cmd == ED_FMINI_GET)
-        rc = n != 2u ? 1u : 0u;
+        rc = (n == 2u || (n == 3u && a[0] == ED_FMINI_FACTORY)) ? 0u : 1u;
     else
         rc = (n != 2u + FG_SIZE && n != 3u + FG_SIZE) || a[0] != ED_FMINI_TRACK ? 1u : 0u;
     if (!rc && a[0] != ED_FMINI_TRACK && a[0] != ED_FMINI_FACTORY && a[0] != ED_FMINI_USER)
         rc = 1;
-    if (!rc && a[1] >= (a[0] == ED_FMINI_FACTORY ? FMINI_NFACTORY : a[0] == ED_FMINI_USER ? (uint32_t)UP_SLOTS : (uint32_t)NTRK))
+    ix = n == 3u ? (uint32_t)a[1] | (uint32_t)a[2] << 7 : (uint32_t)a[1];     /* (a factory GET of 3 bytes: the index in two bytes) */
+    if (!rc && ix >= (a[0] == ED_FMINI_FACTORY ? FMINI_NFACTORY : a[0] == ED_FMINI_USER ? (uint32_t)UP_SLOTS : (uint32_t)NTRK))
         rc = 1;
     if (!rc && a[0] == ED_FMINI_USER && (!up_used(a[1]) || up_rec(a[1])->engine != ENGI_FMINI))
         rc = 2;
@@ -153,10 +156,13 @@ static int ed_fmini_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
                 memcpy(pk, FMINI_FACTORY[v[P_E7] >= 0 && v[P_E7] < (int32_t)FMINI_NFACTORY ? v[P_E7] : 0], FG_SIZE);
             }
         } else {
-            memcpy(pk, a[0] == ED_FMINI_FACTORY ? FMINI_FACTORY[a[1]] : fmini_patch[a[1]], FG_SIZE);
+            memcpy(pk, a[0] == ED_FMINI_FACTORY ? FMINI_FACTORY[ix] : fmini_patch[a[1]], FG_SIZE);
         }
     }
-    ed_b(n ? a[0] : 127u); ed_b(n > 1u ? a[1] : 127u); ed_b(rc);
+    ed_b(n ? a[0] : 127u); ed_b(n > 1u ? a[1] : 127u);
+    if (n == 3u && a[0] == ED_FMINI_FACTORY)
+        ed_b(a[2]);                                       /* (the factory index's high byte) */
+    ed_b(rc);
     if (!rc && cmd == ED_FMINI_GET) {
         for (i = 0; i < FG_SIZE; i++)
             ed_b(pk[i]);

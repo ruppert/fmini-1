@@ -6,7 +6,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="FMini-1: a Minimoog emulation firmware for the M-Vave FM-1, mono and polyphonic. Analog Circuit Modelling, 3 oscillators, ladder filter, 100 presets, arpeggiator, sequencer, MIDI.">
+<meta name="description" content="FMini-1: a Minimoog emulation firmware for the M-Vave FM-1, mono and polyphonic. Analog Circuit Modelling, 3 oscillators, ladder filter, 200 presets, arpeggiator, sequencer, MIDI.">
 <title>FMini-1 — a Minimoog emulation for the M-Vave FM-1</title>
 <style>
   :root {
@@ -420,7 +420,7 @@ const TEXT = {
     s1: "Ligue o FM-1 ao computador com um cabo USB de dados.", s2: "Aperte Instalar e mantenha o cabo conectado até aparecer Pronto.", s3: "O FM-1 reinicia como FMini-1, com a tela de abertura.",
     ph_verify: "Verificar", ph_loader: "Modo de atualização", ph_write: "Gravar", ph_reboot: "Reiniciar", ph_done: "Pronto",
     tagline: "Emulação do Minimoog para o FM-1 (mono/poly)",
-    feat: "3 osciladores · filtro ladder · 100 presets · arpejador · MIDI",
+    feat: "3 osciladores · filtro ladder · 200 presets · arpejador · MIDI",
     risk: "Use por sua conta e risco", logT: "Detalhes", fw: "Firmware",
   },
   en: {
@@ -452,7 +452,7 @@ const TEXT = {
     s1: "Plug the FM-1 into the computer with a USB data cable.", s2: "Press Install and keep the cable connected until it says Done.", s3: "The FM-1 restarts as FMini-1 with its splash screen.",
     ph_verify: "Verify", ph_loader: "Update mode", ph_write: "Write", ph_reboot: "Restart", ph_done: "Done",
     tagline: "A Minimoog emulation for the M-Vave FM-1 (mono/poly)",
-    feat: "3 oscillators · ladder filter · 100 presets · arpeggiator · MIDI",
+    feat: "3 oscillators · ladder filter · 200 presets · arpeggiator · MIDI",
     risk: "Use at your own risk", logT: "Details", fw: "Firmware",
   },
 };
@@ -461,13 +461,13 @@ const SITE = {
   pt: {
     nav_f: "Som", nav_s: "Telas", nav_ft: "Features", nav_ed: "Editor", nav_i: "Instalar",
     sub: "Um firmware aberto que transforma o M-VAVE FM-1 em um sintetizador monofônico e polifônico. O FMini-1 usa a técnica de Analog Circuit Modelling, criada a partir dos esquemas reais do Minimoog para reproduzir com precisão o comportamento do instrumento original: três osciladores, filtro ladder, contornos, efeitos e tudo ao alcance dos botões do FM-1.",
-    chip_f: "Filtro ladder", chip_p: "100 presets",
+    chip_f: "Filtro ladder", chip_p: "200 presets",
     cta_install: "Instalar agora", cta_screens: "Ver as telas",
     h_sound: "O som", l_sound: "Cada bloco do painel do Minimoog tem seu lugar na tela de 240 × 240 do FM-1, com quatro knobs físicos para tocar de verdade.",
     f1t: "Banco de osciladores", f1d: "Três osciladores com faixas de LO a 2', forma de onda individual, ajuste fino (detune) independente nos osciladores 2 e 3 e uma leve deriva de afinação, como a dos VCOs analógicos.",
     f2t: "Filtro ladder", f2d: "Ladder de 4 polos, 24 dB/oitava, com saturação em cada estágio e o atraso de realimentação do circuito do Minimoog. Com a ênfase a partir de 8 o filtro auto-oscila numa senoide pura que acompanha o teclado em 1 V/oitava. O corte é lido de −5 a +5, como no painel.",
     f3t: "Contornos", f3d: "Dois contornos (filtro e volume) com ataque, decaimento e sustentação. O ataque é exponencial, como o do circuito original. Glide, LFO e modulação completam a seção.",
-    f4t: "100 presets", f4d: "Dez grupos de dez: uma vitrine de estilos, hard leads, soft leads, baixos, pads e cordas, metais, plucks, teclas, atmosferas e efeitos sonoros. Cerca de um quarto já vem com o arpejador ligado. Salve os seus em 32 posições de usuário.",
+    f4t: "200 presets", f4d: "Vinte grupos de dez: uma vitrine de estilos, hard leads, soft leads, baixos, pads e cordas, metais, plucks, teclas, atmosferas e efeitos sonoros. Cerca de um quarto já vem com o arpejador ligado. Salve os seus em 32 posições de usuário.",
     f5t: "Arpejador e sequenciador", f5d: "Um toque no ARP liga e desliga; segurar ativa o HOLD. O sequenciador grava até 64 notas (REC) e toca (PLAY). Os LEDs das teclas acendem junto com as notas.",
     f6t: "Efeitos por preset", f6d: "Reverb, delay, chorus e drive, cada preset com a sua própria combinação, para que baixos, leads e pads tenham ambientes bem diferentes.",
     h_screens: "As telas", l_screens: "O painel foi desenhado para a tela do FM-1, com knobs estriados, chaves vermelhas e azuis e gráficos de filtro e contornos. Escolha uma página:",
@@ -483,7 +483,7 @@ const SITE = {
     pops: [
       { i: "arp", t: "Arpejador", d: "Modo, velocidade, oitavas, gate, HOLD e tempo. Toque no botão ARP para ligar; segure para o HOLD. O quadro fecha sozinho em 4 s." },
       { i: "seq", t: "Sequenciador", d: "64 posições para notas. REC arma a gravação, PLAY toca e para, e o tempo se ajusta com o encoder." },
-      { i: "save", t: "Salvar preset", d: "Escolha a posição U01–U32, escreva o nome com os encoders e aperte SAVE. Suas versões ficam junto dos 100 presets de fábrica." },
+      { i: "save", t: "Salvar preset", d: "Escolha a posição U01–U32, escreva o nome com os encoders e aperte SAVE. Suas versões ficam junto dos 200 presets de fábrica." },
       { i: "fxrev", t: "FX · Editar reverb", d: "O botão EDIT abre quatro knobs: MIX, TYPE (room, hall, plate, spring e cloud, longo e denso), DECAY e TONE. Todos os reverbs são estéreo. Apertar FX de novo passa para o delay, o chorus e o drive." },
       { i: "fxdly", t: "FX · Editar delay", d: "MIX, TYPE (analog, digital, tape, ping-pong, multi-tap, slapback e reverse), TIME e FEEDBACK. O botão SCL marca o tempo (tap tempo). O chorus tem Stereo (inspirado no CE-2), Juno e Multi; o drive, Soft e Tube." },
       { i: "glo", t: "Global", d: "Entrada MIDI (USB, MIDI ou todas), canal, clock MIDI do ARP e do SEQ (OFF, USB ou TRS), faixa do pitch bend e a lista de controles MIDI." },
@@ -491,7 +491,7 @@ const SITE = {
       { i: "preset", t: "Troca de preset", d: "Ao trocar de preset aparece o número e o nome em letras grandes, por 1,5 s, e some." },
     ],
     l_feat: "As funcionalidades, em resumo.",
-    ft1t: "100 presets e 32 de usuário", ft1d: "100 presets de fábrica, de leads a efeitos sonoros, e 32 posições (U01–U32) para salvar os seus.",
+    ft1t: "200 presets e 32 de usuário", ft1d: "200 presets de fábrica, de leads a efeitos sonoros, e 32 posições (U01–U32) para salvar os seus.",
     ft2t: "Mono e 12 vozes", ft2d: "Monofônico como o Minimoog, ou polifônico com 12 vozes.",
     ft3t: "Emulação perfeita", ft3d: "Três osciladores, mixer com saturação suave e filtro ladder de 24 dB/oitava com auto-oscilação, modelados no Minimoog Model D.",
     ft4t: "Efeitos", ft4d: "5 reverbs (Room, Hall, Plate, Spring, Cloud), 7 delays (Analog, Digital, Tape, Ping-Pong, Multi, Slap, Reverse), 3 chorus (Stereo, Juno, Multi) e drive (Soft, Tube).",
@@ -505,13 +505,13 @@ const SITE = {
   en: {
     nav_f: "Sound", nav_s: "Screens", nav_ft: "Features", nav_ed: "Editor", nav_i: "Install",
     sub: "An open firmware that turns the M-VAVE FM-1 into a monophonic and polyphonic synth. FMini-1 uses Analog Circuit Modelling, built from the actual Minimoog schematics to accurately reproduce the behaviour of the real instrument: three oscillators, a ladder filter, contours and effects, all within reach of the FM-1's buttons.",
-    chip_f: "Ladder filter", chip_p: "100 presets",
+    chip_f: "Ladder filter", chip_p: "200 presets",
     cta_install: "Install now", cta_screens: "See the screens",
     h_sound: "The sound", l_sound: "Each block of the Minimoog panel has its place on the FM-1's 240 × 240 screen, with four real knobs to play it for real.",
     f1t: "Oscillator bank", f1d: "Three oscillators with ranges from LO to 2', a waveform each, independent detune on oscillators 2 and 3 and a touch of pitch drift, like analog VCOs.",
     f2t: "Ladder filter", f2d: "A four-pole ladder, 24 dB/octave, with saturation in every stage and the feedback lag of the Minimoog circuit. From emphasis 8 up it self-oscillates as a pure sine that follows the keyboard at 1 V/octave. Cutoff reads -5 to +5, as on the panel.",
     f3t: "Contours", f3d: "Two contours (filter and loudness) with attack, decay and sustain. The attack is exponential, like the original circuit. Glide, LFO and modulation complete the section.",
-    f4t: "100 presets", f4d: "Ten groups of ten: a showcase of styles, hard leads, soft leads, basses, pads and strings, brass, plucks, keys, atmospheres and sound effects. About a quarter comes with the arpeggiator already on. Save your own in 32 user slots.",
+    f4t: "200 presets", f4d: "Twenty groups of ten: a showcase of styles, hard leads, soft leads, basses, pads and strings, brass, plucks, keys, atmospheres and sound effects. About a quarter comes with the arpeggiator already on. Save your own in 32 user slots.",
     f5t: "Arpeggiator and sequencer", f5d: "One tap on ARP turns it on and off; holding it sets HOLD. The sequencer records up to 64 notes (REC) and plays them (PLAY). The key LEDs light with the notes.",
     f6t: "Effects per preset", f6d: "Reverb, delay, chorus and drive, each preset with its own combination, so basses, leads and pads live in very different spaces.",
     h_screens: "The screens", l_screens: "The panel is drawn for the FM-1's screen, with fluted knobs, red and blue rocker switches and graphs of the filter and contours. Pick a page:",
@@ -527,7 +527,7 @@ const SITE = {
     pops: [
       { i: "arp", t: "Arpeggiator", d: "Mode, rate, octaves, gate, HOLD and tempo. Tap the ARP button to turn it on; hold it for HOLD. The box closes by itself after 4 s." },
       { i: "seq", t: "Sequencer", d: "64 slots for notes. REC arms recording, PLAY starts and stops, and the tempo is set with an encoder." },
-      { i: "save", t: "Save preset", d: "Pick the slot U01–U32, type the name with the encoders and press SAVE. Your versions sit next to the 100 factory presets." },
+      { i: "save", t: "Save preset", d: "Pick the slot U01–U32, type the name with the encoders and press SAVE. Your versions sit next to the 200 factory presets." },
       { i: "fxrev", t: "FX · Edit reverb", d: "EDIT opens four knobs: MIX, TYPE (room, hall, plate, spring and cloud, long and dense), DECAY and TONE. Every reverb is stereo. Pressing FX again moves on to the delay, the chorus and the drive." },
       { i: "fxdly", t: "FX · Edit delay", d: "MIX, TYPE (analog, digital, tape, ping-pong, multi-tap, slapback and reverse), TIME and FEEDBACK. The SCL button taps the tempo. The chorus has Stereo (after the CE-2), Juno and Multi; the drive, Soft and Tube." },
       { i: "glo", t: "Global", d: "MIDI input (USB, MIDI or all), channel, MIDI clock for the ARP and SEQ (OFF, USB or TRS), pitch bend range and the list of MIDI controls." },
@@ -535,7 +535,7 @@ const SITE = {
       { i: "preset", t: "Preset change", d: "When the preset changes, its number and name appear in big letters for 1.5 s, then vanish." },
     ],
     l_feat: "The features at a glance.",
-    ft1t: "100 presets and 32 user slots", ft1d: "100 factory presets, from leads to sound effects, and 32 slots (U01–U32) for your own.",
+    ft1t: "200 presets and 32 user slots", ft1d: "200 factory presets, from leads to sound effects, and 32 slots (U01–U32) for your own.",
     ft2t: "Mono and 12 voices", ft2d: "Monophonic like the Minimoog, or polyphonic with 12 voices.",
     ft3t: "Minimoog model", ft3d: "Three oscillators, a mixer that overloads softly and a 24 dB/oct ladder filter that self-oscillates, modelled on the Minimoog Model D.",
     ft4t: "Effects", ft4d: "5 reverbs (Room, Hall, Plate, Spring, Cloud), 7 delays (Analog, Digital, Tape, Ping-Pong, Multi, Slap, Reverse), 3 choruses (Stereo, Juno, Multi) and drive (Soft, Tube).",

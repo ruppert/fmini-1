@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     fa_draw();
     dump(dir, 11);
     {   /* SAVE: a user preset in the first free slot, found again by PRESETS; the bank is mostly mono, its pads, keys and plucks poly */
-        apply_preset_to(TSEL, 5);                       /* 1.14.0: SAVE writes the slot being played (150, an INIT slot) */
+        apply_preset_to(TSEL, 5);                       /* SAVE writes the slot being played (150: a factory slot, saved over) */
         TSEL->p[P_E7] = 150;
         fmini_poll();
         fa_gl_close(); fa_ar = 0; fa_sc = 0; fa_sq = 0; fmg_fx = 0;   /* the SAVE dialog alone on the screen */
@@ -161,9 +161,9 @@ int main(int argc, char **argv)
         fa_mono();
         if (TSEL->p[P_VOICE] != V_POLY) { printf("POLY is not kept\n"); return 1; }
         TSEL->p[P_VOICE] = V_MONO;
-        {   /* the bank: 100 patches, a voice mode each (leads, basses and SFX mono; pads, keys, brass chords and plucks poly), names that fit */
+        {   /* the bank: 200 patches, a voice mode each (leads, basses and SFX mono; pads, keys, brass chords and plucks poly), names that fit */
             uint32_t k, npoly = 0;
-            if (FMINI_NFACTORY != 100u || strlen(FMINI_CATS) != 100u || NELEM(FMINI_PRESETS) != 100u) { printf("bank size %u\n", (uint32_t)FMINI_NFACTORY); return 1; }
+            if (FMINI_NFACTORY != 200u || strlen(FMINI_CATS) != 200u || NELEM(FMINI_PRESETS) != 200u) { printf("bank size %u\n", (uint32_t)FMINI_NFACTORY); return 1; }
             for (k = 0; k < FMINI_NFACTORY; k++) {
                 apply_preset_to(TSEL, k);
                 fa_mono();
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
                 if (strlen(ENGINES[ENGI_FMINI]->presets[k].name) > 12u) { printf("preset %u: name too long\n", k); return 1; }
                 npoly += !ENGINES[ENGI_FMINI]->presets[k].mono;
             }
-            if (npoly < 25u || npoly > 75u) { printf("bank: %u poly patches\n", npoly); return 1; }
+            if (npoly < 50u || npoly > 150u) { printf("bank: %u poly patches\n", npoly); return 1; }   /* (of 200: the first hundred had 58) */
             TSEL->p[P_VOICE] = V_MONO;
         }
     }
@@ -254,6 +254,8 @@ int main(int argc, char **argv)
         uint32_t k, on = 0, fxk, bad = 0;
         int16_t bpm0 = song.g[G_BPM];
         song.g[G_BPM] = 117;
+        for (k = 0; k < FMINI_NSLOT; k++)            /* (the SAVE steps above wrote some slots: back to their factory patches) */
+            fb_forget(k);
         for (k = 0; k < FMINI_NFACTORY; k++) {
             const fmini_x_t *x = &FMINI_X[k];
             TSEL->user = 0;
@@ -279,7 +281,7 @@ int main(int argc, char **argv)
                 if (song.g[FA_XG[fxk]] != clamp(x->fx[fxk], GP[FA_XG[fxk]].min, GP[FA_XG[fxk]].max) || x->fx[fxk] > GP[FA_XG[fxk]].max) {
                     printf("patch %u: FX %u = %d (%d)\n", k, fxk, song.g[FA_XG[fxk]], x->fx[fxk]); bad++;
                 }
-            if (song.octave != x->oct || (k >= 50u && k < 60u && x->oct != -1)) { printf("patch %u: octave %d\n", k, song.octave); bad++; }
+            if (song.octave != x->oct || (((k >= 50u && k < 60u) || (k >= 130u && k < 140u)) && x->oct != -1)) { printf("patch %u: octave %d\n", k, song.octave); bad++; }
             if (k >= 30u && k < 40u && song.octave != -1) { printf("patch %u: a bass comes in with OCT-1 (%d)\n", k, song.octave); bad++; }
             if ((k == 0u || k == 2u || k == 10u) && (fmini_patch[0][FG_SW1] & FS_MOSC)) { printf("patch %u: MOD OSC is off\n", k); bad++; }
             if (k == 0u && (song.octave != 1 || TSEL->p[P_E0] != 61 || fmini_patch[0][FG_GLID] != 50)) {      /* CUTOFF -0.2 (the ladder's dial, 1.7.0), GLIDE 3.9 (-10 %), OCT+ */
@@ -289,7 +291,7 @@ int main(int argc, char **argv)
                 printf("patch 3: cutoff %d reverb %d type %d\n", TSEL->p[P_E0], TSEL->p[P_REV], song.g[G_RTYPE]); bad++;
             }
         }
-        if (on < 22u || on > 28u) { printf("bank: ARP on in %u of 100 patches\n", on); bad++; }
+        if (on < 44u || on > 56u) { printf("bank: ARP on in %u of 200 patches\n", on); bad++; }
         if (song.g[G_BPM] != 117) { printf("bank: a patch changed the tempo (%d)\n", song.g[G_BPM]); bad++; }
         if (bad) return 1;
         song.g[G_BPM] = bpm0;                            /* (a Program Change brings the same: ui.c midi_pc_load) */

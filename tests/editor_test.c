@@ -509,9 +509,13 @@ static int fmini_patches(void)
     a[0] = 1; a[1] = 0;
     request(ED_FMINI_GET, a, 2);
     bad += check("FMINI_GET of an unknown target: rc 1", host_wire[7] == 1u);
-    a[0] = ED_FMINI_FACTORY; a[1] = FMINI_NFACTORY;
-    request(ED_FMINI_GET, a, 2);
-    bad += check("FMINI_GET of factory patch 101: rc 1", host_wire[7] == 1u);
+    a[0] = ED_FMINI_FACTORY; a[1] = FMINI_NFACTORY & 127; a[2] = FMINI_NFACTORY >> 7;     /* 1.14.1: the index in two bytes */
+    request(ED_FMINI_GET, a, 3);
+    bad += check("FMINI_GET of factory patch 200: rc 1", host_wire[8] == 1u);
+    a[1] = 150 & 127; a[2] = 150 >> 7;
+    request(ED_FMINI_GET, a, 3);
+    bad += check("FMINI_GET factory 150 (two bytes): the 32 bytes after lo, hi, rc", host_wire[8] == 0 &&
+                 host_wire[5] == ED_FMINI_FACTORY && host_wire[6] == (150 & 127) && host_wire[7] == 1 && !memcmp(host_wire + 9, FMINI_FACTORY[150], FG_SIZE));
     /* a user preset: stored from an FMINI track, read without loading it */
     reset();
     trk[0].eng_req = ENGI_FMINI; trk[0].engine = ENGI_FMINI;

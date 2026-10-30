@@ -955,7 +955,7 @@ static void slug(char *d, const char *s, size_t n)
 }
 
 /* ------------------------------------------------------------- main --- */
-#define MAXJ 512
+#define MAXJ 1024                      /* (1.14.1: the FMini-1 bank is 200 patches; the jobs are every engine x preset) */
 static job_t J[MAXJ];
 static uint32_t nj;
 static job_t *add(uint32_t kind, const char *name)

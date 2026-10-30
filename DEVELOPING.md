@@ -8,7 +8,7 @@ USB editor protocol. Facts here were read from the sources at v1.7.0; when a fil
 
 FMini-1 is firmware for the M-VAVE FM-1 that turns it into one monophonic (optionally 12-voice) synthesizer modelled after the
 Minimoog Model D: three oscillators, a noise source, a mixer that overloads softly, a 24 dB/oct transistor-ladder low-pass with its
-own contour, a loudness contour, an LFO, an arpeggiator, a small sequencer, three FX buses and 100 factory patches. It is a fork of
+own contour, a loudness contour, an LFO, an arpeggiator, a small sequencer, three FX buses and 200 factory patches. It is a fork of
 Felucca (many engines, a sequencer, projects); FMini-1 keeps Felucca's sound core, FX, MIDI, USB and storage and replaces the user
 interface (`FELUCCA_FMINI_ONLY=1`: `fmini_app.c`, `ui_fmini.c`) and adds one engine (FMINI, `eng_fmini.c`). Felucca's other engines are
 still built (the regression tests render them) but FMini-1's own screens do not offer them.
@@ -26,7 +26,7 @@ they do not fit).
 | --- | --- |
 | `firmware/src/` | the firmware, one compilation unit: `felucca.c` includes everything, in an order that matters |
 | `firmware/src/eng_fmini.c` | the FMINI engine: oscillators, mixer, the ladder, the contours, the 32-byte patch |
-| `firmware/src/eng_fmini_presets.h`, `eng_fmini_filter.h` | **generated**: the 100 patches; the filter's tables (do not edit) |
+| `firmware/src/eng_fmini_presets.h`, `eng_fmini_filter.h` | **generated**: the 200 patches; the filter's tables (do not edit) |
 | `firmware/src/fmini_app.c`, `ui_fmini.c` | FMini-1's whole UI: pages, knobs, graphs, dialogs (`fa_*`, `fmg_*`) |
 | `firmware/src/voice.c`, `fx.c`, `audio.c`, `mod.c` | voices and envelopes; the FX buses and the part mixer; the audio ISR; the modulation matrix |
 | `firmware/src/editor*.c`, `up_fm6.c`, `upreset.c`, `project.c`, `storage.c` | USB editor commands; user presets; projects; flash |
@@ -177,11 +177,11 @@ of meaning matters to users, add a marker byte there and convert on load.
 | Test | What it guards |
 | --- | --- |
 | `fmini_filter_test.c` | the ladder against the hardware numbers (section 5) |
-| `fmini_app_test.c` | every page, SAVE / PRESETS over the 100 patches and user patches, each patch's ARP / LFO / FX / LEVEL / octave |
+| `fmini_app_test.c` | every page, SAVE / PRESETS over the 200 patches and user patches, each patch's ARP / LFO / FX / LEVEL / octave |
 | `fmini_fx_test.c` | the FMini-1 FX: reverb, delay and chorus types, TUBE drive, bypass at 0 |
 | `editor_test.c`, `web/test_editor_fmini.py` | the editor handler; the editor page against the real C handler in Chromium |
 | `ui_render.c` | every screen in every palette: lint (clipped, overlapping text), alignment by ink, a PNG sheet in `build/ui_new/` |
-| `regress.c` + `golden.txt`, `cpu_baseline.txt`, `target_budget.*` | render hashes of every engine and preset (the 100 FMINI ones are current in the default build; the `FELUCCA_CPU2=0` build differs for 41, see CLAUDE.md); level, DC, voices; CPU: the host's instruction counter may be missing (it was, in the sandbox: the budget is then not checked), the **static loop-instruction count** of the render functions in the chip's disassembly is always checked (+10 %) |
+| `regress.c` + `golden.txt`, `cpu_baseline.txt`, `target_budget.*` | render hashes of every engine and preset (the 200 FMINI ones are current in the default build; the `FELUCCA_CPU2=0` build differs for 41, see CLAUDE.md); level, DC, voices; CPU: the host's instruction counter may be missing (it was, in the sandbox: the budget is then not checked), the **static loop-instruction count** of the render functions in the chip's disassembly is always checked (+10 %) |
 | the rest | storage, projects, MIDI, USB, update loader, FX, other engines (Felucca's) |
 
 Seven sections fail at 1.9.2 (as at 1.7.0); CLAUDE.md lists them and says which were confirmed on the untouched v1.6.1. `tests/hostsim.c`

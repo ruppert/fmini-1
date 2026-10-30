@@ -2,7 +2,7 @@
  * Copyright (C) 2026 Guilherme Ruppert (FMini-1 fork) */
 #ifndef FMINI_BANK_C
 #define FMINI_BANK_C
-/* FMini-1 preset bank (1.14.0): 200 slots. Slots 0..99 start as the factory patches, 100..199 as INIT (one sawtooth
+/* FMini-1 preset bank (1.14.1): 200 slots, all of them factory patches (000..199). INIT (one sawtooth
  * on oscillator 1, no filter envelope, no effects). A slot that was saved holds its own record (fmini_rec.c); a slot
  * never saved reads its factory record. The records live in 13 storage objects (OBJ_PRESET0..12), 16 slots each; each
  * object starts with a stamp, and a new firmware with another factory bank clears them at boot (install = factory).
@@ -34,7 +34,7 @@ static void fb_init_patch(uint8_t *p)
     p[FG_TUNE] = 64;
 }
 
-/* the record of slot k as the factory has it (k < 100: the bank; else INIT), into rec (FB_SLOT bytes); its length */
+/* the record of slot k as the factory has it (k < FMINI_NFACTORY: the bank; else INIT), into rec (FB_SLOT bytes); its length */
 static uint32_t fb_factory_rec(uint32_t k, uint8_t *rec)
 {
     uint8_t patch[FG_SIZE], par[18];
@@ -288,7 +288,7 @@ static uint8_t fb_rs_state(void)
 }
 static void fb_rs_touch(void) { fb_rs_t = fm1_ms; }
 
-/* FACTORY RESET (protocol 4): the slot's saved record forgotten, so it reads its factory record (INIT for 100..199) from
+/* FACTORY RESET (protocol 4): the slot's saved record forgotten, so it reads its factory record (a factory patch for every slot now) from
  * now on, and a later firmware's factory bank shows. 0 = done */
 static int fb_forget(uint32_t k)
 {

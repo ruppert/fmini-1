@@ -35,7 +35,7 @@ static const char *const PRESET_CAT[16] = {
     "FFFF",                      /* 11 NOISE: WIND, RAIN, ARCADE, METAL */
     "KUBLPUKU",                  /* 12 FM6: TINE EP, BELL, FM BASS, BRASS, PAD, MARIMBA, ORGAN, PLUCK */
     "DD",                        /* 13 SLICE: CHOP, STUTTER */
-    FMINI_CATS,                   /* 14 FMINI: the 100 monophonic patches (eng_fmini_presets.h) */
+    FMINI_CATS,                   /* 14 FMINI: the 200 monophonic patches (eng_fmini_presets.h) */
 };
 static uint32_t preset_cat(uint32_t e, uint32_t k)    /* factory preset k of engine e */
 {
@@ -48,8 +48,7 @@ static uint32_t preset_cat(uint32_t e, uint32_t k)    /* factory preset k of eng
         ;
     if (s[i] && L[c])
         return c;
-    return e == ENGI_FMINI && k >= FMINI_NFACTORY ? CAT_OTHER   /* 1.14.0: the INIT slots (100..199) */
-                                                  : cat_of_engine(e);
+    return cat_of_engine(e);
 }
 #endif
 #endif

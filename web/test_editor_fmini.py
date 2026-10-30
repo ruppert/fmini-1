@@ -73,7 +73,7 @@ with sync_playwright() as pw:
     pg.wait_for_function("!document.body.classList.contains('off')", timeout=15000)
     check("Connect: handshake, descriptors, names; status shows connected", "FMini-1" in pg.inner_text("#stxt") and not errs)
     check("INFO told the page the patch commands exist", pg.evaluate("__fmini.S.canPatch") is True)
-    check("the preset list has the 200 slots (100 factory, 100 INIT)", pg.evaluate("document.querySelectorAll('#preset option').length") >= 200)
+    check("the preset list has the 200 slots (all factory patches)", pg.evaluate("document.querySelectorAll('#preset option').length") >= 200)
     nm = pg.evaluate("__fmini.S.names")
     check("  .. and every one of them has its name (the last: " + (nm[199] if len(nm) > 199 else "?") + ")", len(nm) == 200 and all(len(x) > 0 for x in nm))
     pg.wait_for_timeout(300)
@@ -201,11 +201,11 @@ with sync_playwright() as pw:
     pg.click("#tabs button:text-is('PRESETS')")
     pg.wait_for_selector("#resetsel")
     check("PRESETS: the 200 presets are listed for FACTORY RESET", pg.locator("#resetsel option").count() == 200)
-    check("  .. slot 150 is INIT", pg.locator("#resetsel option").nth(150).inner_text().endswith("INIT"))
+    check("  .. slot 150 is a factory patch, not INIT", not pg.locator("#resetsel option").nth(150).inner_text().endswith("INIT"))
     check("  .. no cards, no SAVE / erase / U-bank buttons (a slot is written on the device)", pg.locator(".slot").count() == 0 and pg.locator("button:has-text('Save here')").count() == 0)
     pg.select_option("#preset", "150")
     pg.wait_for_timeout(900)
-    check("Load: slot 150 (INIT) is on the track (the PRESET list)", pg.evaluate("__fmini.S.slot") == 150)
+    check("Load: slot 150 is on the track (the PRESET list)", pg.evaluate("__fmini.S.slot") == 150)
     fa(83, [0, 0, *[5] * 32])
     pg.click("#tabs button:text-is('CTRL')")
     # A/B
@@ -241,7 +241,7 @@ with sync_playwright() as pw:
     bj = json.loads(bk.read_text())
     check("  .. all 200 presets, each as its record", bj.get("fmini1bkp") == 1 and len(bj["slots"]) == 200 and all(x["rec"][:2] == "01" for x in bj["slots"]))
     orig7 = pg.evaluate("__fmini.S.names[7]")
-    orig100 = pg.evaluate("__fmini.S.names.slice(0, 100)")
+    orig200 = pg.evaluate("__fmini.S.names.slice(0, 200)")
     mod = json.loads(bk.read_text())
     mod["slots"][7]["rec"] = "01" + mod["slots"][7]["rec"][2:4] + "5a" + mod["slots"][7]["rec"][6:]     # slot 7's name: starts with Z
     mp = Path("/tmp/claude_fmini_mod.bkp"); mp.write_text(json.dumps(mod))
@@ -266,8 +266,8 @@ with sync_playwright() as pw:
     pg.click("#tabs button:text-is('PRESETS')"); pg.wait_for_selector("#resetsel")
     pg.click("button:text-is('Restore all factory presets'), button:text-is('Restaurar todos os presets de fábrica')")
     pg.wait_for_function("(v) => !document.body.classList.contains('busy') && __fmini.S.names[7] === v", arg=orig7, timeout=300000)
-    check("FACTORY RESET all: the 100 factory presets are back, slot 7 included", pg.evaluate("__fmini.S.names.slice(0, 100)") == orig100)
-    check("  .. and the INIT slots are still INIT", pg.evaluate("__fmini.S.names[150]") == "INIT")
+    check("FACTORY RESET all: the 200 factory presets are back, slot 7 included", pg.evaluate("__fmini.S.names.slice(0, 200)") == orig200)
+    check("  .. and the last slot (199) is a factory patch again", pg.evaluate("__fmini.S.names[199]") != "INIT")
 
     # firmware up to 1.7.1 cut the NAMES reply at 664 bytes: the page says an update is available and still works
     CUT[0] = True
@@ -275,7 +275,7 @@ with sync_playwright() as pw:
     pg.click("#connect")
     pg.wait_for_function("!document.body.classList.contains('off')", timeout=15000)
     note = pg.inner_text("#msg"); got = pg.evaluate("__fmini.S.names.filter(Boolean).length")
-    check(f"a firmware that cuts NAMES at 664 bytes ({got} of 100 names): the page says an update is available", 60 < got < 100 and ("Update" in note or "Atualiz" in note) and str(got) in note)
+    check(f"a firmware that cuts NAMES at 664 bytes ({got} of 200 names): the page says an update is available", 60 < got < 100 and ("Update" in note or "Atualiz" in note) and str(got) in note)
     CUT[0] = False
     pg.click("#connect"); pg.wait_for_timeout(300)
     pg.click("#connect")

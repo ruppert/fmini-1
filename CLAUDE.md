@@ -28,7 +28,7 @@ export JIELI_TOOLCHAIN=<dir with pi32v2/bin/clang>   AC79_SDK=<AC79 SDK checkout
 sh tests/run_tests.sh > /tmp/tests.log 2>&1 # the whole host suite, 20-30 minutes; run it in the background
 python3 tools/fmini_filter.py                # regenerate firmware/src/eng_fmini_filter.h (filter laws and tables)
 python3 tools/gen_fmini_presets.py           # regenerate firmware/src/eng_fmini_presets.h from tools/fmini_bank.py
-python3 tools/preset_lab.py --wasm docs/emu/felucca.wasm --out DIR     # render and measure the 100 factory patches
+python3 tools/preset_lab.py --wasm docs/emu/felucca.wasm --out DIR     # render and measure the 200 factory patches
 WASI_SDK=<wasi-sdk-25.0 dir> sh web/emu/build_wasi.sh                    # docs/emu (the browser emulator)
 python3 web/make_fmini_installer.py build/fmini-1-fm1-<version>.fwsc docs/index.html X.Y.Z  # the installer page (docs/index.html)
 ```

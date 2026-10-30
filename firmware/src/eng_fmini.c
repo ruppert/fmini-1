@@ -22,8 +22,8 @@
 #define FMINI_POLY 4
 #endif
 #define FG_SIZE 32u
-#define FMINI_NFACTORY 100u
-#define FMINI_NSLOT 200u                  /* 1.14.0: the slots (0..99 factory, 100..199 INIT: fmini_bank.c) */
+#define FMINI_NFACTORY 200u               /* 1.14.1: the factory patches, 000..199 (eng_fmini_presets.h); the slots are the same count */
+#define FMINI_NSLOT 200u                  /* the slots (0..199 factory: fmini_bank.c) */
 #define FMINI_OWN FMINI_NSLOT
 #define FMINI_PACKED 128u          /* the slot of an FM6 patch in a project / a user preset (eng_fm6.c) */
 
@@ -121,7 +121,7 @@ typedef struct {
     uint8_t arp[7], lfo[4], fx[12], level;
     int8_t mod[3], oct;
 } fmini_x_t;
-#include "eng_fmini_presets.h"          /* FMINI_FACTORY (the 100 patches) and FMINI_PRESETS: tools/gen_fmini_presets.py */
+#include "eng_fmini_presets.h"          /* FMINI_FACTORY (the 200 patches) and FMINI_PRESETS: tools/gen_fmini_presets.py */
 #include "eng_fmini_filter.h"           /* the ladder's laws: FMINI_CUT FMINI_K FMINI_TRIM FMINI_G FMINI_GX (tools/fmini_filter.py) */
 
 /* --------------------------------------------------------------- the patch --- */
@@ -159,7 +159,7 @@ static void fmini_adopt(uint32_t tr)
     tr %= NTRK;
     fmini_own_ok &= (uint8_t)~(1u << tr);
     if (t->eng_req == ENGI_FMINI && s >= (int32_t)FMINI_NFACTORY && s < (int32_t)FMINI_NSLOT) {
-        uint8_t p[FG_SIZE];                       /* an INIT slot (or a saved one): it stays that slot if its patch is the same */
+        uint8_t p[FG_SIZE];                       /* a slot past the factory's (none now: 200 of 200): a saved one; it stays that slot if its patch is the same */
         fmini_slot_patch((uint32_t)s, p);
         if (memcmp(p, fmini_patch[tr], FG_SIZE))
             s = (int32_t)FMINI_OWN;

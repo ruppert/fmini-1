@@ -168,7 +168,7 @@ const TX = {
     badfile: "Arquivo de som inválido.", rnd: "Aleatorizar", amt: "Variação", abcopy: "Copiar A → B", abcopyb: "Copiar B → A", abtip: "Alterna entre dois ajustes para comparar",
     lib: "PRESETS", libload: "Carregar", libempty: "— vazio —", libtitle: "Presets do aparelho (000–199)",
     resetall: "Restaurar todos os presets de fábrica", resetone: "Restaurar", askreset: "Restaurar o preset %n para o de fábrica? O que está gravado nele será substituído.",
-    askresetall: "Restaurar os 100 presets de fábrica (000–099)? O que está gravado neles será substituído.", busyreset: "Restaurando os presets de fábrica… não desconecte o USB.",
+    askresetall: "Restaurar os 200 presets de fábrica (000–199)? O que está gravado neles será substituído.", busyreset: "Restaurando os presets de fábrica… não desconecte o USB.",
     resetdone: "Presets de fábrica restaurados.", resetfail: "O aparelho não conseguiu restaurar o preset.",
     bakexp: "Fazer backup (.bkp)", bakimp: "Restaurar backup (.bkp)", busybak: "Lendo os 200 presets…", bakdone: "Backup salvo.",
     busyrest: "Gravando os 200 presets… não desconecte o USB.", waitdev: "Confirme no aparelho: ALGORITHM = YES, depois SAVE. Qualquer botão de página cancela.",
@@ -191,7 +191,7 @@ const TX = {
     badfile: "Invalid sound file.", rnd: "Randomize", amt: "Amount", abcopy: "Copy A → B", abcopyb: "Copy B → A", abtip: "Switch between two settings to compare",
     lib: "PRESETS", libload: "Load", libempty: "— empty —", libtitle: "Device presets (000–199)",
     resetall: "Restore all factory presets", resetone: "Restore", askreset: "Restore preset %n to its factory preset? What is saved in it will be replaced.",
-    askresetall: "Restore the 100 factory presets (000–099)? What is saved in them will be replaced.", busyreset: "Restoring the factory presets… do not unplug USB.",
+    askresetall: "Restore the 200 factory presets (000–199)? What is saved in them will be replaced.", busyreset: "Restoring the factory presets… do not unplug USB.",
     resetdone: "Factory presets restored.", resetfail: "The device could not restore the preset.",
     bakexp: "Make backup (.bkp)", bakimp: "Restore backup (.bkp)", busybak: "Reading the 200 presets…", bakdone: "Backup saved.",
     busyrest: "Writing the 200 presets… do not unplug USB.", waitdev: "Confirm on the device: ALGORITHM = YES, then SAVE. Any page button cancels.",
@@ -696,7 +696,7 @@ async function withBusy(text, fn) {
   try { return await fn(); } finally { touch.until = Date.now() + 600; busy(""); void keep; }
 }
 /* the PRESETS tab: the backup and restore of every preset, and FACTORY RESET (a preset back to its factory preset: the
- * slots 000..099 for all of them, any one slot from the list) */
+ * slots 000..199 for all of them, any one slot from the list) */
 async function buildLib() {
   const panel = $("panel"); panel.textContent = "";
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
@@ -714,7 +714,7 @@ async function buildLib() {
   g2.append(r1, r2);
   panel.append(g1, g2);
 }
-const FACTORY_N = 100;                                 /* the factory presets: 000..099 */
+const FACTORY_N = 200;                                 /* the factory presets: 000..199 */
 async function fmReset(k) {
   const r = await req(CMD.FMINI_RESET, [k & 127, k >> 7], 8000);
   if (r[2] !== 0) throw bad("resetfail");
