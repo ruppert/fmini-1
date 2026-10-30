@@ -1599,7 +1599,10 @@ static void fa_preset(int32_t s)
     }
     /* every slot is a preset now (0..199, the same way): the one shown, or the patch the track came from (OWN) */
     cur = t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NSLOT ? (uint32_t)t->p[P_E7] : fa_base % FMINI_NSLOT;
-    nx = (cur + (s > 0 ? 1u : FMINI_NSLOT - 1u)) % FMINI_NSLOT;
+    {   /* one preset per detent, however fast they came (s: the detents since the last frame, signed); round */
+        int32_t i = ((int32_t)cur + s) % (int32_t)FMINI_NSLOT;
+        nx = (uint32_t)(i < 0 ? i + (int32_t)FMINI_NSLOT : i);
+    }
     t->user = 0;
     apply_preset_to(t, nx);
     t->p[P_E7] = (int16_t)nx;

@@ -146,6 +146,14 @@ int main(int argc, char **argv)
         TSEL->p[P_E7] = (int16_t)(FMINI_NSLOT - 1u);
         fa_preset(1);                                   /* the last slot (199) -> round to the first (0) */
         if (TSEL->p[P_E7] != 0) { printf("save: no wrap\n"); return 1; }
+        /* the PRESETS knob: every detent is a preset, however fast they came (25 in one frame: 25 presets) */
+        fa_sv = 0; fa_sv_conf = 0; fb_rs = FB_RS_IDLE;      /* the PRESETS knob, not the SAVE dialog's slot */
+        TSEL->p[P_E7] = 10; fa_preset(25);
+        if (TSEL->p[P_E7] != 35) { printf("knob: 25 detents at once did not move 25 presets (%d)\n", TSEL->p[P_E7]); return 1; }
+        fa_preset(-30);
+        if (TSEL->p[P_E7] != 5) { printf("knob: -30 detents did not move back 30 with the wrap (%d)\n", TSEL->p[P_E7]); return 1; }
+        fa_preset(-7);
+        if (TSEL->p[P_E7] != 198) { printf("knob: the wrap below 0 is wrong (%d)\n", TSEL->p[P_E7]); return 1; }
         TSEL->p[P_VOICE] = V_LEGATO;
         fa_mono();
         if (TSEL->p[P_VOICE] != V_MONO) { printf("not mono\n"); return 1; }
