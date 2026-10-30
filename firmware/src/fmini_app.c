@@ -1499,11 +1499,21 @@ static int fa_save_slot(uint32_t k, const char *name)
     return fb_write(k, rec, n);                       /* flash (fmini_bank.c), or the host's RAM copy */
 }
 
-/* PRESETS: the previous / next patch of the list (factory F1..F8, then the saved ones), round; in the SAVE dialog the slot */
+/* PRESETS knob: a slow turn steps one preset per detent; a fast one jumps further (the time between the detents
+ * sets the step: 1 at 120 ms and more, up to 25 at 25 ms and less). In the SAVE dialog the slot moves one at a time */
+static uint32_t fa_pr_t;                               /* the time of the last turn */
+static uint32_t fa_pr_step(int32_t s)
+{
+    uint32_t n = (uint32_t)(s > 0 ? s : -s), now = fm1_ms, per, m;
+    per = (now - fa_pr_t) / n;
+    fa_pr_t = now;
+    m = per >= 120u ? 1u : per >= 60u ? 3u : per >= 35u ? 8u : per >= 20u ? 15u : 25u;
+    return n * m;
+}
 static void fa_preset(int32_t s)
 {
     track_t *t = TSEL;
-    uint32_t cur, nx;
+    uint32_t cur, nx, n;
     if (fa_sv) {
         fa_sv_slot = (uint8_t)((fa_sv_slot + FMINI_NSLOT + (s > 0 ? 1u : FMINI_NSLOT - 1u)) % FMINI_NSLOT);
         fa_sv_fill();
@@ -1511,7 +1521,8 @@ static void fa_preset(int32_t s)
     }
     /* every slot is a preset now (0..199, the same way): the one shown, or the patch the track came from (OWN) */
     cur = t->p[P_E7] >= 0 && t->p[P_E7] < (int32_t)FMINI_NSLOT ? (uint32_t)t->p[P_E7] : fa_base % FMINI_NSLOT;
-    nx = (cur + (s > 0 ? 1u : FMINI_NSLOT - 1u)) % FMINI_NSLOT;
+    n = fa_pr_step(s);
+    nx = s > 0 ? (cur + n) % FMINI_NSLOT : (cur + FMINI_NSLOT - n % FMINI_NSLOT) % FMINI_NSLOT;   /* round */
     t->user = 0;
     apply_preset_to(t, nx);
     t->p[P_E7] = (int16_t)nx;

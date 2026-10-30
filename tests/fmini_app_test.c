@@ -117,8 +117,18 @@ int main(int argc, char **argv)
         fa_sv_do();
         if (fa_sv || TSEL->p[P_E7] != 150 || !str_eq(ENGINES[ENGI_FMINI]->presets[150].name, "MY PATCH")) { printf("save: not stored\n"); return 1; }
         TSEL->p[P_E7] = (int16_t)(FMINI_NSLOT - 1u);
+        fm1_ms += 500u;
         fa_preset(1);                                   /* the last slot (199) -> round to the first (0) */
         if (TSEL->p[P_E7] != 0) { printf("save: no wrap\n"); return 1; }
+        /* the PRESETS knob: a slow turn is one preset a detent, a fast one jumps (the time between the detents) */
+        TSEL->p[P_E7] = 10; fm1_ms += 500u; fa_preset(1);
+        if (TSEL->p[P_E7] != 11) { printf("knob: slow turn is not one step (%d)\n", TSEL->p[P_E7]); return 1; }
+        fm1_ms += 500u; fa_preset(-1);
+        if (TSEL->p[P_E7] != 10) { printf("knob: slow turn back is not one step\n"); return 1; }
+        fm1_ms += 10u; fa_preset(1);
+        if (TSEL->p[P_E7] != 35) { printf("knob: fast turn did not jump (%d)\n", TSEL->p[P_E7]); return 1; }
+        fm1_ms += 10u; fa_preset(-2);
+        if (TSEL->p[P_E7] != 185) { printf("knob: fast turn back did not jump with the wrap (%d)\n", TSEL->p[P_E7]); return 1; }
         TSEL->p[P_VOICE] = V_LEGATO;
         fa_mono();
         if (TSEL->p[P_VOICE] != V_MONO) { printf("not mono\n"); return 1; }
@@ -190,6 +200,7 @@ int main(int argc, char **argv)
         song.g[G_RSIZE] = 50; song.g[G_DRREV] = 50; song.g[G_CRATE] = 50; song.g[G_DRLVL] = 50;
         if (TSEL->p[P_AMODE] != 0 || TSEL->p[P_AHOLD] != 0) { printf("arp: a factory patch leaves the ARP on\n"); return 1; }
         TSEL->p[P_E7] = 4;                              /* the track plays slot 4 */
+        fm1_ms += 500u;
         fa_preset(1);                                   /* the next factory patch (5, DUB STAB): its own FX settings, arpeggiator and octave */
         if (fa_on_user() || TSEL->p[P_E7] != 5 || song.g[G_RSIZE] != FMINI_X[5].fx[1] || song.g[G_DRLVL] != FMINI_X[5].fx[10] ||
             song.g[G_RTYPE] != FMINI_X[5].fx[0] || song.g[G_DTIME] != FMINI_X[5].fx[3] || song.octave != FMINI_X[5].oct) {
@@ -224,6 +235,7 @@ int main(int argc, char **argv)
             TSEL->user = 0;
             if (k) {
                 TSEL->p[P_E7] = (int16_t)(k - 1u);
+                fm1_ms += 500u;
                 fa_preset(1);
             } else {
                 apply_preset_to(TSEL, 0);
