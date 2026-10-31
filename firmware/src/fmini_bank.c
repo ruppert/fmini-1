@@ -12,7 +12,6 @@
 #define FB_NOBJ ((FB_NSLOT + FB_PER_OBJ - 1u) / FB_PER_OBJ)   /* 13 objects: the last one holds 8 slots */
 #define FB_PER_OBJ 16u
 #define FB_SLOT 128u                          /* one record: name 14 + patch 34 + extra 30 + preset 20 bytes, room to grow */
-#define FB_STAMP 0x31564246u                  /* "FBV1": the factory bank this build writes */
 #define FB_PAYLOAD (4u + FB_PER_OBJ * FB_SLOT)
 #define FB_INIT_SLOT FMINI_NFACTORY           /* the first INIT slot */
 
@@ -198,6 +197,23 @@ static int fb_write(uint32_t k, const uint8_t *rec, uint32_t n)
 }
 #endif
 
+/* the stamp of this build's factory bank: a hash of the 200 patches and their names (1.14.9), so a firmware whose bank
+ * differs clears the saved slots at boot (the comment at the top says so; a fixed stamp never changed) */
+static uint32_t fb_stamp_v;
+static uint32_t fb_stamp(void)
+{
+    uint32_t h = 2166136261u, i, k;
+    if (fb_stamp_v)
+        return fb_stamp_v;
+    for (i = 0; i < FMINI_NFACTORY * FG_SIZE; i++)
+        h = (h ^ ((const uint8_t *)FMINI_FACTORY)[i]) * 16777619u;
+    for (k = 0; k < FMINI_NFACTORY; k++)
+        for (i = 0; FMINI_PRESETS[k].name[i]; i++)
+            h = (h ^ (uint8_t)FMINI_PRESETS[k].name[i]) * 16777619u;
+    fb_stamp_v = h | 1u;
+    return fb_stamp_v;
+}
+
 #if FELUCCA_FLASH
 /* object o into fb_obj_buf; 1 when it was read and its stamp is this bank's (an empty bank is a stamp only) */
 static int fb_obj_read(uint32_t o)
@@ -206,7 +222,7 @@ static int fb_obj_read(uint32_t o)
     if (!flash_ok || st_load(OBJ_PRESET0 + o, fb_obj_buf, FB_PAYLOAD) != (int)FB_PAYLOAD)
         return 0;
     stamp = (uint32_t)fb_obj_buf[0] | (uint32_t)fb_obj_buf[1] << 8 | (uint32_t)fb_obj_buf[2] << 16 | (uint32_t)fb_obj_buf[3] << 24;
-    return stamp == FB_STAMP;
+    return stamp == fb_stamp();
 }
 
 /* a new object: the stamp and no saved slots (every slot is its factory record); its save result: 0 = written */
@@ -215,10 +231,10 @@ static int fb_obj_clear(uint32_t o)
     uint32_t i;
     for (i = 0; i < FB_PAYLOAD; i++)
         fb_obj_buf[i] = 0;
-    fb_obj_buf[0] = (uint8_t)FB_STAMP;
-    fb_obj_buf[1] = (uint8_t)(FB_STAMP >> 8);
-    fb_obj_buf[2] = (uint8_t)(FB_STAMP >> 16);
-    fb_obj_buf[3] = (uint8_t)(FB_STAMP >> 24);
+    fb_obj_buf[0] = (uint8_t)fb_stamp();
+    fb_obj_buf[1] = (uint8_t)(fb_stamp() >> 8);
+    fb_obj_buf[2] = (uint8_t)(fb_stamp() >> 16);
+    fb_obj_buf[3] = (uint8_t)(fb_stamp() >> 24);
     return flash_ok ? st_save(OBJ_PRESET0 + o, fb_obj_buf, FB_PAYLOAD) : -1;
 }
 
