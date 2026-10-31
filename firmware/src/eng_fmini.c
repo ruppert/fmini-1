@@ -41,39 +41,10 @@ enum {                           /* the patch's bytes */
     FG_NUM
 };
 enum { FS_O1 = 1, FS_O2 = 2, FS_O3 = 4, FS_NZ = 8, FS_PINK = 16, FS_MOSC = 32, FS_MFLT = 64 };   /* FG_SW1 */
-enum { FT_GLIDE = 1, FT_SQR = 2, FT_DETFINE = 4 };                                                 /* FG_SW2; FT_DETFINE: DET 2 / 3 use the fine law */
+enum { FT_GLIDE = 1, FT_SQR = 2 };                                                                 /* FG_SW2 */
 
-/* DET 2 / 3 (FG_F2, FG_F3), in cents. The coarse law (FT_DETFINE clear, every patch before 1.10): byte 64 = 0, 11 cents a
- * step, +-7 semitones. The fine law (FT_DETFINE set): a code 0..DET_MAX, 90 = 0; a step is 10 cents up to 4 semitones, 5 cents
- * from 4 to 6 semitones, 10 cents from 6 to 7. Both are signed cents; the fine code covers 181 values in one byte. */
-#define DET_MAX 180
-static int32_t fmini_det_coarse(uint32_t b) { return ((int32_t)b - 64) * 11; }
-static int32_t fmini_det_fine(uint32_t c)
-{
-    int32_t k = (int32_t)(c > DET_MAX ? DET_MAX : c) - 90, a = k < 0 ? -k : k, h;
-    h = a <= 40 ? 10 * a : a <= 80 ? 400 + 5 * (a - 40) : 600 + 10 * (a - 80);
-    return k < 0 ? -h : h;
-}
-/* the code whose fine cents are nearest to cents */
-static uint32_t fmini_det_code(int32_t cents)
-{
-    uint32_t c, best = 90;
-    int32_t bd = 1000000, d;
-    for (c = 0; c <= DET_MAX; c++) {
-        d = fmini_det_fine(c) - cents;
-        if (d < 0)
-            d = -d;
-        if (d < bd) {
-            bd = d;
-            best = c;
-        }
-    }
-    return best;
-}
-static int32_t fmini_det(const uint8_t *g, uint32_t i)   /* the cents of DET byte i (FG_F2 or FG_F3) of patch g */
-{
-    return (g[FG_SW2] & FT_DETFINE) ? fmini_det_fine(g[i]) : fmini_det_coarse(g[i]);
-}
+/* DET 2 / 3 (FG_F2, FG_F3), in cents: byte 64 = 0, 11 cents a step, +-7 semitones (the one law since 1.0) */
+static int32_t fmini_det(const uint8_t *g, uint32_t i) { return ((int32_t)g[i] - 64) * 11; }
 
 static uint8_t fmini_patch[NTRK][FG_SIZE];        /* the tracks' patches (main loop writes, then fmini_pgen) */
 static volatile uint8_t fmini_pgen[NTRK];         /* +1 after each write of fmini_patch[t] */
@@ -97,7 +68,7 @@ static int32_t fmini_mn[NTRK];                    /* the modulation noise of thi
 /* the highest value of each byte */
 static uint32_t fmini_max(uint32_t i)
 {
-    static const uint8_t MAXV[FG_NUM] = {5, 5, 5, 5, 5, 5, 180, 180, 127, 127, 127, 127, 127, 7, 127, 127, 127, 127};   /* DET 2 / 3: DET_MAX; SW2: the FT_ bits */
+    static const uint8_t MAXV[FG_NUM] = {5, 5, 5, 5, 5, 5, 127, 127, 127, 127, 127, 127, 127, 3, 127, 127, 127, 127};
     return i < FG_NUM ? MAXV[i] : 0u;
 }
 

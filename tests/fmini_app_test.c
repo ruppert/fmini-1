@@ -471,43 +471,21 @@ int main(int argc, char **argv)
             events_block(CTL);
             if (trk[0].mw != 0) { printf("mod wheel (TRS) %u\n", trk[0].mw); return 1; }
         }
-        {   /* DET 2 / 3: one detent is one step of the fine law (0.1 semitone, 0.05 from 4 to 6), no acceleration; the first
-             * turn moves the patch to the fine law (both detunes to their nearest step) */
-            uint32_t pg = 1, i, f2 = 0, k;
-            int32_t c2;
+        {   /* DET 2 / 3: the coarse law (byte 64 = 0, 11 cents a step, +-7 semitones); the encoder moves the byte with the
+             * usual acceleration, as before 1.11 */
+            uint32_t pg = 1, i, f2 = 0;
             for (i = 0; i < fmg_count(pg); i++)
                 if (fmg_field(pg, i)->a == FG_F2) f2 = i;
-            fmini_patch[0][FG_SW2] &= (uint8_t)~FT_DETFINE;
-            fmini_patch[0][FG_F2] = 64; fmini_patch[0][FG_F3] = 64;
+            fmini_patch[0][FG_F2] = 64;
+            if (fmini_det(fmini_patch[0], FG_F2) != 0) { printf("DET centre %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
+            fmini_patch[0][FG_F2] = 127;
+            if (fmini_det(fmini_patch[0], FG_F2) != 693) { printf("DET top %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
+            fmini_patch[0][FG_F2] = 0;
+            if (fmini_det(fmini_patch[0], FG_F2) != -704) { printf("DET bottom %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
+            fmini_patch[0][FG_F2] = 64;
             song.sel = 0;
             fmg_turn(pg, f2, 1, EN_K1);
-            if (!(fmini_patch[0][FG_SW2] & FT_DETFINE) || fmini_det(fmini_patch[0], FG_F2) != 10) { printf("DET first turn %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
-            fmini_patch[0][FG_F2] = 90;
-            {   /* the dial: the fine centre (0 cents, code 90) is drawn at the middle, 5.0, as the coarse centre byte 64 was */
-                const char *lb = 0, *un = 0;
-                char val[16];
-                int32_t ratio = -1;
-                uint32_t ic = 0;
-                fmg_card_at(pg, f2, -1, &lb, val, &un, &ratio, &ic);
-                if (ratio != 500 || val[0] != '+' || val[1] != '0' || val[3] != '0') { printf("DET dial centre %d '%s'\n", (int)ratio, val); return 1; }
-            }
-            fmg_turn(pg, f2, 40, EN_K1);                       /* +40 detents: a fast turn is still 40 */
-            if (fmini_patch[0][FG_F2] != 130 || fmini_det(fmini_patch[0], FG_F2) != 400) { printf("DET 4 st %d\n", (int)fmini_patch[0][FG_F2]); return 1; }
-            fmg_turn(pg, f2, 1, EN_K1);
-            if (fmini_det(fmini_patch[0], FG_F2) != 405) { printf("DET 4.05 %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
-            fmini_patch[0][FG_F2] = 170;
-            fmg_turn(pg, f2, 1, EN_K1);
-            if (fmini_det(fmini_patch[0], FG_F2) != 610) { printf("DET 6.10 %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
-            fmg_turn(pg, f2, -1000, EN_K1);
-            if (fmini_patch[0][FG_F2] != 0 || fmini_det(fmini_patch[0], FG_F2) != -700) { printf("DET floor %d\n", (int)fmini_patch[0][FG_F2]); return 1; }
-            fmini_patch[0][FG_F2] = 90; fmini_patch[0][FG_F3] = 90;
-            c2 = fmini_det(fmini_patch[0], FG_F3);
-            if (c2 != 0) { printf("DET 3 centre %d\n", (int)c2); return 1; }
-            /* the coarse law (a patch from before 1.10) is untouched by the engine: byte 64 = 0, 11 cents a step */
-            fmini_patch[0][FG_SW2] &= (uint8_t)~FT_DETFINE;
-            fmini_patch[0][FG_F2] = 127;
-            if (fmini_det(fmini_patch[0], FG_F2) != 693) { printf("coarse law %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
-            for (k = 0; k < 1; k++) (void)k;
+            if (fmini_patch[0][FG_F2] <= 64) { printf("DET turn up %d\n", (int)fmini_patch[0][FG_F2]); return 1; }
             fmini_patch[0][FG_F2] = 64; fmini_patch[0][FG_F3] = 64;
         }
         fa_gl = 0;
