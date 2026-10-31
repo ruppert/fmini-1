@@ -329,8 +329,14 @@ static void fmg_card_at(uint32_t pg, uint32_t i, int32_t vo, const char **label,
     }
     v = vo >= 0 ? vo : (int32_t)fmg_byte(f->a);
     *ratio = v * 1000 / 127;
-    if (f->a == FG_F2 || f->a == FG_F3) {
-        fmg_tenths(val, (v - 64) * 70 / 63);
+    if (f->a == FG_F2 || f->a == FG_F3) {        /* DET 2 / 3: -7.0 .. +7.0 semitones, 0.0 at the middle (byte 64 = 0 cents) */
+        int32_t x = v - 64;
+        *ratio = x >= 0 ? 500 + x * 500 / 63 : 500 + x * 500 / 64;    /* the pointer: 0 at the dial's middle */
+        if (x)
+            fmg_tenths(val, x >= 0 ? x * 70 / 63 : x * 70 / 64);
+        else {
+            val[0] = '0'; val[1] = '.'; val[2] = '0'; val[3] = 0;
+        }
         *unit = "ST";
     } else if (f->a == FG_TUNE) {
         v = (v - 64) * 100 / 64;                     /* cents */

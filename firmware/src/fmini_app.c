@@ -189,6 +189,8 @@ static void fa_val(char *s, int32_t ratio, const fmgf_t *f)
 {
     if (f->kind == FK_PAR && (f->a == P_E0 || f->a == P_E1))
         return;
+    if (f->kind == FK_BYTE && (f->a == FG_F2 || f->a == FG_F3))    /* DET 2 / 3: the signed semitones (fmg_card_at) */
+        return;
     fa_num(s, ratio);
 }
 
