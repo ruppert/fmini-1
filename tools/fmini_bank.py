@@ -853,6 +853,8 @@ def preset_moves(b):
             send=(80, 0, 0, 0), dr=("TUBE", 60, 90), poly=False)
     P[7] = tmp.p[0]
     P[7]["e"][0] = round((-2.0 + 5.0) * 127 / 10.0)
+    # 1.14.17: 002 DUB STEP was far louder than the others (level 127): its level is 104, the bank's usual
+    P[2]["level"] = 104
     # 1.14.16: 007 and 022 trade places (names and sounds go with them)
     swap(7, 22)
     # 1.14.16: MOD OSC off on every factory patch (the switch's bit 32 of the oscillators' switches, byte 12)
