@@ -3,7 +3,7 @@
 
 static const uint8_t FMINI_FACTORY[FMINI_NFACTORY][FG_SIZE] = {
     FGP(3, 3, 2, 2, 2, 3, 65, 64, 90, 90, 70, 0, 7, 1, 64, 0, 64, 50, 11, 0, 0, 0),   /* 00 MINI LEAD */
-    FGP(2, 2, 1, 2, 3, 3, 65, 64, 120, 100, 80, 0, 7, 0, 64, 0, 40, 0, 11, 0, 0, 0),   /* 01 MOOG BASS */
+    FGP(2, 2, 1, 2, 3, 3, 65, 64, 120, 100, 127, 0, 7, 0, 64, 0, 40, 0, 11, 0, 0, 0),   /* 01 MOOG BASS */
     FGP(3, 3, 3, 2, 2, 3, 65, 63, 115, 115, 90, 0, 7, 0, 64, 0, 64, 0, 11, 0, 11, 8),   /* 02 DUB STEP */
     FGP(2, 2, 3, 2, 2, 0, 65, 64, 85, 85, 40, 15, 31, 0, 64, 0, 40, 0, 11, 0, 0, 0),   /* 03 PAD SWELL */
     FGP(3, 3, 3, 2, 2, 2, 65, 63, 75, 75, 60, 0, 7, 0, 64, 0, 64, 0, 11, 0, 11, 8),   /* 04 LUSH STRINGS */
@@ -208,7 +208,7 @@ static const uint8_t FMINI_FACTORY[FMINI_NFACTORY][FG_SIZE] = {
 #define FMINI_CATS "LBUPPPLKUKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPFFFFFFFFFFLPUBKLLULKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPFFFFFFFFFF"   /* category.c: B bass, L lead, P pad, U pluck, K keys, D drum, F fx */
 static const preset_t FMINI_PRESETS[] = {
     {"MINI LEAD", {61, 44, 51, 0, 79, 70, 30, 0}, {15, 81, 110, 70}, 0, 1, FX(30, 0, 55, 40), PAT(4)},
-    {"MOOG BASS", {43, 51, 71, 0, 70, 30, 0, 1}, {9, 74, 60, 65}, 0, 1, FX(30, 0, 0, 20), PAT(2)},
+    {"MOOG BASS", {43, 51, 71, 0, 70, 30, 0, 1}, {9, 74, 60, 65}, 0, 1, FX(30, 0, 0, 46), PAT(2)},
     {"DUB STEP", {47, 42, 81, 0, 70, 0, 0, 2}, {9, 80, 0, 72}, 0, 0, FX(20, 0, 38, 51), PAT(6)},
     {"PAD SWELL", {37, 33, 89, 103, 108, 70, 40, 3}, {103, 106, 118, 108}, 0, 0, FX(0, 70, 50, 90), PAT(5)},
     {"LUSH STRINGS", {66, 32, 0, 81, 89, 100, 20, 4}, {84, 91, 127, 90}, 0, 0, FX(0, 127, 0, 60), PAT(5)},

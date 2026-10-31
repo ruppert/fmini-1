@@ -824,6 +824,9 @@ def preset_moves(b):
     P[1]["name"] = "MOOG BASS"
     P[1]["arp"][0] = 0                     # 1.14.7: 001 MOOG BASS: arpeggiator off, OCT-1 on
     P[1]["oct"] = -1
+    # 1.14.14: 001 MOOG BASS: the OSC 3 level 10.0 (127), the reverb MIX 3.6 (the send, 0.0-10.0 on the screen)
+    P[1]["g"][10] = knob(10.0)
+    P[1]["send"][3] = knob(3.6)
     # 1.14.7: 002 DUB STEP (was DUB STAB): the arpeggiator on with 2 octaves; the reverb HALL (mix 4.0, decay 4.5, tone 5.0);
     # the delay P-PONG (mix 3.0, time 374 ms, feedback 2.0). The knobs are read on the 0.0-10.0 screen scale.
     x = P[2]
