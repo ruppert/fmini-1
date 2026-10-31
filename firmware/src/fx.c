@@ -4,7 +4,9 @@
  * shared buses (chorus, tempo delay, reverb). Mono buses, stereo dry mix. */
 #define DLY_LEN 65536u           /* 1.49 s: 1/4 fits from 41 BPM, 1/4D from 61, 1/2 from 81 */
 #define CHO_LEN 2048u
-static int16_t dly_buf[DLY_LEN] __attribute__((section(".pool")));
+/* the loop: one 12-bit value per two samples (22 kHz storage, 1.14.4): 3 bytes hold two values (the even one in byte 0
+ * and the low nibble of byte 1, the odd one in the high nibble of byte 1 and byte 2). 49152 bytes for 1.49 s */
+static uint8_t dly_buf[DLY_LEN / 2u / 2u * 3u] __attribute__((section(".pool")));
 static int16_t cho_buf[CHO_LEN] __attribute__((section(".pool")));
 static const uint16_t REV_COMB[4] = {1116, 1188, 1277, 1356};
 static const uint16_t REV_AP[2] = {556, 441};
@@ -950,6 +952,53 @@ static int32_t fx_any(const int32_t *x, uint32_t n)      /* a bus with anything 
     return 0;
 }
 
+static inline int32_t dly_pos(uint32_t p)                    /* the loop's value at sample p (16-bit scale): its pair's value */
+{
+    uint32_t k = (p & (DLY_LEN - 1u)) >> 1;
+    const uint8_t *b = &dly_buf[(k >> 1) * 3u];
+    uint32_t a = (k & 1u) ? (uint32_t)(b[1] >> 4) | ((uint32_t)b[2] << 4) : (uint32_t)b[0] | ((uint32_t)(b[1] & 15u) << 8);
+    return ((int32_t)(a ^ 0x800u) - 0x800) * 16;
+}
+static inline int32_t dly_at(uint32_t d)
+{
+    return d <= fx.dly_w - fx.dly_start ? dly_pos(fx.dly_w - d) : 0;
+}
+static inline int32_t dly_atq(uint32_t dq)                  /* Q8 samples back, linear between two samples */
+{
+    uint32_t d = dq >> 8;
+    int32_t a = dly_at(d), b = dly_at(d + 1u);
+    return a + (((b - a) * (int32_t)(dq & 255u)) >> 8);
+}
+static uint32_t dly_seed = 12345u;                           /* the dither's generator (a fixed sequence: the same sound each time) */
+static int32_t dly_last;                                     /* the last input of an even sample (the pair's average) */
+static inline uint32_t dly_rnd(void) { dly_seed = dly_seed * 1103515245u + 12345u; return (dly_seed >> 16) & 255u; }
+static inline void dly_put(int32_t v)                       /* the loop's input (clamped): stored on every second sample */
+{
+    uint32_t w = fx.dly_w, k = (w & (DLY_LEN - 1u)) >> 1;
+    int32_t s = clamp(v, -32768, 32767);
+    if ((w & 1u) == 0u) {                                    /* the pair's value: the average of two inputs, TPDF dither, 12 bits */
+        uint8_t *b = &dly_buf[(k >> 1) * 3u];
+        int32_t h = (s + dly_last) >> 1, q;
+        uint32_t a;
+        dly_last = s;
+        {
+            int32_t dz = ((int32_t)dly_rnd() - (int32_t)dly_rnd()) >> 4;    /* dither only above one 12-bit step: the loop
+                                                                       * falls to exact silence instead of a floor of hiss */
+            if (h >= 16 || h <= -16)
+                h += dz;
+        }
+        q = clamp(h >= 0 ? (h + 8) >> 4 : -((-h + 8) >> 4), -2048, 2047);
+        a = (uint32_t)q & 0xFFFu;
+        if ((k & 1u) == 0u) {
+            b[0] = (uint8_t)a;
+            b[1] = (uint8_t)((b[1] & 0xF0u) | (a >> 8));
+        } else {
+            b[1] = (uint8_t)((b[1] & 0x0Fu) | ((a & 15u) << 4));
+            b[2] = (uint8_t)(a >> 4);
+        }
+    }
+    fx.dly_w++;
+}
 #if FELUCCA_FMINI_ONLY
 /* FMini-1: the chorus's three TYPEs (params.c N_CHOTYPE), all stereo (wet: the mid in wet, left minus right in dside), on cho_buf, wet only (MIX
  * is the send): the delay swing is cdepth (the typical pitch swing, scaled by DEPTH and by RATE: see fx_buses), the LFO runs at RATE.
@@ -997,21 +1046,6 @@ static __attribute__((noinline)) void cho_block(const int32_t *cho_in, int32_t *
 
 /* FMini-1: the delay's seven TYPEs (params.c N_DLYTYPE: ANALOG DIGITAL TAPE P-PONG MULTI SLAP REVERSE), one loop each over the block, all on
  * dly_buf: the sample d back (1 .. 65535), or silence if the delay started less than d samples ago (older ones are from before) */
-static inline int32_t dly_at(uint32_t d)
-{
-    return d <= fx.dly_w - fx.dly_start ? dly_buf[(fx.dly_w - d) & (DLY_LEN - 1u)] : 0;
-}
-static inline int32_t dly_atq(uint32_t dq)                  /* Q8 samples back, linear between two samples */
-{
-    uint32_t d = dq >> 8;
-    int32_t a = dly_at(d), b = dly_at(d + 1u);
-    return a + (((b - a) * (int32_t)(dq & 255u)) >> 8);
-}
-static inline void dly_put(int32_t v)                       /* the loop's input (clamped) */
-{
-    dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)clamp(v, -32768, 32767);
-    fx.dly_w++;
-}
 #define DLY_MAXQ ((int32_t)(DLY_LEN - 4u) << 8)
 /* ANALOG: a BBD chain's echo: dark (the loop's low-pass ~2.6 kHz: every repeat darker), a slow drift of the clock (+-12 samples at 1 Hz), the
  *   loop saturating softly (the chain's compander and its clipping). TAPE: wow (+-24 samples at 0.6 Hz) and flutter (+-1.5 at 6.3 Hz), a low
@@ -1086,7 +1120,7 @@ static __attribute__((noinline)) void dly_block(const int32_t *dly_in, int32_t *
                 uint32_t c = fx.rv_c[k], nn = fx.rv_n[k];
                 int32_t wt = (int32_t)(c < nn / 2u ? c : nn - c) * (int32_t)fx.rv_i[k];
                 uint32_t age = w - fx.rv_p[k];
-                o += mulq15(age <= w - fx.dly_start && age < DLY_LEN - 2u ? dly_buf[fx.rv_p[k] & (DLY_LEN - 1u)] : 0, wt);
+                o += mulq15(age <= w - fx.dly_start && age < DLY_LEN - 2u ? dly_pos(fx.rv_p[k]) : 0, wt);
                 fx.rv_p[k]--;
                 if (++c >= nn) {                        /* a new sweep from the newest sample, the length from TIME now */
                     c = 0;
@@ -1171,11 +1205,9 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
         }
         if (dly_act) {
             /* delay with a low-passed feedback */
-            x = dly_buf[(fx.dly_w - dl) & (DLY_LEN - 1u)];
+            x = dly_at(dl);
             fx.dly_lp += mulq15(x - fx.dly_lp, col);
-            dly_buf[fx.dly_w & (DLY_LEN - 1u)] =
-                (int16_t)clamp((dly_in[i] >> 1) + mulq15(fx.dly_lp, fb), -32768, 32767);
-            fx.dly_w++;
+            dly_put((dly_in[i] >> 1) + mulq15(fx.dly_lp, fb));
             y += mulq15(x << 1, dmix);
         }
         wet[i] = y;
