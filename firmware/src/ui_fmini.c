@@ -108,7 +108,10 @@ static void fmg_det_turn(uint32_t f, uint32_t role, int32_t s)
     uint8_t p[FG_SIZE];
     int32_t c;
     memcpy(p, fmini_patch[tr], FG_SIZE);
-    c = clamp(fmini_det(p, lo) + fmg_acc(role, s, 1400), -700, 700);
+    {   /* the usual acceleration, halved: a slow detent is 1 cent (fmg_acc gives 2) */
+        int32_t a = fmg_acc(role, s, 1400);
+        c = clamp(fmini_det(p, lo) + (a >= 0 ? (a + 1) / 2 : -((-a + 1) / 2)), -700, 700);
+    }
     fmini_det_put(p, lo, c);
     p[f] = (uint8_t)clamp((c >= 0 ? (c + 5) / 11 : -((-c + 5) / 11)) + 64, 0, 127);
     fmg_commit(p, f);
