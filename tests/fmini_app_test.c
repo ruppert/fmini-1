@@ -471,22 +471,32 @@ int main(int argc, char **argv)
             events_block(CTL);
             if (trk[0].mw != 0) { printf("mod wheel (TRS) %u\n", trk[0].mw); return 1; }
         }
-        {   /* DET 2 / 3: the coarse law (byte 64 = 0, 11 cents a step, +-7 semitones); the encoder moves the byte with the
-             * usual acceleration, as before 1.11 */
+        {   /* DET 2 / 3 (1.14.12): the cents, -700 .. +700 in steps of 1, 0.00 at the middle; a CC is the coarse law,
+             * (v - 64) * 11 cents, and the coarse byte follows the knob's cents */
             uint32_t pg = 1, i, f2 = 0;
+            const char *lb = 0, *un = 0;
+            char val[16];
+            int32_t ratio = -1;
+            uint32_t ic = 0;
             for (i = 0; i < fmg_count(pg); i++)
                 if (fmg_field(pg, i)->a == FG_F2) f2 = i;
-            fmini_patch[0][FG_F2] = 64;
-            if (fmini_det(fmini_patch[0], FG_F2) != 0) { printf("DET centre %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
-            fmini_patch[0][FG_F2] = 127;
-            if (fmini_det(fmini_patch[0], FG_F2) != 693) { printf("DET top %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
-            fmini_patch[0][FG_F2] = 0;
-            if (fmini_det(fmini_patch[0], FG_F2) != -704) { printf("DET bottom %d\n", (int)fmini_det(fmini_patch[0], FG_F2)); return 1; }
-            fmini_patch[0][FG_F2] = 64;
             song.sel = 0;
+            fmini_patch[0][FG_DC2L] = 0; fmini_patch[0][FG_DC2H] = 0;
+            if (fmini_det(fmini_patch[0], FG_DC2L) != 0) { printf("DET centre %d\n", (int)fmini_det(fmini_patch[0], FG_DC2L)); return 1; }
+            fmg_card_at(pg, f2, -1, &lb, val, &un, &ratio, &ic);
+            if (ratio != 500 || val[0] != '0' || val[1] != '.' || val[2] != '0' || val[3] != '0') { printf("DET centre shown %d '%s'\n", (int)ratio, val); return 1; }
             fmg_turn(pg, f2, 1, EN_K1);
-            if (fmini_patch[0][FG_F2] <= 64) { printf("DET turn up %d\n", (int)fmini_patch[0][FG_F2]); return 1; }
-            fmini_patch[0][FG_F2] = 64; fmini_patch[0][FG_F3] = 64;
+            if (fmini_det(fmini_patch[0], FG_DC2L) <= 0) { printf("DET turn up %d\n", (int)fmini_det(fmini_patch[0], FG_DC2L)); return 1; }
+            fmg_det_cc(FG_F2, 127);
+            if (fmini_det(fmini_patch[0], FG_DC2L) != 693 || fmini_patch[0][FG_F2] != 127) { printf("DET CC top %d\n", (int)fmini_det(fmini_patch[0], FG_DC2L)); return 1; }
+            fmg_det_cc(FG_F2, 0);
+            if (fmini_det(fmini_patch[0], FG_DC2L) != -704) { printf("DET CC bottom %d\n", (int)fmini_det(fmini_patch[0], FG_DC2L)); return 1; }
+            fmini_det_put(fmini_patch[0], FG_DC2L, 700);
+            fmg_turn(pg, f2, 100, EN_K1);
+            if (fmini_det(fmini_patch[0], FG_DC2L) != 700) { printf("DET clamp %d\n", (int)fmini_det(fmini_patch[0], FG_DC2L)); return 1; }
+            fmg_card_at(pg, f2, -1, &lb, val, &un, &ratio, &ic);
+            if (ratio != 1000 || val[0] != '+' || val[1] != '7' || val[2] != '.' || val[3] != '0' || val[4] != '0') { printf("DET top shown %d '%s'\n", (int)ratio, val); return 1; }
+            fmini_patch[0][FG_DC2L] = 0; fmini_patch[0][FG_DC2H] = 0; fmini_patch[0][FG_F2] = 64;
         }
         fa_gl = 0;
         /* the filter: USB 1, MIDI 2, BT 3 */

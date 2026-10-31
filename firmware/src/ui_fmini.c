@@ -99,6 +99,31 @@ static void fmg_write(uint32_t b, uint32_t v)
     p[b] = (uint8_t)v;
     fmg_commit(p, b);
 }
+static int32_t fmg_acc(uint32_t role, int32_t s, int32_t range);
+/* DET 2 / 3 (FG_F2, FG_F3): the knob moves the cents by 1 (-700 .. +700, the usual acceleration); the coarse byte follows
+ * the nearest 11-cent step, so the editor sees the same value as before */
+static void fmg_det_turn(uint32_t f, uint32_t role, int32_t s)
+{
+    uint32_t tr = song.sel % NTRK, lo = f == FG_F2 ? FG_DC2L : FG_DC3L;
+    uint8_t p[FG_SIZE];
+    int32_t c;
+    memcpy(p, fmini_patch[tr], FG_SIZE);
+    c = clamp(fmini_det(p, lo) + fmg_acc(role, s, 1400), -700, 700);
+    fmini_det_put(p, lo, c);
+    p[f] = (uint8_t)clamp((c >= 0 ? (c + 5) / 11 : -((-c + 5) / 11)) + 64, 0, 127);
+    fmg_commit(p, f);
+}
+/* a CC (0..127) for DET 2 / 3: the coarse law, (v - 64) * 11 cents, as the MIDI has always meant it */
+static void fmg_det_cc(uint32_t f, uint32_t v)
+{
+    uint32_t tr = song.sel % NTRK, lo = f == FG_F2 ? FG_DC2L : FG_DC3L;
+    uint8_t p[FG_SIZE];
+    int32_t c = ((int32_t)v - 64) * 11;
+    memcpy(p, fmini_patch[tr], FG_SIZE);
+    p[f] = (uint8_t)v;
+    fmini_det_put(p, lo, c);
+    fmg_commit(p, f);
+}
 static uint32_t fmg_byte(uint32_t b) { return fmini_patch[song.sel % NTRK][b % FG_SIZE]; }
 static uint8_t fmg_shadow[3];                                    /* a send's value while its switch is off (REV DLY CHO) */
 static int fmg_sw_on(const fmgf_t *f)
@@ -203,6 +228,10 @@ static void fmg_turn(uint32_t pg, uint32_t i, int32_t s, uint32_t role)
         break;
     }
     default:                                                      /* FK_BYTE, FK_GLIDE */
+        if (f->a == FG_F2 || f->a == FG_F3) {                     /* DET 2 / 3: the cents, a step of 1 */
+            fmg_det_turn(f->a, role, s);
+            break;
+        }
         fmg_write(f->a, (uint32_t)clamp((int32_t)fmg_byte(f->a) + fmg_acc(role, s, 127), 0, 127));
         if (f->kind == FK_GLIDE) {                       /* the knob is the GLIDE: any time above 0 switches it on, 0 off */
             uint32_t sw2 = fmg_byte(FG_SW2), want = fmg_byte(f->a) ? (sw2 | FT_GLIDE) : (sw2 & ~(uint32_t)FT_GLIDE);
@@ -253,18 +282,16 @@ static void fmg_range(uint32_t pg, uint32_t i, int32_t *lo, int32_t *hi)
 }
 
 /* tenths with a sign: "+1.5" */
-static void fmg_tenths(char *s, int32_t x)
+/* signed cents as semitones with two decimals: +4.05 (0 is "0.00", without a sign) */
+static void fmg_cents(char *s, int32_t c)
 {
-    if (x < 0) {
-        *s++ = '-';
-        x = -x;
-    } else {
-        *s++ = '+';
-    }
-    fmt_int(s, x / 10);
+    int32_t a = c < 0 ? -c : c;
+    *s++ = c < 0 ? '-' : '+';
+    fmt_int(s, a / 100);
     s += str_len(s);
     *s++ = '.';
-    *s++ = (char)('0' + x % 10);
+    *s++ = (char)('0' + (a / 10) % 10);
+    *s++ = (char)('0' + a % 10);
     *s = 0;
 }
 
@@ -329,13 +356,13 @@ static void fmg_card_at(uint32_t pg, uint32_t i, int32_t vo, const char **label,
     }
     v = vo >= 0 ? vo : (int32_t)fmg_byte(f->a);
     *ratio = v * 1000 / 127;
-    if (f->a == FG_F2 || f->a == FG_F3) {        /* DET 2 / 3: -7.0 .. +7.0 semitones, 0.0 at the middle (byte 64 = 0 cents) */
-        int32_t x = v - 64;
-        *ratio = x >= 0 ? 500 + x * 500 / 63 : 500 + x * 500 / 64;    /* the pointer: 0 at the dial's middle */
-        if (x)
-            fmg_tenths(val, x >= 0 ? x * 70 / 63 : x * 70 / 64);
+    if (f->a == FG_F2 || f->a == FG_F3) {        /* DET 2 / 3: -7.00 .. +7.00 semitones, 0.00 at the middle (0 cents) */
+        int32_t c = fmini_det(fmini_patch[song.sel % NTRK], f->a == FG_F2 ? FG_DC2L : FG_DC3L);
+        *ratio = clamp((c + 700) * 1000 / 1400, 0, 1000);    /* the pointer: 0 at the dial's middle */
+        if (c)
+            fmg_cents(val, c);
         else {
-            val[0] = '0'; val[1] = '.'; val[2] = '0'; val[3] = 0;
+            val[0] = '0'; val[1] = '.'; val[2] = '0'; val[3] = '0'; val[4] = 0;
         }
         *unit = "ST";
     } else if (f->a == FG_TUNE) {

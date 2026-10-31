@@ -111,7 +111,7 @@ class Bank:
         assert len(name) <= 12, name
         assert len(osc) == 3, name
         sw1 = 0
-        g = [0] * 18
+        g = [0] * 22
         for i, (rng, wave, lv, cents) in enumerate(osc):
             g[i] = R[rng]
             g[3 + i] = W[wave]
@@ -130,6 +130,10 @@ class Bank:
         if mflt:
             sw1 |= 64
         g[12] = sw1
+        for i, sl in ((6, 18), (7, 20)):       # DET 2 / 3 in cents (1.14.12): the coarse byte's cents as eng_fmini.c fmini_det_put
+            c = (g[i] - 64) * 11
+            m = abs(c)
+            g[sl], g[sl + 1] = m & 127, (m >> 7 & 7) | (8 if c < 0 else 0)
         g[13] = (1 if glide else 0) | (2 if sqr else 0)
         g[14] = clamp(64 + int(round(tune / 1.5625)), 0, 127)   # TUNE (cents): 64 = A 440, 1.56 cents a step
         g[15] = clamp(int(mmix), 0, 127)

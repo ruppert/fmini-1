@@ -1110,7 +1110,10 @@ static void fa_ctl_apply(uint32_t n, uint32_t v)
         fmg_glide_sync();
         break;
     case FK_BYTE:
-        fmg_write(f->a, v);
+        if (f->a == FG_F2 || f->a == FG_F3)
+            fmg_det_cc(f->a, v);
+        else
+            fmg_write(f->a, v);
         break;
     case FK_GLB: {
         const param_desc_t *d = &GP[f->a];

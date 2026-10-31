@@ -38,13 +38,28 @@ enum {                           /* the patch's bytes */
     FG_MMIX,                     /* modulation source: 0 LFO .. 127 noise */
     FG_KBD,                      /* keyboard tracking of the cutoff, 0..127 = 0..1 */
     FG_GLID,                     /* glide time kept while the GLIDE switch is off (P_GLIDE holds it while on) */
+    FG_DC2L, FG_DC2H,            /* DET 2 in cents: a signed 16-bit (low, high byte), -700 .. +700 (1.14.12) */
+    FG_DC3L, FG_DC3H,            /* DET 3 in cents, the same */
     FG_NUM
 };
 enum { FS_O1 = 1, FS_O2 = 2, FS_O3 = 4, FS_NZ = 8, FS_PINK = 16, FS_MOSC = 32, FS_MFLT = 64 };   /* FG_SW1 */
 enum { FT_GLIDE = 1, FT_SQR = 2 };                                                                 /* FG_SW2 */
 
-/* DET 2 / 3 (FG_F2, FG_F3), in cents: byte 64 = 0, 11 cents a step, +-7 semitones (the one law since 1.0) */
-static int32_t fmini_det(const uint8_t *g, uint32_t i) { return ((int32_t)g[i] - 64) * 11; }
+/* DET 2 / 3, in cents: the signed 16-bit at bytes lo, lo + 1 (FG_DC2L, FG_DC3L). The coarse byte FG_F2 / FG_F3 (64 = 0,
+ * 11 cents a step) is what a CC writes and is kept near the cents for the editor; the sound uses the cents (1.14.12). */
+static int32_t fmini_det(const uint8_t *g, uint32_t lo)
+{
+    int32_t m = g[lo] | (int32_t)(g[lo + 1] & 7) << 7;
+    return g[lo + 1] & 8 ? -m : m;
+}
+/* the cents c (|c| <= 1023) as the two 7-bit bytes at lo: the magnitude low 7 bits, then bits 7..9 with the sign at bit 3
+ * (7 bits each: the patch travels as 7-bit sysex; all zero = 0 cents) */
+static void fmini_det_put(uint8_t *g, uint32_t lo, int32_t c)
+{
+    int32_t m = c < 0 ? -c : c;
+    g[lo] = (uint8_t)(m & 127);
+    g[lo + 1] = (uint8_t)((m >> 7 & 7) | (c < 0 ? 8 : 0));
+}
 
 static uint8_t fmini_patch[NTRK][FG_SIZE];        /* the tracks' patches (main loop writes, then fmini_pgen) */
 static volatile uint8_t fmini_pgen[NTRK];         /* +1 after each write of fmini_patch[t] */
@@ -68,7 +83,7 @@ static int32_t fmini_mn[NTRK];                    /* the modulation noise of thi
 /* the highest value of each byte */
 static uint32_t fmini_max(uint32_t i)
 {
-    static const uint8_t MAXV[FG_NUM] = {5, 5, 5, 5, 5, 5, 127, 127, 127, 127, 127, 127, 127, 3, 127, 127, 127, 127};
+    static const uint8_t MAXV[FG_NUM] = {5, 5, 5, 5, 5, 5, 127, 127, 127, 127, 127, 127, 127, 3, 127, 127, 127, 127, 127, 15, 127, 15};
     return i < FG_NUM ? MAXV[i] : 0u;
 }
 
@@ -80,8 +95,8 @@ static void fmini_sanitize(uint8_t *v)
 }
 
 /* --------------------------------------------------------- factory patches --- */
-#define FGP(r1, r2, r3, w1, w2, w3, f2, f3, l1, l2, l3, ln, s1, s2, tn, mm, kb, gl) \
-    {r1, r2, r3, w1, w2, w3, f2, f3, l1, l2, l3, ln, s1, s2, tn, mm, kb, gl}
+#define FGP(r1, r2, r3, w1, w2, w3, f2, f3, l1, l2, l3, ln, s1, s2, tn, mm, kb, gl, d2l, d2h, d3l, d3h) \
+    {r1, r2, r3, w1, w2, w3, f2, f3, l1, l2, l3, ln, s1, s2, tn, mm, kb, gl, d2l, d2h, d3l, d3h}
 #define ALLO (FS_O1 | FS_O2 | FS_O3)
 /* what a factory patch sets beyond its preset_t (a load: fmini_app.c fa_factory_extras): the arpeggiator (ON, the MODE the ARP
  * button turns on, RATE, OCT, GATE, SWG, PROB), the LFO (RATE, WAVE, FADE, SYNC), the common modulation (LFO -> pitch, LFO ->
@@ -424,8 +439,8 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         dr3 = (d1 - d2) >> 9;
     }
     inc1 = cents_inc(clamp(p16 + fmini_range16(g[FG_R1]), 0, 2047), dr1, fine);
-    inc2 = cents_inc(clamp(p16 + fmini_range16(g[FG_R2]), 0, 2047), fmini_det(g, FG_F2) + dr2, fine);
-    inc3 = cents_inc(clamp(p16 + fmini_range16(g[FG_R3]), 0, 2047), fmini_det(g, FG_F3) + dr3, fine);
+    inc2 = cents_inc(clamp(p16 + fmini_range16(g[FG_R2]), 0, 2047), fmini_det(g, FG_DC2L) + dr2, fine);
+    inc3 = cents_inc(clamp(p16 + fmini_range16(g[FG_R3]), 0, 2047), fmini_det(g, FG_DC3L) + dr3, fine);
 
     /* mixer levels: a squared curve */
     if (sw & FS_O1) l1 = (int32_t)(g[FG_L1] * g[FG_L1] * 2) + 0;
