@@ -860,6 +860,26 @@ def preset_moves(b):
     # 1.14.16: MOD OSC off on every factory patch (the switch's bit 32 of the oscillators' switches, byte 12)
     for x in P:
         x["g"][12] &= ~32
+    # 1.14.22: 004 and 007 trade places (names and sounds go with them)
+    swap(4, 7)
+    # 1.14.22: 000 MINI LEAD: OSC 2 one octave down (16')
+    P[0]["g"][1] = 2
+    # 1.14.22: 002 and 008 trade sounds; the names stay in their slots
+    a, b_ = P[2], P[8]
+    for k in a:
+        if k != "name":
+            a[k], b_[k] = b_[k], a[k]
+    # 1.14.22: 002 is called PLUCK ARP; PLUCK ARP (168) becomes PLUCK ARP 2
+    P[2]["name"] = "PLUCK ARP"
+    P[168]["name"] = "PLUCK ARP 2"
+    # 1.14.22: OCEAN (183) is copied to 008 (the whole patch, its name too)
+    P[8] = copy.deepcopy(P[183])
+    # 1.14.22: 183 becomes a new atmospheric patch, AURA ATMOS (a placeholder name: rename it when you like)
+    tmp = Bank()
+    tmp.add("AURA ATMOS", "atmo", (o("16", "SAW", 70), o("8", "TRI", 50, 7), o("16", "PW", 40, -6)), noise=30, pink=True,
+            cutoff=600, emph=3.0, cntr=co(2.2), kbd=50, fenv=(1500, 3000, 70), env=(1800, 3000, 110, 3500), poly=True,
+            vib=30, lfo=(0.15, "TRI", 0, "OFF"), send=(0, 60, 50, 100), rv=("CLOUD", 95, 60), dl=("TAPE", 500, 50), pat=5)
+    P[183] = tmp.p[0]
 
 def build(b):
     showcase(b)
