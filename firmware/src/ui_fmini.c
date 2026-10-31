@@ -108,9 +108,12 @@ static void fmg_det_turn(uint32_t f, uint32_t role, int32_t s)
     uint8_t p[FG_SIZE];
     int32_t c;
     memcpy(p, fmini_patch[tr], FG_SIZE);
-    {   /* the usual acceleration, halved: a slow detent is 1 cent (fmg_acc gives 2) */
-        int32_t a = fmg_acc(role, s, 1400);
-        c = clamp(fmini_det(p, lo) + (a >= 0 ? (a + 1) / 2 : -((-a + 1) / 2)), -700, 700);
+    {   /* the acceleration for the cents: fmg_acc's multiplier m (2 slow .. 18 fast, times s) gives m*m/4 cents: a slow detent
+         * is 1 cent (0.01), a fast turn about 75-80 cents a detent; at most 100 cents an event */
+        int32_t a = fmg_acc(role, s, 1400), m = a < 0 ? -a : a, d = m * m / 4;
+        if (d > 100)
+            d = 100;
+        c = clamp(fmini_det(p, lo) + (a < 0 ? -d : d), -700, 700);
     }
     fmini_det_put(p, lo, c);
     p[f] = (uint8_t)clamp((c >= 0 ? (c + 5) / 11 : -((-c + 5) / 11)) + 64, 0, 127);
@@ -365,7 +368,7 @@ static void fmg_card_at(uint32_t pg, uint32_t i, int32_t vo, const char **label,
         if (c)
             fmg_cents(val, c);
         else {
-            val[0] = '0'; val[1] = '.'; val[2] = '0'; val[3] = '0'; val[4] = 0;
+            val[0] = '0'; val[1] = 0;                /* the middle: "0" */
         }
         *unit = "ST";
     } else if (f->a == FG_TUNE) {

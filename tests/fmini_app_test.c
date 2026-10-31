@@ -484,7 +484,7 @@ int main(int argc, char **argv)
             fmini_patch[0][FG_DC2L] = 0; fmini_patch[0][FG_DC2H] = 0;
             if (fmini_det(fmini_patch[0], FG_DC2L) != 0) { printf("DET centre %d\n", (int)fmini_det(fmini_patch[0], FG_DC2L)); return 1; }
             fmg_card_at(pg, f2, -1, &lb, val, &un, &ratio, &ic);
-            if (ratio != 500 || val[0] != '0' || val[1] != '.' || val[2] != '0' || val[3] != '0') { printf("DET centre shown %d '%s'\n", (int)ratio, val); return 1; }
+            if (ratio != 500 || val[0] != '0' || val[1] != 0) { printf("DET centre shown %d '%s'\n", (int)ratio, val); return 1; }
             fmg_turn(pg, f2, 1, EN_K1);
             if (fmini_det(fmini_patch[0], FG_DC2L) <= 0) { printf("DET turn up %d\n", (int)fmini_det(fmini_patch[0], FG_DC2L)); return 1; }
             fmg_det_cc(FG_F2, 127);
