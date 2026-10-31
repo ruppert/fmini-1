@@ -7,8 +7,9 @@
 # played (keyboard tracking included), emph the Minimoog's EMPHASIS dial 0 .. 10 (sings from about 8), cntr the filter
 # contour's amount (co(octaves)), fenv (attack ms, decay ms, sustain 0..127) the filter contour, env (attack, decay, sustain,
 # release) the loudness contour; send = (drive, chorus, delay, reverb) levels; rv / dl / ch / dr the FX settings.
+import copy
 import os
-from gen_fmini_presets import A, o, osc_off, co, st_pit, hz, ms, cut, dly, semi, det
+from gen_fmini_presets import A, o, osc_off, co, st_pit, hz, ms, cut, dly, semi, det, Bank
 
 
 def showcase(b):
@@ -781,6 +782,22 @@ def fx2(b):                              # 190-199: effects
 ARP2 = ['VELVET EP', 'MINI BASS', 'TIN WHISTLE', 'MACHINE', 'CRUNCH', 'MOONLIGHT', 'DREAM FLUTE', 'ROUND 808', 'RUBBER SUB', 'DOUBLE SAW', 'AURORA', 'GLOW PAD', 'STAB 2', 'SAX BRASS', 'HARP 2', 'KOTO', 'BANJO', 'WURLI 2', 'HARPSI 2', 'STARFIELD', 'FOG BELLS', 'RAYGUN', 'SPACESHIP']
 
 
+def preset_moves(b):
+    """1.14.4: the bank's moves (positions are the presets' numbers; each patch keeps its name, levels and settings)."""
+    P = b.p
+    def swap(i, j):
+        P[i], P[j] = P[j], P[i]
+    swap(1, 103)                           # I FEEL ARP <-> MINI BASS
+    swap(2, 5)                             # LUSH STRINGS <-> DUB STAB
+    P[3] = copy.deepcopy(P[180])           # DEEP WELL copied over ROTARY ORG
+    tmp = Bank()                           # a new patch for 180: a longer, darker swell than DEEP WELL
+    tmp.add("DEEP SWELL 2", "atmo", (o("16", "SAW", 80), o("16", "SAW", 80, 12), o("8", "TRI", 35)), noise=12, pink=True,
+            cutoff=180, emph=2.6, cntr=co(1.6), kbd=40, fenv=(2600, 3400, 60), env=(2600, 2800, 110, 3500), poly=True,
+            vib=30, lfo=(0.1, "SIN", 0, "OFF"), send=(0, 60, 60, 100), rv=("CLOUD", 90, 60), dl=("TAPE", 500, 55), pat=5)
+    P[180] = tmp.p[0]
+    swap(4, 5)                             # LUSH STRINGS <-> CRYSTAL BELL
+    swap(5, 7)                             # CRYSTAL BELL <-> SPACE DRONE
+
 def build(b):
     showcase(b)
     hard_leads(b)
@@ -807,6 +824,7 @@ def build(b):
             x["arp"][0] = 1
     for x in b.p[130:140]:          # 130-139 (the second hundred's basses): OCT-1, as the first hundred's
         x["oct"] = -1
+    preset_moves(b)                 # after the rules above: a patch keeps its own arpeggiator and octave when it moves
     if os.environ.get("FMINI_PARTIAL"):
         while len(b.p) < 200:       # a development filler: the groups still to write
             i = len(b.p)
