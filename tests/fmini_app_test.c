@@ -287,7 +287,7 @@ int main(int argc, char **argv)
             if (k == 0u && (song.octave != 1 || TSEL->p[P_E0] != 61 || fmini_patch[0][FG_GLID] != 50)) {      /* CUTOFF -0.2 (the ladder's dial, 1.7.0), GLIDE 3.9 (-10 %), OCT+ */
                 printf("patch 0: octave %d cutoff %d glide %d\n", song.octave, TSEL->p[P_E0], fmini_patch[0][FG_GLID]); bad++;
             }
-            if (k == 3u && (TSEL->p[P_E0] != 43 || TSEL->p[P_REV] != 90 || song.g[G_RTYPE] != 4)) {          /* 1.14.4: DEEP WELL (a copy of the 180 swell): CUTOFF, REVERB 9.0, CLOUD */
+            if (k == 3u && (TSEL->p[P_E0] != 37 || TSEL->p[P_REV] != 90 || song.g[G_RTYPE] != 4)) {          /* 1.14.5: PAD SWELL (the 1.14.4 DEEP WELL copy): CUTOFF -2.1 (byte 37), REVERB 9.0, CLOUD */
                 printf("patch 3: cutoff %d reverb %d type %d\n", TSEL->p[P_E0], TSEL->p[P_REV], song.g[G_RTYPE]); bad++;
             }
         }

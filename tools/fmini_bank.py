@@ -9,7 +9,7 @@
 # release) the loudness contour; send = (drive, chorus, delay, reverb) levels; rv / dl / ch / dr the FX settings.
 import copy
 import os
-from gen_fmini_presets import A, o, osc_off, co, st_pit, hz, ms, cut, dly, semi, det, Bank
+from gen_fmini_presets import A, o, osc_off, co, st_pit, hz, ms, cut, dly, semi, det, emp, Bank
 
 
 def showcase(b):
@@ -782,6 +782,11 @@ def fx2(b):                              # 190-199: effects
 ARP2 = ['VELVET EP', 'MINI BASS', 'TIN WHISTLE', 'MACHINE', 'CRUNCH', 'MOONLIGHT', 'DREAM FLUTE', 'ROUND 808', 'RUBBER SUB', 'DOUBLE SAW', 'AURORA', 'GLOW PAD', 'STAB 2', 'SAX BRASS', 'HARP 2', 'KOTO', 'BANJO', 'WURLI 2', 'HARPSI 2', 'STARFIELD', 'FOG BELLS', 'RAYGUN', 'SPACESHIP']
 
 
+def knob(v):
+    """a knob read as 0.0 .. 10.0 on the screen -> its byte 0..127"""
+    return min(127, max(0, int(round(v * 127 / 10.0))))
+
+
 def preset_moves(b):
     """1.14.4: the bank's moves (positions are the presets' numbers; each patch keeps its name, levels and settings)."""
     P = b.p
@@ -797,6 +802,27 @@ def preset_moves(b):
     P[180] = tmp.p[0]
     swap(4, 5)                             # LUSH STRINGS <-> CRYSTAL BELL
     swap(5, 7)                             # CRYSTAL BELL <-> SPACE DRONE
+    # 1.14.5: the sounds of 004 and 142 trade places; the names stay where they are (only the sound moves)
+    a, b_ = P[4], P[142]
+    for k in a:
+        if k != "name":
+            a[k], b_[k] = b_[k], a[k]
+    # 1.14.5: 001 MINI BASS: OCT-1 on; the arpeggiator on with 2 octaves (it was turned off, then on again);
+    # the reverb HALL (mix 4.0, decay 4.5, tone 5.0), the delay P-PONG (mix 3.0, time 374 ms, feedback 2.0)
+    x = P[1]
+    x["oct"] = -1
+    x["arp"][0] = 1
+    x["arp"][3] = 2
+    x["fxg"][0], x["fxg"][1], x["fxg"][2] = 1, knob(4.5), knob(5.0)        # reverb TYPE HALL, DECAY, TONE
+    x["send"][3] = knob(4.0)                                               # reverb MIX
+    x["fxg"][3], x["fxg"][4], x["fxg"][5] = 3, dly(374), knob(2.0)         # delay TYPE P-PONG, TIME, FEEDBK
+    x["send"][2] = knob(3.0)                                               # delay MIX
+    # 1.14.5: 003 PAD SWELL (was DEEP WELL): CUTOFF -2.1, EMPHASIS 2.6, the filter contour's AMOUNT 7.0 (the dials as the screen shows them)
+    x = P[3]
+    x["name"] = "PAD SWELL"
+    x["e"][0] = round((-2.1 + 5.0) * 127 / 10.0)
+    x["e"][1] = emp(2.6)
+    x["e"][2] = knob(7.0)
 
 def build(b):
     showcase(b)
