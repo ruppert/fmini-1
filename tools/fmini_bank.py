@@ -823,6 +823,11 @@ def preset_moves(b):
     x["e"][0] = round((-2.1 + 5.0) * 127 / 10.0)
     x["e"][1] = emp(2.6)
     x["e"][2] = knob(7.0)
+    # 1.14.6: 001 is called MOOG BASS (renamed after the level lookup, so its level stays)
+    P[1]["name"] = "MOOG BASS"
+    P[30]["name"] = "MINI BASS"            # the 030 bass (was MOOG BASS): the name is free once 001 moves to MOOG BASS
+    # 1.14.6: 006 CS-80 BRASS: MOD OSC off (the switch's bit 32 in the oscillators' switches)
+    P[6]["g"][12] &= ~32
 
 def build(b):
     showcase(b)
