@@ -108,9 +108,9 @@ static void fmg_det_turn(uint32_t f, uint32_t role, int32_t s)
     uint8_t p[FG_SIZE];
     int32_t c;
     memcpy(p, fmini_patch[tr], FG_SIZE);
-    {   /* the acceleration for the cents: fmg_acc's multiplier m (2 slow .. 18 fast, times s) gives m*m/6 cents (at least 1):
-         * a slow detent is 1 cent (0.01), a fast turn about 50 cents a detent; at most 100 cents an event */
-        int32_t a = fmg_acc(role, s, 1400), m = a < 0 ? -a : a, d = m * m / 6;
+    {   /* the acceleration for the cents: fmg_acc's multiplier m (2 slow .. 18 fast, times s) gives m*m/12 cents (at least 1):
+         * a slow detent is 1 cent (0.01), a fast turn about 25 cents a detent; at most 100 cents an event */
+        int32_t a = fmg_acc(role, s, 1400), m = a < 0 ? -a : a, d = m * m / 12;
         if (d < 1)
             d = 1;
         if (d > 100)
