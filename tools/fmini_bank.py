@@ -807,6 +807,13 @@ def preset_moves(b):
     for k in a:
         if k != "name":
             a[k], b_[k] = b_[k], a[k]
+    # 1.14.8: 004 LUSH STRINGS: CUTOFF +0.2 on the dial (byte 66), CHORUS mix 10.0 (127), the loudness contour's
+    # DECAY 7.2 and SUSTAIN 10.0 (the screen's 0.0-10.0 values as bytes; the decay is not in ms here)
+    x = P[4]
+    x["e"][0] = round((0.2 + 5.0) * 127 / 10.0)
+    x["send"][1] = knob(10.0)
+    x["amp"][1] = knob(7.2)
+    x["amp"][2] = knob(10.0)
     # 1.14.5: 003 PAD SWELL (was DEEP WELL): CUTOFF -2.1, EMPHASIS 2.6, the filter contour's AMOUNT 7.0 (the dials as the screen shows them)
     x = P[3]
     x["name"] = "PAD SWELL"
