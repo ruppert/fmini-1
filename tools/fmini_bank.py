@@ -840,6 +840,19 @@ def preset_moves(b):
     P[30]["name"] = "MINI BASS"            # the 030 bass (was MOOG BASS): the name is free once 001 moves to MOOG BASS
     # 1.14.6: 006 CS-80 BRASS: MOD OSC off (the switch's bit 32 in the oscillators' switches)
     P[6]["g"][12] &= ~32
+    # 1.14.15: 001 MOOG BASS: the drive's GAIN 2.5 (the DIST send) and OUTPUT 7.5 (the screen's 0.0-10.0 values)
+    P[1]["send"][0] = knob(2.5)
+    P[1]["fxg"][11] = knob(7.5)
+    # 1.14.15: 007 MEGA LEAD replaces CRYSTAL BELL: the Minimoog-style gliding lead (the recipe of the MusicRadar tutorial):
+    # OSC 1 pulse (PW) at 8', OSC 2 saw at 2' (+3 cents), OSC 3 square at 4' (-3 cents); CUTOFF -2.0 on the dial; CONTOUR 85;
+    # the filter envelope attack 600 ms, decay 2 s, sustain 6.0; the loudness attack minimum, decay 5.0, sustain 6.0;
+    # keyboard tracking on (64); GLIDE about 12 o'clock (200 ms); a heavy tube drive: GAIN 8.0, OUTPUT 9.0; EMPHASIS 7.0
+    tmp = Bank()
+    tmp.add("MEGA LEAD", "lead", (o("8", "PW", 110), o("2", "SAW", 90, 3), o("4", "SQR", 90, -3)),
+            cutoff=300, emph=7.0, cntr=85, kbd=64, fenv=(600, 2000, 76), env=(5, 600, 76, 150), glide=200,
+            send=(80, 0, 0, 0), dr=("TUBE", 60, 90), poly=False)
+    P[7] = tmp.p[0]
+    P[7]["e"][0] = round((-2.0 + 5.0) * 127 / 10.0)
 
 def build(b):
     showcase(b)

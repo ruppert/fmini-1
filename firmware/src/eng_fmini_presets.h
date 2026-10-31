@@ -9,7 +9,7 @@ static const uint8_t FMINI_FACTORY[FMINI_NFACTORY][FG_SIZE] = {
     FGP(3, 3, 3, 2, 2, 2, 65, 63, 75, 75, 60, 0, 7, 0, 64, 0, 64, 0, 11, 0, 11, 8),   /* 04 LUSH STRINGS */
     FGP(2, 2, 3, 2, 2, 4, 66, 64, 90, 90, 60, 25, 95, 0, 64, 0, 40, 0, 22, 0, 0, 0),   /* 05 SPACE DRONE */
     FGP(3, 3, 2, 2, 2, 2, 65, 63, 90, 90, 70, 0, 7, 0, 64, 0, 64, 0, 11, 0, 11, 8),   /* 06 CS-80 BRASS */
-    FGP(4, 4, 5, 0, 0, 0, 127, 111, 100, 70, 40, 0, 7, 0, 64, 0, 127, 0, 53, 5, 5, 4),   /* 07 CRYSTAL BELL */
+    FGP(3, 5, 4, 4, 2, 3, 64, 64, 110, 90, 90, 0, 7, 1, 64, 0, 64, 72, 0, 0, 0, 0),   /* 07 MEGA LEAD */
     FGP(3, 3, 4, 2, 3, 2, 65, 63, 100, 90, 60, 0, 7, 0, 64, 0, 70, 0, 11, 0, 11, 8),   /* 08 TANGERINE */
     FGP(3, 4, 5, 0, 0, 3, 64, 64, 100, 60, 30, 0, 7, 0, 64, 0, 90, 0, 0, 0, 0, 0),   /* 09 E.PIANO */
     FGP(3, 3, 2, 2, 2, 3, 62, 65, 100, 100, 75, 0, 7, 1, 64, 0, 90, 68, 22, 8, 11, 0),   /* 10 EMERSON */
@@ -205,16 +205,16 @@ static const uint8_t FMINI_FACTORY[FMINI_NFACTORY][FG_SIZE] = {
 };
 
 /* {CUT, EMPH, CNTR, F.ATK, F.DEC, F.SUS, MOD, SLOT}, {ATK DEC SUS REL}, MONO (legato) or POLY, the sends DIST CHORUS DELAY REVERB */
-#define FMINI_CATS "LBUPPPLKUKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPFFFFFFFFFFLPUBKLLULKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPFFFFFFFFFF"   /* category.c: B bass, L lead, P pad, U pluck, K keys, D drum, F fx */
+#define FMINI_CATS "LBUPPPLLUKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPFFFFFFFFFFLPUBKLLULKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPFFFFFFFFFF"   /* category.c: B bass, L lead, P pad, U pluck, K keys, D drum, F fx */
 static const preset_t FMINI_PRESETS[] = {
     {"MINI LEAD", {61, 44, 51, 0, 79, 70, 30, 0}, {15, 81, 110, 70}, 0, 1, FX(30, 0, 55, 40), PAT(4)},
-    {"MOOG BASS", {43, 51, 71, 0, 70, 30, 0, 1}, {9, 74, 60, 65}, 0, 1, FX(30, 0, 0, 46), PAT(2)},
+    {"MOOG BASS", {43, 51, 71, 0, 70, 30, 0, 1}, {9, 74, 60, 65}, 0, 1, FX(32, 0, 0, 46), PAT(2)},
     {"DUB STEP", {47, 42, 81, 0, 70, 0, 0, 2}, {9, 80, 0, 72}, 0, 0, FX(20, 0, 38, 51), PAT(6)},
     {"PAD SWELL", {37, 33, 89, 103, 108, 70, 40, 3}, {103, 106, 118, 108}, 0, 0, FX(0, 70, 50, 90), PAT(5)},
     {"LUSH STRINGS", {66, 32, 0, 81, 89, 100, 20, 4}, {84, 91, 127, 90}, 0, 0, FX(0, 127, 0, 60), PAT(5)},
     {"SPACE DRONE", {44, 48, 64, 108, 112, 60, 70, 5}, {106, 108, 118, 109}, 0, 0, FX(0, 80, 60, 90), PAT(5)},
     {"CS-80 BRASS", {42, 39, 76, 75, 92, 70, 20, 6}, {61, 86, 118, 84}, 0, 0, FX(0, 60, 0, 45), PAT(5)},
-    {"CRYSTAL BELL", {47, 29, 76, 0, 99, 0, 0, 7}, {0, 106, 0, 99}, 0, 0, FX(0, 20, 30, 70), PAT(7)},
+    {"MEGA LEAD", {38, 89, 85, 86, 103, 76, 0, 7}, {22, 86, 76, 68}, 0, 1, FX(80, 0, 0, 0), PAT(0)},
     {"TANGERINE", {51, 55, 66, 0, 74, 10, 0, 8}, {0, 78, 25, 69}, 0, 0, FX(20, 40, 85, 55), PAT(13)},
     {"E.PIANO", {57, 32, 51, 0, 75, 10, 0, 9}, {9, 101, 10, 75}, 0, 0, FX(0, 70, 0, 25), PAT(6)},
     {"EMERSON", {59, 58, 46, 0, 86, 55, 28, 10}, {9, 77, 118, 75}, 0, 1, FX(60, 0, 55, 35), PAT(4)},
@@ -413,13 +413,13 @@ static const preset_t FMINI_PRESETS[] = {
  * chorus TYPE DEPTH RATE, drive TYPE TONE OUTPUT}, the LEVEL, the modulation {LFO>PITCH LFO>AMP CONTOUR>PITCH} and the octave (fmini_x_t) */
 static const fmini_x_t FMINI_X[FMINI_NFACTORY] = {
     {{0, 1, 2, 1, 64, 0, 127}, {89, 0, 81, 0}, {1, 60, 80, 0, 65, 45, 0, 60, 47, 1, 70, 64}, 108, {0, 0, 0}, 1},   /* 00 */
-    {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 0, 0}, {0, 30, 80, 0, 65, 50, 0, 60, 47, 1, 70, 64}, 104, {0, 0, 0}, -1},   /* 01 */
+    {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 0, 0}, {0, 30, 80, 0, 65, 50, 0, 60, 47, 1, 70, 95}, 104, {0, 0, 0}, -1},   /* 01 */
     {{1, 1, 2, 2, 64, 0, 127}, {87, 0, 0, 0}, {1, 57, 64, 3, 65, 25, 0, 60, 47, 1, 64, 64}, 127, {0, 0, 0}, 0},   /* 02 */
     {{0, 1, 2, 1, 64, 0, 127}, {13, 0, 0, 0}, {4, 90, 60, 2, 75, 55, 0, 60, 47, 0, 64, 64}, 104, {0, 0, 0}, 0},   /* 03 */
     {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 86, 0}, {1, 70, 80, 0, 65, 50, 0, 70, 44, 0, 64, 64}, 104, {0, 0, 0}, 0},   /* 04 */
     {{0, 1, 2, 1, 64, 0, 127}, {9, 0, 0, 0}, {4, 90, 70, 6, 80, 50, 2, 70, 34, 0, 64, 64}, 113, {0, 0, 0}, 0},   /* 05 */
     {{0, 1, 2, 1, 64, 0, 127}, {88, 0, 89, 0}, {1, 70, 80, 0, 65, 50, 0, 60, 53, 0, 64, 64}, 114, {0, 0, 0}, -1},   /* 06 */
-    {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 0, 0}, {2, 80, 100, 1, 65, 40, 0, 60, 44, 0, 64, 64}, 107, {0, 0, 0}, 0},   /* 07 */
+    {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 0, 0}, {1, 70, 67, 0, 65, 50, 0, 60, 47, 1, 60, 90}, 104, {0, 0, 0}, 0},   /* 07 */
     {{1, 3, 2, 3, 64, 0, 127}, {87, 0, 0, 0}, {2, 60, 90, 1, 65, 62, 0, 60, 40, 0, 64, 64}, 113, {0, 0, 0}, 0},   /* 08 */
     {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 0, 0}, {2, 50, 90, 0, 65, 50, 0, 60, 50, 0, 64, 64}, 120, {0, 0, 0}, 0},   /* 09 */
     {{0, 1, 2, 1, 64, 0, 127}, {89, 0, 86, 0}, {2, 45, 80, 2, 58, 38, 0, 60, 47, 1, 80, 70}, 100, {0, 0, 0}, 0},   /* 10 */
