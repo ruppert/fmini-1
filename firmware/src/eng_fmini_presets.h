@@ -4,7 +4,7 @@
 static const uint8_t FMINI_FACTORY[FMINI_NFACTORY][FG_SIZE] = {
     FGP(3, 3, 2, 2, 2, 3, 65, 64, 90, 90, 70, 0, 7, 1, 64, 0, 64, 50),   /* 00 MINI LEAD */
     FGP(2, 2, 1, 2, 3, 3, 65, 64, 120, 100, 80, 0, 7, 0, 64, 0, 40, 0),   /* 01 MOOG BASS */
-    FGP(3, 3, 3, 2, 2, 3, 65, 63, 115, 115, 90, 0, 7, 0, 64, 0, 64, 0),   /* 02 DUB STAB */
+    FGP(3, 3, 3, 2, 2, 3, 65, 63, 115, 115, 90, 0, 7, 0, 64, 0, 64, 0),   /* 02 DUB STEP */
     FGP(2, 2, 3, 2, 2, 0, 65, 64, 85, 85, 40, 15, 31, 0, 64, 0, 40, 0),   /* 03 PAD SWELL */
     FGP(3, 3, 3, 2, 2, 2, 65, 63, 75, 75, 60, 0, 7, 0, 64, 0, 64, 0),   /* 04 LUSH STRINGS */
     FGP(2, 2, 3, 2, 2, 4, 66, 64, 90, 90, 60, 25, 95, 0, 64, 0, 40, 0),   /* 05 SPACE DRONE */
@@ -208,8 +208,8 @@ static const uint8_t FMINI_FACTORY[FMINI_NFACTORY][FG_SIZE] = {
 #define FMINI_CATS "LBUPPPLKUKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPFFFFFFFFFFLPUBKLLULKLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBPPPPPPPPPPLLLLLLLLLLUUUUUUUUUUKKKKKKKKKKPPPPPPPPPPFFFFFFFFFF"   /* category.c: B bass, L lead, P pad, U pluck, K keys, D drum, F fx */
 static const preset_t FMINI_PRESETS[] = {
     {"MINI LEAD", {61, 44, 51, 0, 79, 70, 30, 0}, {15, 81, 110, 70}, 0, 1, FX(30, 0, 55, 40), PAT(4)},
-    {"MOOG BASS", {43, 51, 71, 0, 70, 30, 0, 1}, {9, 74, 60, 65}, 0, 1, FX(30, 0, 38, 51), PAT(2)},
-    {"DUB STAB", {47, 42, 81, 0, 70, 0, 0, 2}, {9, 80, 0, 72}, 0, 0, FX(20, 0, 90, 45), PAT(6)},
+    {"MOOG BASS", {43, 51, 71, 0, 70, 30, 0, 1}, {9, 74, 60, 65}, 0, 1, FX(30, 0, 0, 20), PAT(2)},
+    {"DUB STEP", {47, 42, 81, 0, 70, 0, 0, 2}, {9, 80, 0, 72}, 0, 0, FX(20, 0, 38, 51), PAT(6)},
     {"PAD SWELL", {37, 33, 89, 103, 108, 70, 40, 3}, {103, 106, 118, 108}, 0, 0, FX(0, 70, 50, 90), PAT(5)},
     {"LUSH STRINGS", {62, 32, 0, 81, 89, 100, 20, 4}, {84, 86, 116, 90}, 0, 0, FX(0, 70, 0, 60), PAT(5)},
     {"SPACE DRONE", {44, 48, 64, 108, 112, 60, 70, 5}, {106, 108, 118, 109}, 0, 0, FX(0, 80, 60, 90), PAT(5)},
@@ -413,8 +413,8 @@ static const preset_t FMINI_PRESETS[] = {
  * chorus TYPE DEPTH RATE, drive TYPE TONE OUTPUT}, the LEVEL, the modulation {LFO>PITCH LFO>AMP CONTOUR>PITCH} and the octave (fmini_x_t) */
 static const fmini_x_t FMINI_X[FMINI_NFACTORY] = {
     {{0, 1, 2, 1, 64, 0, 127}, {89, 0, 81, 0}, {1, 60, 80, 0, 65, 45, 0, 60, 47, 1, 70, 64}, 108, {0, 0, 0}, 1},   /* 00 */
-    {{1, 1, 2, 2, 64, 0, 127}, {87, 0, 0, 0}, {1, 57, 64, 3, 65, 25, 0, 60, 47, 1, 70, 64}, 104, {0, 0, 0}, -1},   /* 01 */
-    {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 0, 0}, {3, 55, 80, 2, 65, 70, 0, 60, 47, 1, 64, 64}, 127, {0, 0, 0}, 0},   /* 02 */
+    {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 0, 0}, {0, 30, 80, 0, 65, 50, 0, 60, 47, 1, 70, 64}, 104, {0, 0, 0}, -1},   /* 01 */
+    {{1, 1, 2, 2, 64, 0, 127}, {87, 0, 0, 0}, {1, 57, 64, 3, 65, 25, 0, 60, 47, 1, 64, 64}, 127, {0, 0, 0}, 0},   /* 02 */
     {{0, 1, 2, 1, 64, 0, 127}, {13, 0, 0, 0}, {4, 90, 60, 2, 75, 55, 0, 60, 47, 0, 64, 64}, 104, {0, 0, 0}, 0},   /* 03 */
     {{0, 1, 2, 1, 64, 0, 127}, {87, 0, 86, 0}, {1, 70, 80, 0, 65, 50, 0, 70, 44, 0, 64, 64}, 104, {0, 0, 0}, 0},   /* 04 */
     {{0, 1, 2, 1, 64, 0, 127}, {9, 0, 0, 0}, {4, 90, 70, 6, 80, 50, 2, 70, 34, 0, 64, 64}, 113, {0, 0, 0}, 0},   /* 05 */

@@ -807,24 +807,26 @@ def preset_moves(b):
     for k in a:
         if k != "name":
             a[k], b_[k] = b_[k], a[k]
-    # 1.14.5: 001 MINI BASS: OCT-1 on; the arpeggiator on with 2 octaves (it was turned off, then on again);
-    # the reverb HALL (mix 4.0, decay 4.5, tone 5.0), the delay P-PONG (mix 3.0, time 374 ms, feedback 2.0)
-    x = P[1]
-    x["oct"] = -1
-    x["arp"][0] = 1
-    x["arp"][3] = 2
-    x["fxg"][0], x["fxg"][1], x["fxg"][2] = 1, knob(4.5), knob(5.0)        # reverb TYPE HALL, DECAY, TONE
-    x["send"][3] = knob(4.0)                                               # reverb MIX
-    x["fxg"][3], x["fxg"][4], x["fxg"][5] = 3, dly(374), knob(2.0)         # delay TYPE P-PONG, TIME, FEEDBK
-    x["send"][2] = knob(3.0)                                               # delay MIX
     # 1.14.5: 003 PAD SWELL (was DEEP WELL): CUTOFF -2.1, EMPHASIS 2.6, the filter contour's AMOUNT 7.0 (the dials as the screen shows them)
     x = P[3]
     x["name"] = "PAD SWELL"
     x["e"][0] = round((-2.1 + 5.0) * 127 / 10.0)
     x["e"][1] = emp(2.6)
     x["e"][2] = knob(7.0)
-    # 1.14.6: 001 is called MOOG BASS (renamed after the level lookup, so its level stays)
+    # 1.14.7: 001 keeps the 1.14.4 sound and is called MOOG BASS (renamed after the level lookup, so its level stays)
     P[1]["name"] = "MOOG BASS"
+    P[1]["arp"][0] = 0                     # 1.14.7: 001 MOOG BASS: arpeggiator off, OCT-1 on
+    P[1]["oct"] = -1
+    # 1.14.7: 002 DUB STEP (was DUB STAB): the arpeggiator on with 2 octaves; the reverb HALL (mix 4.0, decay 4.5, tone 5.0);
+    # the delay P-PONG (mix 3.0, time 374 ms, feedback 2.0). The knobs are read on the 0.0-10.0 screen scale.
+    x = P[2]
+    x["name"] = "DUB STEP"
+    x["arp"][0] = 1
+    x["arp"][3] = 2
+    x["fxg"][0], x["fxg"][1], x["fxg"][2] = 1, knob(4.5), knob(5.0)        # reverb TYPE HALL, DECAY, TONE
+    x["send"][3] = knob(4.0)                                               # reverb MIX
+    x["fxg"][3], x["fxg"][4], x["fxg"][5] = 3, dly(374), knob(2.0)         # delay TYPE P-PONG, TIME, FEEDBK
+    x["send"][2] = knob(3.0)                                               # delay MIX
     P[30]["name"] = "MINI BASS"            # the 030 bass (was MOOG BASS): the name is free once 001 moves to MOOG BASS
     # 1.14.6: 006 CS-80 BRASS: MOD OSC off (the switch's bit 32 in the oscillators' switches)
     P[6]["g"][12] &= ~32
