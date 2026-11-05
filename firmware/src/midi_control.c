@@ -425,8 +425,25 @@ static volatile uint16_t *const mpc_io;     /* 0x80 | program (bits 0..6) | bank
  * (realtime and clock are handled in events_block, SysEx never reaches here). With ROUT CH1-4 channels
  * 5..16 are ignored entirely (with CH5-8 .. CH13-16 every channel outside the block): notes, bend, CCs (CC1/11/64, RPN, and the CC120/121/123 panic and reset),
  * channel aftertouch, Program Change, so they stay free for other instruments. */
+/* MIDI debug (2.2.2): the last CC0 / CC32 / Program Change messages, before the ROUT filter, for the MIDI BANK pop-up
+ * (fmini_app.c). kind 1 = CC (d1 the CC, d2 its value), kind 2 = Program Change (d1 the program, d2 the bank it uses). */
+#define MDBG_N 8u
+static volatile uint32_t mdbg_n;
+static volatile uint32_t mdbg_v[MDBG_N];
+static void mdbg_add(uint32_t kind, uint32_t ch, uint32_t d1, uint32_t d2)
+{
+    mdbg_v[mdbg_n % MDBG_N] = kind | (ch << 4) | (d1 << 9) | (d2 << 16);
+    mdbg_n++;
+}
+uint32_t midi_dbg_count(void) { return mdbg_n; }
+uint32_t midi_dbg_get(uint32_t k) { return mdbg_v[(mdbg_n - 1u - k) % MDBG_N]; }   /* k = 0 the newest */
+
 static void __attribute__((noinline)) midi_event(uint32_t st, uint32_t ch, uint32_t d1, uint32_t d2)
 {
+    if (st == 0xB0u && (d1 == 0u || d1 == 32u))
+        mdbg_add(1u, ch, d1, d2);
+    else if (st == 0xC0u)
+        mdbg_add(2u, ch, d1, midi_channel(ch)->bank_lsb ? 1u : 0u);
     if (song.g[G_ROUTE] != 1 && !midi_in_block(ch))
         return;
     if (st == 0x90u || st == 0x80u)

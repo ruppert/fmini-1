@@ -1351,6 +1351,56 @@ static void fa_pp_draw(void)
 static uint32_t fa_cpu_until, fa_cpu_last, fa_cpu_seen;
 extern volatile uint32_t cpu_crit;
 static int fa_cpu_on(void) { return fa_cpu_until && (int32_t)(fm1_ms - fa_cpu_until) < 0; }
+/* MIDI BANK (2.2.2, debug): after each CC0 / CC32 / Program Change the pop-up lists the last ones, newest at the bottom, for 8 s */
+extern uint32_t midi_dbg_count(void);
+extern uint32_t midi_dbg_get(uint32_t k);
+static uint32_t fa_mdbg_seen, fa_mdbg_until;
+static int fa_mdbg_on(void) { return fa_mdbg_until && (int32_t)(fm1_ms - fa_mdbg_until) < 0; }
+static void fa_mdbg_watch(void)
+{
+    uint32_t n = midi_dbg_count();
+    if (n == fa_mdbg_seen)
+        return;
+    fa_mdbg_seen = n;
+    fa_mdbg_until = fm1_ms + 8000u;
+}
+static void fa_mdbg_add(char *d, const char *s)
+{
+    uint32_t i = 0;
+    while (d[i] && i < 30u)
+        i++;
+    while (*s && i < 31u)
+        d[i++] = *s++;
+    d[i] = 0;
+}
+static void fa_mdbg_draw(void)
+{
+    uint32_t n = midi_dbg_count(), k, shown = n < 6u ? n : 6u;
+    char line[40], num[12];
+    fa_frame("MIDI BANK");
+    for (k = 0; k < shown; k++) {
+        uint32_t v = midi_dbg_get(shown - 1u - k);   /* oldest of the six at the top */
+        uint32_t kind = v & 15u, ch = (v >> 4) & 31u, d1 = (v >> 9) & 127u, d2 = (v >> 16) & 255u;
+        line[0] = 0;
+        fa_mdbg_add(line, kind == 1u ? "CC" : "PC ");
+        fmt_int(num, (int32_t)d1);
+        fa_mdbg_add(line, num);
+        fa_mdbg_add(line, kind == 1u ? " = " : "  bank ");
+        fmt_int(num, (int32_t)d2);
+        fa_mdbg_add(line, num);
+        fa_mdbg_add(line, "  ch ");
+        fmt_int(num, (int32_t)ch + 1);
+        fa_mdbg_add(line, num);
+        fa_ltext(20, 56 + (int32_t)k * 20, &AF_M, line, k + 1u == shown ? FA_OR : FA_CR);
+    }
+    if (!n)
+        fa_ctext(120, 100, &AF_M, "no message yet", FA_CR);
+    fmt_int(num, (int32_t)n);
+    line[0] = 0;
+    fa_mdbg_add(line, "total ");
+    fa_mdbg_add(line, num);
+    fa_ctext(120, 186, &AF_S, line, FA_CR);
+}
 static void fa_cpu_watch(void)
 {
     if (cpu_crit == fa_cpu_seen)
@@ -1534,6 +1584,8 @@ static void fa_scene(void)
         fa_pp_draw();
     if (fa_cpu_on())
         fa_cpu_draw();
+    if (fa_mdbg_on())
+        fa_mdbg_draw();
 }
 
 static uint32_t fa_signature(void)
@@ -1550,7 +1602,7 @@ static uint32_t fa_signature(void)
         h = (h ^ fmini_patch[0][i]) * 16777619u;
     for (i = 0; i < P_COUNT; i++)
         h = (h ^ (uint32_t)t->p[i]) * 16777619u;
-    h = (h ^ fa_base ^ (uint32_t)fa_pp_on() << 8 ^ (uint32_t)fa_cpu_on() << 9) * 16777619u;
+    h = (h ^ fa_base ^ (uint32_t)fa_pp_on() << 8 ^ (uint32_t)fa_cpu_on() << 9 ^ (uint32_t)fa_mdbg_on() << 10 ^ midi_dbg_count() << 11) * 16777619u;
     h = (h ^ fa_gl ^ (uint32_t)fa_gl_row << 3 ^ (uint32_t)fa_cc_i << 6 ^ (uint32_t)fm_midi_src << 12 ^ (uint32_t)fm_bt << 17 ^ (uint32_t)fm_midi_ch << 14 ^ (uint32_t)fm_bend_mode << 19) * 16777619u;
     h = (h ^ (uint32_t)fa_tune_hz << 7 ^ (uint32_t)(glo_transpose + 16) << 24) * 16777619u;   /* TUNING, TRANSPOSE: the list redraws as they change */
     for (i = 0; i < FA_NCC; i++)
@@ -1616,6 +1668,7 @@ static void fa_draw(void)
     uint32_t sig;
     uint32_t band;
     fa_cpu_watch();
+    fa_mdbg_watch();
     sig = fa_signature();
     if (sig == fa_sig_prev && !ui.force)
         return;
