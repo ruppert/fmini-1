@@ -518,21 +518,21 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     }
 
     for (i = 0; i < n; i++) {
-        int32_t x = mix[i], S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer overloads softly */
+        int32_t x = softclip(mix[i]), S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer overloads softly */
         S = (c0 * ((s0 + 128) >> 8) + c1 * ((s1 + 128) >> 8) + c2 * ((s2 + 128) >> 8) + c3 * ((s3 + 128) >> 8)) >> 14;   /* what the stages already hold */
         fbc = sx + fmini_mulr((S << 8) - sx, (uint32_t)gx16);              /* through the lag pole (Q8) */
         u = ((x * inv14) >> 14) - ((kinv12 * ((fbc + 128) >> 8)) >> 12);  /* the input less the feedback, the loop solved */
-        xin = u << 8;                                              /* the first stage's input (Q8) */
+        xin = softclip(u) << 8;                                              /* the first stage's input (Q8) */
         v1 = fmini_mulr(xin - s0, (uint32_t)G16);                          /* each stage is a differential pair: tanh in front of it */
         y1 = v1 + s0;
         s0 = y1 + v1;
-        v2 = fmini_mulr((((y1 + 128) >> 8) << 8) - s1, (uint32_t)G16);
+        v2 = fmini_mulr((softclip((y1 + 128) >> 8) << 8) - s1, (uint32_t)G16);
         y2 = v2 + s1;
         s1 = y2 + v2;
-        v3 = fmini_mulr((((y2 + 128) >> 8) << 8) - s2, (uint32_t)G16);
+        v3 = fmini_mulr((softclip((y2 + 128) >> 8) << 8) - s2, (uint32_t)G16);
         y3 = v3 + s2;
         s2 = y3 + v3;
-        v4 = fmini_mulr((((y3 + 128) >> 8) << 8) - s3, (uint32_t)G16);
+        v4 = fmini_mulr((softclip((y3 + 128) >> 8) << 8) - s3, (uint32_t)G16);
         y4 = v4 + s3;
         s3 = y4 + v4;
         w = fmini_mulr(y4 - sx, (uint32_t)gx16);                           /* the lag pole follows the output */
