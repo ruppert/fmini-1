@@ -400,7 +400,9 @@ static int32_t fmini_contour(const int16_t *p, voice_t *v, int32_t kr)
 #ifndef FMINI_KNEE
 #define FMINI_KNEE 16000
 #endif
-static inline int32_t fmini_sat(int32_t x) { return soft_knee(x, FMINI_KNEE); }
+/* above the knee, out of line: the render loop keeps only the compare (its cost is counted per sample) */
+static __attribute__((noinline)) int32_t fmini_knee_far(int32_t x) { return soft_knee(x, FMINI_KNEE); }
+static inline int32_t fmini_sat(int32_t x) { return (x <= FMINI_KNEE && x >= -FMINI_KNEE) ? x : fmini_knee_far(x); }
 
 /* a * k / 65536 rounded to the nearest (mulq16 floors: four stages of it leave a bias that a quiet, low ladder cannot sing against) */
 static inline int32_t fmini_mulr(int32_t a, uint32_t k)
