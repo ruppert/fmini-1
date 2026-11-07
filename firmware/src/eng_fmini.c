@@ -518,7 +518,7 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     }
 
     for (i = 0; i < n; i++) {
-        int32_t x = softclip(mix[i]), S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer overloads softly */
+        int32_t x = mix[i] > 32767 ? 32767 : mix[i] < -32767 ? -32767 : mix[i], S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer overloads softly */
         S = (c0 * ((s0 + 128) >> 8) + c1 * ((s1 + 128) >> 8) + c2 * ((s2 + 128) >> 8) + c3 * ((s3 + 128) >> 8)) >> 14;   /* what the stages already hold */
         fbc = sx + fmini_mulr((S << 8) - sx, (uint32_t)gx16);              /* through the lag pole (Q8) */
         u = ((x * inv14) >> 14) - ((kinv12 * ((fbc + 128) >> 8)) >> 12);  /* the input less the feedback, the loop solved */
