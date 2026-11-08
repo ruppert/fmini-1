@@ -297,7 +297,7 @@ static inline int32_t fmini_shark(uint32_t ph)            /* a triangle that ris
  * CA-72's ladder runs well under its pairs' knee, so a sawtooth or triangle comes out as drawn (its 3rd harmonic
  * at -20 dB in the triangle, measured on the CA-72 oscillator through the open ladder), while the singing sits at
  * the CA-72's level against the waveform. Harmonics relative to the fundamental; a shift, not a gain change. */
-#define FMINI_LADDER_IN 1
+#define FMINI_LADDER_IN 2         /* 12 dB below full scale: the ladder stays under its knee at every oscillator level */
 static void fmini_wave(uint32_t w, uint32_t *php, uint32_t inc, int32_t g, int32_t *mix, uint32_t n)
 {
     uint32_t ph = *php, i;
@@ -523,7 +523,7 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     }
 
     for (i = 0; i < n; i++) {
-        int32_t x = softclip(mix[i]) >> FMINI_LADDER_IN, S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer overloads softly */
+        int32_t x = (mix[i] > 32767 ? 32767 : mix[i] < -32767 ? -32767 : mix[i]) >> FMINI_LADDER_IN, S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer clips hard at full scale (no tanh: the CA-72 mixer is linear) */
         S = (c0 * ((s0 + 128) >> 8) + c1 * ((s1 + 128) >> 8) + c2 * ((s2 + 128) >> 8) + c3 * ((s3 + 128) >> 8)) >> 14;   /* what the stages already hold */
         fbc = sx + fmini_mulr((S << 8) - sx, (uint32_t)gx16);              /* through the lag pole (Q8) */
         u = ((x * inv14) >> 14) - ((kinv12 * ((fbc + 128) >> 8)) >> 12);  /* the input less the feedback, the loop solved */
