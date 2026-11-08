@@ -298,6 +298,14 @@ static inline int32_t fmini_shark(uint32_t ph)            /* a triangle that ris
  * at -20 dB in the triangle, measured on the CA-72 oscillator through the open ladder), while the singing sits at
  * the CA-72's level against the waveform. Harmonics relative to the fundamental; a shift, not a gain change. */
 #define FMINI_LADDER_IN 2         /* 12 dB below full scale: the ladder stays under its knee at every oscillator level */
+/* the differential pair: tanh with its bias, the bias's own offset taken away (the CA-72's pairs sit on a bias; its 2nd
+ * harmonic at full level is -37 dB, the triangle's odd harmonics unchanged). pair_off = softclip(FMINI_PAIR_BIAS), once a block */
+#define FMINI_PAIR_BIAS 1500
+static inline int32_t pairb(int32_t x, int32_t pair_off)
+{
+    return softclip(x + FMINI_PAIR_BIAS) - pair_off;
+}
+
 static void fmini_wave(uint32_t w, uint32_t *php, uint32_t inc, int32_t g, int32_t *mix, uint32_t n)
 {
     uint32_t ph = *php, i;
@@ -421,7 +429,7 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     const int16_t *p = t->p;
     const uint8_t *g = fmini_eff[(uint32_t)(t - trk) % NTRK].p;
     int32_t mix[CTL];
-    int32_t env15, mod, lfo, vib, lc, p16, fine, k12, G16, gx16, c0, c1, c2, c3, inv14, kinv12, trim12;
+    int32_t env15, mod, lfo, vib, lc, p16, fine, k12, G16, gx16, c0, c1, c2, c3, inv14, kinv12, trim12, pair_off;
     int32_t l1 = 0, l2 = 0, l3 = 0, ln = 0, dr1, dr2, dr3;
     uint32_t hp = (uint32_t)(g[FG_SW2] & FT_HP) ? 1u : 0u;      /* the output: LP (the last stage) or HP ((1 - LP)^4 of the same stages) */
     uint32_t tr = (uint32_t)(t - trk) % NTRK, i, sw = g[FG_SW1];
@@ -522,22 +530,23 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         }
     }
 
+    pair_off = softclip(FMINI_PAIR_BIAS);
     for (i = 0; i < n; i++) {
         int32_t x = (mix[i] > 32767 ? 32767 : mix[i] < -32767 ? -32767 : mix[i]) >> FMINI_LADDER_IN, S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer clips hard at full scale (no tanh: the CA-72 mixer is linear) */
         S = (c0 * ((s0 + 128) >> 8) + c1 * ((s1 + 128) >> 8) + c2 * ((s2 + 128) >> 8) + c3 * ((s3 + 128) >> 8)) >> 14;   /* what the stages already hold */
         fbc = sx + fmini_mulr((S << 8) - sx, (uint32_t)gx16);              /* through the lag pole (Q8) */
         u = ((x * inv14) >> 14) - ((kinv12 * ((fbc + 128) >> 8)) >> 12);  /* the input less the feedback, the loop solved */
-        xin = softclip(u) << 8;                                              /* the first stage's input (Q8) */
+        xin = (pairb(u, pair_off)) << 8;                                              /* the first stage's input (Q8) */
         v1 = fmini_mulr(xin - s0, (uint32_t)G16);                          /* each stage is a differential pair: tanh in front of it */
         y1 = v1 + s0;
         s0 = y1 + v1;
-        v2 = fmini_mulr((softclip((y1 + 128) >> 8) << 8) - s1, (uint32_t)G16);
+        v2 = fmini_mulr((pairb((y1 + 128) >> 8, pair_off) << 8) - s1, (uint32_t)G16);
         y2 = v2 + s1;
         s1 = y2 + v2;
-        v3 = fmini_mulr((softclip((y2 + 128) >> 8) << 8) - s2, (uint32_t)G16);
+        v3 = fmini_mulr((pairb((y2 + 128) >> 8, pair_off) << 8) - s2, (uint32_t)G16);
         y3 = v3 + s2;
         s2 = y3 + v3;
-        v4 = fmini_mulr((softclip((y3 + 128) >> 8) << 8) - s3, (uint32_t)G16);
+        v4 = fmini_mulr((pairb((y3 + 128) >> 8, pair_off) << 8) - s3, (uint32_t)G16);
         y4 = v4 + s3;
         s3 = y4 + v4;
         w = fmini_mulr(y4 - sx, (uint32_t)gx16);                           /* the lag pole follows the output */
