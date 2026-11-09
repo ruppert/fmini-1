@@ -60,8 +60,10 @@ def dly(t):
 
 
 def co(octs):
-    """the contour's amount in octaves of cutoff (127 = about 5) -> 0..127"""
-    return clamp(int(round(octs * 127 / 5.0)), 0, 127)
+    """the contour's amount in octaves of cutoff -> 0..127, through the CA-72's AMOUNT taper (fmini_filter.cntr_share)"""
+    from fmini_filter import cntr_share, CNTR_OCT
+    want = octs / CNTR_OCT
+    return min(range(128), key=lambda v: abs(cntr_share(v) - want))
 
 
 def semi(n):

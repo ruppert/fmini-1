@@ -132,6 +132,18 @@ def g_of_fosc(f):
     return math.tan(math.pi * f / FS) / W0
 
 
+# AMOUNT OF CONTOUR: the CA-72's R12 taper (voice::contour_amount_track, knob -> share of the contour's volts) and the
+# full swing in octaves of cutoff. The CA-72 model swings 1.84 .. 1.97 octaves at amount 1 with the filter contour's
+# SUSTAIN at 0.3 (cutoff 0.2 and 0.5, keyboard off, the singing pitch read from its spectrum): about 6.3 at full.
+CNTR_TRACK = [(0.0, 0.0), (0.25, 0.2080), (0.4, 0.3796), (0.5, 0.5111), (0.75, 0.7950), (1.0, 1.0)]
+CNTR_OCT = 6.3
+
+
+def cntr_share(v):
+    """CNTR 0..127 -> the share of the contour reaching the cutoff (0..1)"""
+    return lin(CNTR_TRACK, v / 127.0)
+
+
 def tables():
     """(CUT[128] p16, K[128] Q12, TRIM[128] Q12, G[], GX[]) the tables of eng_fmini_filter.h"""
     cut = [cut_p16(v) for v in range(128)]
@@ -178,6 +190,7 @@ def emit(path):
          "#define FMINI_GN %d              /* their length */" % len(G),
          "#define FMINI_NOTE0 %d           /* the keyboard's 0 V: the lowest key, F */" % NOTE0,
          "#define FMINI_FOSC_MAX16 %d      /* the singing pitch's ceiling, MIDI x 16 */" % int(round(midi16(FOSC_MAX))),
+         "#define FMINI_CNTR_FULL16 %d     /* the contour's full swing, MIDI x 16 (%.1f octaves) */" % (int(round(CNTR_OCT * 192)), CNTR_OCT),
          ""]
 
     def arr(name, typ, vals, per=8, comment=""):
@@ -201,6 +214,8 @@ def emit(path):
         L.append("    {" + ", ".join(str(v) for v in line) + "},")
     L.append("};")
     L.append("")
+    arr("FMINI_CNTR", "uint16_t", [int(round(cntr_share(v) * 32767)) for v in range(128)], 8,
+        "/* AMOUNT OF CONTOUR 0..127 -> the contour's share, Q15 (the CA-72's taper) */")
     arr("FMINI_G", "uint32_t", G, 6, "/* stage pole G = g/(1+g), Q24, per semitone of the singing pitch */")
     arr("FMINI_GX", "uint32_t", GX, 6, "/* the feedback lag pole's G, Q24 */")
     pathlib.Path(path).write_text("\n".join(L))

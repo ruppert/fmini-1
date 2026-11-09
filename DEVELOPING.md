@@ -114,7 +114,7 @@ The model and its numbers are in `tools/fmini_filter.py` (read its header); the 
   states (coefficients `c0..c3`), passed through the lag pole, and `u = (x - k * fb) / (1 + k * Gx * G^4)` is the loop's solution;
   then the stages run with their tanh (`softclip`).
 - **Units.** The knobs and the pitch work in 1/16 semitone of the singing pitch (MIDI x 16): CUTOFF -> `FMINI_CUT[128]`; plus the
-  contour (up to 5 octaves), the keyboard (`(pitch - 41 x 16) x KBD x 516 >> 16`), the LFO (+-2.85 octaves), the host's routings.
+  contour (up to 6.3 octaves, through the CA-72's AMOUNT taper `FMINI_CNTR`), the keyboard (`(pitch - 41 x 16) x KBD x 516 >> 16`), the LFO (+-2.85 octaves), the host's routings.
   The stage and lag poles come from per-semitone tables (`FMINI_G`, `FMINI_GX`), linear between. EMPHASIS -> `FMINI_K` (the loop gain)
   and `FMINI_TRIM` (an output trim of up to 1.5 dB for the passband loss the hardware has beyond the loop's own).
 - **Fixed point.** Signals +-32768; ladder and lag-pole states **Q8**; `G` Q16 (rounded multiply); prediction coefficients Q14; `k` Q12.

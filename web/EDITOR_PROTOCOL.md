@@ -1097,6 +1097,13 @@ pitch from velocity 111 up (`tests/fmini_filter_test.c`, 3a: 0.0 cents from velo
 Felucca's other engines (`voice.c`). A patch played with velocities above 110 sounds darker than on 1.7.2 and older, as it was
 made to; the 100 factory goldens moved for that reason (`regress.c` plays a note at 120).
 
+**Branch `new-filter` (not released; no new command, INFO unchanged):** `P_E2` (CNTR, the filter contour's AMOUNT) changed
+meaning. It was linear, 127 = 5 octaves of cutoff at a full contour; it now follows the CA-72's AMOUNT taper
+(`voice::contour_amount_track`: 0.25 of the knob is 21 %, 0.5 is 51 %, 0.75 is 80 %) over 6.3 octaves (`FMINI_CNTR`,
+`FMINI_CNTR_FULL16`). A patch, user preset, sound file or library entry made before keeps its raw CNTR, so its contour sweeps
+further: 2 octaves (51 before) become about 2.4, 5 octaves (127) become 6.3. There is no migration; the factory bank, written
+in octaves (`co()` in `tools/gen_fmini_presets.py`), was regenerated and sweeps as before.
+
 The web editor for it is `web/editor_fmini.html` (published at `editor/` on the FMini-1 site).
 
 ## Tagged device preferences v1

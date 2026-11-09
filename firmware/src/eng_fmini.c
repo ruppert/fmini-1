@@ -421,7 +421,7 @@ static inline int32_t fmini_mulr(int32_t a, uint32_t k)
  * processed). The lag pole puts the loop's 180-degree point at 0.686 of the stage pole: the filter sings at 1.578 times
  * its -3 dB corner, and it sings when the feedback k reaches 2.92. The knobs and the pitch work in 1/16 semitones of the
  * singing pitch (MIDI x 16): CUTOFF is the dial -5 .. +5 (FMINI_CUT), the keyboard adds 1 V/oct from F (MIDI 41) at KBD 127,
- * the contour up to 5 octaves; EMPHASIS is the dial 0 .. 10 (FMINI_K) with the hardware's passband loss (FMINI_TRIM). With
+ * the contour up to 6.3 octaves through the CA-72's AMOUNT taper (FMINI_CNTR); EMPHASIS is the dial 0 .. 10 (FMINI_K) with the hardware's passband loss (FMINI_TRIM). With
  * the mixer silent and EMPHASIS past 8 the ladder sings a sine at the singing pitch, 1 V/oct over the keyboard.
  * Q formats: signals +-32768 (tanh(1)); the states Q8 (a quiet ladder at a low cutoff moves less than a LSB a sample); G Q16; the prediction's coefficients c Q14; k Q12. */
 static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
@@ -497,7 +497,13 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
             lc += ((FMINI_CUT[i0 + 1] - lc) * fr) >> 8;
     }
     lc += (m->cutoff * 55) >> 10;                                                                           /* the host's steps (1/14 octave) in 1/16 semitones */
-    lc += (int32_t)(((int64_t)env15 * fmini_sm[tr][2] / (127 * 65536)) * 960) >> 15;                          /* the contour: up to 5 octaves */
+    {                                                                                                           /* the contour: the CA-72's taper, up to 6.3 octaves */
+        uint32_t ci = (uint32_t)fmini_sm[tr][2] >> 16, cf = ((uint32_t)fmini_sm[tr][2] & 0xFFFFu) >> 1;
+        int32_t ctap;
+        if (ci > 126u) { ci = 126u; cf = 32768u; }
+        ctap = (int32_t)FMINI_CNTR[ci] + (int32_t)((((int32_t)FMINI_CNTR[ci + 1u] - (int32_t)FMINI_CNTR[ci]) * (int32_t)cf) >> 15);
+        lc += (int32_t)(((int64_t)env15 * ctap * FMINI_CNTR_FULL16) >> 30);
+    }
     lc += ((v->pitch_cur - FMINI_NOTE0 * 16) * (int32_t)g[FG_KBD] * 516) >> 16;                              /* the keyboard: 1 V/oct at 127, 0 V on F */
     if (sw & FS_MFLT)
         lc += (mod * 547) >> 15;                                                                            /* +-2.85 octaves at full depth */
