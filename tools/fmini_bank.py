@@ -787,6 +787,11 @@ def knob(v):
     return min(127, max(0, int(round(v * 127 / 10.0))))
 
 
+def cknob(v):
+    """the contour's AMOUNT as its dial read before the CA-72 taper (linear, 10 = 5 octaves) -> the byte that sweeps as far now"""
+    return co(knob(v) * 5.0 / 127)
+
+
 def preset_moves(b):
     """1.14.4: the bank's moves (positions are the presets' numbers; each patch keeps its name, levels and settings)."""
     P = b.p
@@ -819,7 +824,7 @@ def preset_moves(b):
     x["name"] = "PAD SWELL"
     x["e"][0] = round((-2.1 + 5.0) * 127 / 10.0)
     x["e"][1] = emp(2.6)
-    x["e"][2] = knob(7.0)
+    x["e"][2] = cknob(7.0)
     # 1.14.7: 001 keeps the 1.14.4 sound and is called MOOG BASS (renamed after the level lookup, so its level stays)
     P[1]["name"] = "MOOG BASS"
     P[1]["arp"][0] = 0                     # 1.14.7: 001 MOOG BASS: arpeggiator off, OCT-1 on
@@ -849,7 +854,7 @@ def preset_moves(b):
     # keyboard tracking on (64); GLIDE about 12 o'clock (200 ms); a heavy tube drive: GAIN 8.0, OUTPUT 9.0; EMPHASIS 7.0
     tmp = Bank()
     tmp.add("MEGA LEAD", "lead", (o("8", "PW", 110), o("2", "SAW", 90, 3), o("4", "SQR", 90, -3)),
-            cutoff=300, emph=7.0, cntr=85, kbd=64, fenv=(600, 2000, 76), env=(5, 600, 76, 150), glide=200,
+            cutoff=300, emph=7.0, cntr=co(85 * 5.0 / 127), kbd=64, fenv=(600, 2000, 76), env=(5, 600, 76, 150), glide=200,
             send=(80, 0, 0, 0), dr=("TUBE", 60, 90), poly=False)
     P[7] = tmp.p[0]
     P[7]["e"][0] = round((-2.0 + 5.0) * 127 / 10.0)
@@ -906,7 +911,7 @@ def preset_moves(b):
     x = P[15]
     x["e"][0] = round((-2.5 + 5.0) * 127 / 10.0)
     x["e"][1] = emp(8.0)
-    x["e"][2] = knob(3.8)
+    x["e"][2] = cknob(3.8)
     x["arp"][2] = 1                        # RATE 1/8 (AR in gen_fmini_presets.py)
     x["arp"][3] = 1                        # OCTAVES 1
     x["send"][3] = 0                       # reverb MIX 0
