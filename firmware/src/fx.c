@@ -147,38 +147,49 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
     k = 32000 - d * 95 + ((int32_t)song.g[G_DRLVL] - 64) * 150;   /* tone: transparent at low drive .. ~3 kHz, Q15; G_DRLVL (TONE) moves it */
     k = clamp(k, 2500, 32500);
     mk = 30000 - d * 120;                                /* make-up */
+    /* the states in locals for the block (t->dist_* are read and written per sample otherwise) */
+    {
+        int32_t hp = t->dist_hp, lp1 = t->dist_lp1, lp2 = t->dist_lp2;
 #if FELUCCA_FMINI_ONLY
-    mk = (int32_t)(((int64_t)mk * song.g[G_MIDI] * 512) >> 15);   /* OUTPUT: 64 = as before (x1), 127 = x1.98, 0 = silent */
-    if (song.g[G_INFO] == 1) {
-        /* TUBE: two triode stages with a coupling capacitor between them: the first biased (a grid bias: even harmonics, a soft, lopsided clip),
-         * the second biased too (more even harmonics: a warm 2nd): rounder, thicker than SOFT, and
-         * it compresses before it clips. Each stage gains: GAIN raises the first 1 .. 9x, the second 1 .. 2.5x */
-        int32_t g1 = 4096 + d * d * 2, g2 = 4096 + d * 48, bias1 = 6500, bias2 = 1500, c1 = softclip(bias1), c2 = softclip(bias2);
-        int32_t *cap = &tube_cap[t - trk];
+        mk = (int32_t)(((int64_t)mk * song.g[G_MIDI] * 512) >> 15);   /* OUTPUT: 64 = as before (x1), 127 = x1.98, 0 = silent */
+        if (song.g[G_INFO] == 1) {
+            /* TUBE: two triode stages with a coupling capacitor between them: the first biased (a grid bias: even harmonics, a soft, lopsided clip),
+             * the second biased too (more even harmonics: a warm 2nd): rounder, thicker than SOFT, and
+             * it compresses before it clips. Each stage gains: GAIN raises the first 1 .. 9x, the second 1 .. 2.5x */
+            int32_t g1 = 4096 + d * d * 2, g2 = 4096 + d * 48, bias1 = 6500, bias2 = 1500, c1 = softclip(bias1), c2 = softclip(bias2);
+            int32_t *cap = &tube_cap[t - trk], cp = *cap;
+            for (i = 0; i < (int32_t)n; i++) {
+                int32_t x = b[i], y;
+                hp += (x - hp + 64) >> 7;
+                x = clamp(x - hp, -230000, 230000);
+                y = softclip((((x >> 2) * g1) >> 10) + bias1) - c1;
+                cp += (y - cp + 128) >> 8;                       /* the coupling capacitor (~30 Hz) */
+                y -= cp;
+                y = softclip((((y >> 2) * g2) >> 10) + bias2) - c2;
+                lp1 += mulq15(y - lp1, k);
+                lp2 += mulq15(lp1 - lp2, k);
+                b[i] = mulq15(lp2, mk);
+            }
+            *cap = cp;
+            t->dist_hp = hp;
+            t->dist_lp1 = lp1;
+            t->dist_lp2 = lp2;
+            return;
+        }
+#endif
+        b0 = softclip(bias);
         for (i = 0; i < (int32_t)n; i++) {
             int32_t x = b[i], y;
-            t->dist_hp += (x - t->dist_hp + 64) >> 7;
-            x = clamp(x - t->dist_hp, -230000, 230000);
-            y = softclip((((x >> 2) * g1) >> 10) + bias1) - c1;
-            *cap += (y - *cap + 128) >> 8;                       /* the coupling capacitor (~30 Hz) */
-            y -= *cap;
-            y = softclip((((y >> 2) * g2) >> 10) + bias2) - c2;
-            t->dist_lp1 += mulq15(y - t->dist_lp1, k);
-            t->dist_lp2 += mulq15(t->dist_lp1 - t->dist_lp2, k);
-            b[i] = mulq15(t->dist_lp2, mk);
+            hp += (x - hp + 64) >> 7;                       /* ~55 Hz low cut: keep the bass out of the clipper */
+            x = clamp(x - hp, -230000, 230000);             /* (x >> 2) * g fits 32 bits; the clip is flat out there */
+            y = softclip((((x >> 2) * g) >> 10) + bias) - b0;   /* >> 2 first: no overflow for loud poly */
+            lp1 += mulq15(y - lp1, k);                      /* two poles: tames the fizz */
+            lp2 += mulq15(lp1 - lp2, k);
+            b[i] = mulq15(lp2, mk);
         }
-        return;
-    }
-#endif
-    b0 = softclip(bias);
-    for (i = 0; i < (int32_t)n; i++) {
-        int32_t x = b[i], y;
-        t->dist_hp += (x - t->dist_hp + 64) >> 7;           /* ~55 Hz low cut: keep the bass out of the clipper */
-        x = clamp(x - t->dist_hp, -230000, 230000);         /* (x >> 2) * g fits 32 bits; the clip is flat out there */
-        y = softclip((((x >> 2) * g) >> 10) + bias) - b0;   /* >> 2 first: no overflow for loud poly */
-        t->dist_lp1 += mulq15(y - t->dist_lp1, k);         /* two poles: tames the fizz */
-        t->dist_lp2 += mulq15(t->dist_lp1 - t->dist_lp2, k);
-        b[i] = mulq15(t->dist_lp2, mk);
+        t->dist_hp = hp;
+        t->dist_lp1 = lp1;
+        t->dist_lp2 = lp2;
     }
 }
 
@@ -344,20 +355,32 @@ static __attribute__((noinline)) void rev_room(const int32_t *rev_in, int32_t *o
 {
     uint32_t i, k;
     int32_t size = 25000 + song.g[G_RSIZE] * 50, damp = 32767 - RDAMP * 200;
+    uint16_t ci[4], cir[4], ai[2], air[2];              /* the indices and the combs' low-passes, in locals for the block */
+    int32_t clp[4], clpr[4];
+    for (k = 0; k < 4u; k++) {
+        ci[k] = fx.comb_i[k];
+        cir[k] = fx.comb_ir[k];
+        clp[k] = fx.comb_lp[k];
+        clpr[k] = fx.comb_lpr[k];
+    }
+    for (k = 0; k < 2u; k++) {
+        ai[k] = fx.ap_i[k];
+        air[k] = fx.ap_ir[k];
+    }
     for (i = 0; i < n; i++) {
         int32_t a = 0, b = 0;
         int16_t *c = rev_comb, *cr = rev_x.s;
         int32_t in = mulq15(rev_in[i], 2580);
         for (k = 0; k < 4u; k++) {
-            int32_t o = c[fx.comb_i[k]], q = cr[fx.comb_ir[k]];
-            fx.comb_lp[k] = o + mulq15(fx.comb_lp[k] - o, 32767 - damp);
-            c[fx.comb_i[k]] = (int16_t)clamp(in + mulq15(fx.comb_lp[k], size), -32768, 32767);
-            fx.comb_lpr[k] = q + mulq15(fx.comb_lpr[k] - q, 32767 - damp);
-            cr[fx.comb_ir[k]] = (int16_t)clamp(in + mulq15(fx.comb_lpr[k], size), -32768, 32767);
-            if (++fx.comb_i[k] >= REV_COMB[k])
-                fx.comb_i[k] = 0;
-            if (++fx.comb_ir[k] >= REV_COMB_R[k])
-                fx.comb_ir[k] = 0;
+            int32_t o = c[ci[k]], q = cr[cir[k]];
+            clp[k] = o + mulq15(clp[k] - o, 32767 - damp);
+            c[ci[k]] = (int16_t)clamp(in + mulq15(clp[k], size), -32768, 32767);
+            clpr[k] = q + mulq15(clpr[k] - q, 32767 - damp);
+            cr[cir[k]] = (int16_t)clamp(in + mulq15(clpr[k], size), -32768, 32767);
+            if (++ci[k] >= REV_COMB[k])
+                ci[k] = 0;
+            if (++cir[k] >= REV_COMB_R[k])
+                cir[k] = 0;
             a += o;
             b += q;
             c += REV_COMB[k];
@@ -366,20 +389,30 @@ static __attribute__((noinline)) void rev_room(const int32_t *rev_in, int32_t *o
         c = rev_ap;
         cr = rev_x.s + (1139 + 1211 + 1300 + 1379);
         for (k = 0; k < 2u; k++) {
-            int32_t o = c[fx.ap_i[k]], q = cr[fx.ap_ir[k]];
-            c[fx.ap_i[k]] = (int16_t)clamp(a + (o >> 1), -32768, 32767);
+            int32_t o = c[ai[k]], q = cr[air[k]];
+            c[ai[k]] = (int16_t)clamp(a + (o >> 1), -32768, 32767);
             a = o - a;
-            cr[fx.ap_ir[k]] = (int16_t)clamp(b + (q >> 1), -32768, 32767);
+            cr[air[k]] = (int16_t)clamp(b + (q >> 1), -32768, 32767);
             b = q - b;
-            if (++fx.ap_i[k] >= REV_AP[k])
-                fx.ap_i[k] = 0;
-            if (++fx.ap_ir[k] >= REV_AP_R[k])
-                fx.ap_ir[k] = 0;
+            if (++ai[k] >= REV_AP[k])
+                ai[k] = 0;
+            if (++air[k] >= REV_AP_R[k])
+                air[k] = 0;
             c += REV_AP[k];
             cr += REV_AP_R[k];
         }
         out[i] += (a + b) >> 1;
         rev_side[i] = (a - b) >> 1;
+    }
+    for (k = 0; k < 4u; k++) {
+        fx.comb_i[k] = ci[k];
+        fx.comb_ir[k] = cir[k];
+        fx.comb_lp[k] = clp[k];
+        fx.comb_lpr[k] = clpr[k];
+    }
+    for (k = 0; k < 2u; k++) {
+        fx.ap_i[k] = ai[k];
+        fx.ap_ir[k] = air[k];
     }
     hl.side = 1;
 }
@@ -1012,30 +1045,55 @@ static __attribute__((noinline)) void cho_block(const int32_t *cho_in, int32_t *
     int32_t d = ty == 0u ? (cdepth * 3) >> 2 : ty == 1u ? cdepth >> 1 : (cdepth * 5) >> 3, kc = ty == 0u ? 14500 : ty == 1u ? 21500 : 26000;
     uint32_t wp = fx.cho_w, ph = fx.cho_ph;             /* the state in locals for the block (fx.* is a global: per sample it is loads and stores) */
     int32_t lp0 = fx.cho_lp[0], lp1 = fx.cho_lp[1];
-    for (i = 0; i < n; i++) {
-        int32_t l, r;
-        cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
-        ph += cinc;
-        if (ty == 0u) {
+    /* the TYPE is one a block: a loop per type (the state's update and the outputs are the same in each) */
+    switch (ty) {
+    case 0u:
+        for (i = 0; i < n; i++) {
+            int32_t l, r;
+            cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
+            ph += cinc;
             l = cho_tap(wp, (300 << 8) + (((osc_tri(ph) + 32768) * d) >> 8));
             r = cho_tap(wp, (300 << 8) + (((osc_tri(ph + 0x40000000u) + 32768) * d) >> 8));
-        } else if (ty == 1u) {
-            int32_t a = osc_tri(ph) + 32768;
+            lp0 += mulq15(l - lp0, kc);
+            lp1 += mulq15(r - lp1, kc);
+            wet[i] += (lp0 + lp1) >> 1;
+            dside[i] += (lp0 - lp1) >> 1;
+            wp++;
+        }
+        break;
+    case 1u:
+        for (i = 0; i < n; i++) {
+            int32_t l, r, a;
+            cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
+            ph += cinc;
+            a = osc_tri(ph) + 32768;
             l = cho_tap(wp, (150 << 8) + ((a * d) >> 8));
             r = cho_tap(wp, (150 << 8) + (((65535 - a) * d) >> 8));
-        } else {
-            int32_t v1 = cho_tap(wp, (500 << 8) + (((osc_sine(ph) + 32768) * d) >> 8));
-            int32_t v2 = cho_tap(wp, (640 << 8) + (((osc_sine(ph + 0x40000000u) + 32768) * d) >> 8));
-            int32_t v3 = cho_tap(wp, (420 << 8) + (((osc_sine(ph + 0x80000000u) + 32768) * d) >> 8));
-            int32_t v4 = cho_tap(wp, (760 << 8) + (((osc_sine(ph + 0xC0000000u) + 32768) * d) >> 8));
+            lp0 += mulq15(l - lp0, kc);
+            lp1 += mulq15(r - lp1, kc);
+            wet[i] += (lp0 + lp1) >> 1;
+            dside[i] += (lp0 - lp1) >> 1;
+            wp++;
+        }
+        break;
+    default:
+        for (i = 0; i < n; i++) {
+            int32_t l, r, v1, v2, v3, v4;
+            cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
+            ph += cinc;
+            v1 = cho_tap(wp, (500 << 8) + (((osc_sine(ph) + 32768) * d) >> 8));
+            v2 = cho_tap(wp, (640 << 8) + (((osc_sine(ph + 0x40000000u) + 32768) * d) >> 8));
+            v3 = cho_tap(wp, (420 << 8) + (((osc_sine(ph + 0x80000000u) + 32768) * d) >> 8));
+            v4 = cho_tap(wp, (760 << 8) + (((osc_sine(ph + 0xC0000000u) + 32768) * d) >> 8));
             l = (6 * v1 + 2 * v2 + 6 * v3 + 2 * v4) >> 4;
             r = (2 * v1 + 6 * v2 + 2 * v3 + 6 * v4) >> 4;
+            lp0 += mulq15(l - lp0, kc);
+            lp1 += mulq15(r - lp1, kc);
+            wet[i] += (lp0 + lp1) >> 1;
+            dside[i] += (lp0 - lp1) >> 1;
+            wp++;
         }
-        lp0 += mulq15(l - lp0, kc);
-        lp1 += mulq15(r - lp1, kc);
-        wet[i] += (lp0 + lp1) >> 1;
-        dside[i] += (lp0 - lp1) >> 1;
-        wp++;
+        break;
     }
     fx.cho_w = wp;
     fx.cho_ph = ph;
@@ -1400,36 +1458,57 @@ static __attribute__((noinline)) void ins_drive(ins_t *s, const track_t *t, int3
     uint32_t hold = INS_HOLD[clamp(t->p[P_IB], 0, 127) >> 3];
     int32_t a = t->p[P_IA], g = 4096 + a * a * 3;       /* DRIVE, Q12: 1x .. 12.8x, gentle at first */
     int32_t k = ins_lpk(crush ? t->p[P_IC] : t->p[P_IB]), lvl = crush ? 4096 : LEVEL_Q12[t->p[P_IC] & 127];
-    for (i = 0; i < n; i++) {
-        int32_t x = b[i], y, v;
-        s->w += clamp(tw - s->w, -SL_SLOPE, SL_SLOPE);
-        if (crush) {
-            if (!s->cnt) {
-                s->hold = ins_shape(IT_CRUSH, clamp(x, -262144, 262143), sh);
-                s->cnt = (uint8_t)hold;
+    /* the states in locals; the TYPE (crush or not) is one a block: a loop per kind */
+    int32_t w = s->w, hp = s->hp, lp1 = s->lp1, lp2 = s->lp2, dc = s->dc, hd = s->hold;
+    uint8_t cnt = s->cnt;
+    if (crush) {
+        for (i = 0; i < n; i++) {
+            int32_t x = b[i], y, v;
+            w += clamp(tw - w, -SL_SLOPE, SL_SLOPE);
+            if (!cnt) {
+                hd = ins_shape(IT_CRUSH, clamp(x, -262144, 262143), sh);
+                cnt = (uint8_t)hold;
             }
-            s->cnt--;
-            y = s->hold;
-        } else {
-            s->hp += ((x << 8) - s->hp) >> 8;            /* ~27 Hz low cut (Q8: no offset left by the rounding) */
-            v = clamp(x - (s->hp >> 8), -230000, 230000);
-            y = ins_shape(ty, ((v >> 3) * g) >> 9, 0);    /* (>> 3 first: 32 bits) */
+            cnt--;
+            y = hd;
+            y <<= 4;                                    /* (x16: the low cutoffs' rounding leaves no offset) */
+            v = mulq16(y - lp1, (uint32_t)k);            /* TONE / LPF: two one-pole low-passes */
+            y = v + lp1;
+            lp1 = y + v;
+            v = mulq16(y - lp2, (uint32_t)k);
+            y = v + lp2;
+            lp2 = y + v;
+            y = (y + 8) >> 4;
+            b[i] = pf_mix(x, y, w);
         }
-        y <<= 4;                                        /* (x16: the low cutoffs' rounding leaves no offset) */
-        v = mulq16(y - s->lp1, (uint32_t)k);             /* TONE / LPF: two one-pole low-passes */
-        y = v + s->lp1;
-        s->lp1 = y + v;
-        v = mulq16(y - s->lp2, (uint32_t)k);
-        y = v + s->lp2;
-        s->lp2 = y + v;
-        y = (y + 8) >> 4;
-        if (!crush) {
+    } else {
+        for (i = 0; i < n; i++) {
+            int32_t x = b[i], y, v;
+            w += clamp(tw - w, -SL_SLOPE, SL_SLOPE);
+            hp += ((x << 8) - hp) >> 8;                 /* ~27 Hz low cut (Q8: no offset left by the rounding) */
+            v = clamp(x - (hp >> 8), -230000, 230000);
+            y = ins_shape(ty, ((v >> 3) * g) >> 9, 0);   /* (>> 3 first: 32 bits) */
+            y <<= 4;                                    /* (x16: the low cutoffs' rounding leaves no offset) */
+            v = mulq16(y - lp1, (uint32_t)k);            /* TONE / LPF: two one-pole low-passes */
+            y = v + lp1;
+            lp1 = y + v;
+            v = mulq16(y - lp2, (uint32_t)k);
+            y = v + lp2;
+            lp2 = y + v;
+            y = (y + 8) >> 4;
             y = (y * lvl) >> 12;                        /* LEVEL */
-            s->dc += ((y << 8) - s->dc) >> 9;           /* DC blocker, ~14 Hz (FUZZ's lopsided halves) */
-            y -= s->dc >> 8;
+            dc += ((y << 8) - dc) >> 9;                 /* DC blocker, ~14 Hz (FUZZ's lopsided halves) */
+            y -= dc >> 8;
+            b[i] = pf_mix(x, y, w);
         }
-        b[i] = pf_mix(x, y, s->w);
     }
+    s->w = w;
+    s->hp = hp;
+    s->lp1 = lp1;
+    s->lp2 = lp2;
+    s->dc = dc;
+    s->hold = hd;
+    s->cnt = cnt;
 }
 
 /* PHASR, FLANG, CHOR: the sweep at RATE (one LFO per track), DEPTH, FDBK */
@@ -1441,47 +1520,70 @@ static __attribute__((noinline)) void ins_swept(ins_t *s, const track_t *t, int3
         uint32_t tr = pf_tri(s->ph + (n >> 1) * inc), q = 32768u + (uint32_t)(((int32_t)tr - 32768) * (int32_t)dep / 127);
         int32_t a = PH_A[q >> 11] + (((PH_A[(q >> 11) + 1u] - PH_A[q >> 11]) * (int32_t)(q & 2047u)) >> 11);
         int32_t fbk = c * 180;                          /* 0 .. 0.7, Q15 */
+        int32_t w = s->w, dc = s->dc, fbv = s->fb;      /* the states in locals for the block */
         for (i = 0; i < n; i++) {
-            int32_t x = b[i], xs = clamp((x + 4) >> 3, -16383, 16383), u = xs + ((s->fb * fbk + 16384) >> 15), y = u;
+            int32_t x = b[i], xs = clamp((x + 4) >> 3, -16383, 16383), u = xs + ((fbv * fbk + 16384) >> 15), y = u;
             uint32_t st;
-            s->w += clamp(tw - s->w, -SL_SLOPE, SL_SLOPE);
+            w += clamp(tw - w, -SL_SLOPE, SL_SLOPE);
             for (st = 0; st < PH_ST; st++) {            /* y = a (u - y1) + u1 */
                 y = clamp(s->px[st] + ((a * (u - s->py[st]) + 8192) >> 14), -65535, 65535);
                 s->px[st] = u;
                 s->py[st] = y;
                 u = y;
             }
-            s->fb = clamp(y, -32767, 32767);
+            fbv = clamp(y, -32767, 32767);
             y <<= 2;                                    /* (y: at an eighth) */
-            s->dc += ((y << 8) - s->dc) >> 9;           /* DC blocker, ~14 Hz (a clipped loud input is lopsided) */
-            b[i] = pf_mix(x, (x >> 1) + y - (s->dc >> 8), s->w);   /* (dry + all-passed) / 2 */
+            dc += ((y << 8) - dc) >> 9;                 /* DC blocker, ~14 Hz (a clipped loud input is lopsided) */
+            b[i] = pf_mix(x, (x >> 1) + y - (dc >> 8), w);   /* (dry + all-passed) / 2 */
         }
+        s->w = w;
+        s->dc = dc;
+        s->fb = fbv;
         s->ph += n * inc;
         return;
     }
     {
+        /* CHORUS and FLANGER: the states in locals; the kind is one a block, a loop each (the same update and output) */
         int32_t chorus = s->type == IT_CHORUS, fbk = c * (chorus ? 103 : 219);   /* 0 .. 0.4 / 0 .. 0.85, Q15 */
         uint32_t dq = dep * 516u;                       /* DEPTH, Q16 */
-        for (i = 0; i < n; i++, s->ph += inc) {
-            int32_t x = b[i], r0, r1, v, fr;
-            uint32_t d;                                 /* the delay, Q16 samples */
-            s->w += clamp(tw - s->w, -SL_SLOPE, SL_SLOPE);
-            if (chorus) {
-                d = (uint32_t)((140 << 16) + ((osc_sine(s->ph) * (int32_t)dep * 50) >> 5));   /* 3.2 +- 2.3 ms */
-            } else {
-                uint32_t tr = pf_tri(s->ph), sw = (tr * tr) >> 16;   /* longer near the short end (perform.c) */
-                d = (11u << 16) + 209u * (((sw >> 1) * dq) >> 15);  /* 0.25 .. 5 ms */
+        uint32_t ph = s->ph;
+        int32_t w = s->w, dc = s->dc;
+        uint16_t wp = s->wp;
+        if (chorus) {
+            for (i = 0; i < n; i++, ph += inc) {
+                int32_t x = b[i], r0, r1, v, fr;
+                uint32_t d = (uint32_t)((140 << 16) + ((osc_sine(ph) * (int32_t)dep * 50) >> 5));   /* 3.2 +- 2.3 ms, Q16 samples */
+                w += clamp(tw - w, -SL_SLOPE, SL_SLOPE);
+                r0 = (int32_t)(wp - (d >> 16)) & (int32_t)(IL_LEN - 1u);
+                r1 = (r0 - 1) & (int32_t)(IL_LEN - 1u);
+                fr = (int32_t)((d >> 1) & 0x7FFFu);
+                v = s->line[r0] + (((s->line[r1] - s->line[r0]) * fr) >> 15);
+                s->line[wp] = (int16_t)clamp((x >> 2) + softclip(mulq15(v, fbk)), -32767, 32767);
+                wp = (uint16_t)((wp + 1u) & (IL_LEN - 1u));
+                v <<= 1;                                /* (v: at a quarter) */
+                dc += ((v << 8) - dc) >> 9;             /* DC blocker (the line's clip on a loud lopsided wave) */
+                b[i] = pf_mix(x, (x >> 1) + v - (dc >> 8), w);   /* (dry + delayed) / 2 */
             }
-            r0 = (int32_t)(s->wp - (d >> 16)) & (int32_t)(IL_LEN - 1u);
-            r1 = (r0 - 1) & (int32_t)(IL_LEN - 1u);
-            fr = (int32_t)((d >> 1) & 0x7FFFu);
-            v = s->line[r0] + (((s->line[r1] - s->line[r0]) * fr) >> 15);
-            s->line[s->wp] = (int16_t)clamp((x >> 2) + softclip(mulq15(v, fbk)), -32767, 32767);
-            s->wp = (uint16_t)((s->wp + 1u) & (IL_LEN - 1u));
-            v <<= 1;                                    /* (v: at a quarter) */
-            s->dc += ((v << 8) - s->dc) >> 9;           /* DC blocker (the line's clip on a loud lopsided wave) */
-            b[i] = pf_mix(x, (x >> 1) + v - (s->dc >> 8), s->w);   /* (dry + delayed) / 2 */
+        } else {
+            for (i = 0; i < n; i++, ph += inc) {
+                int32_t x = b[i], r0, r1, v, fr;
+                uint32_t tr = pf_tri(ph), sw = (tr * tr) >> 16, d = (11u << 16) + 209u * (((sw >> 1) * dq) >> 15);   /* 0.25 .. 5 ms, Q16 samples; longer near the short end (perform.c) */
+                w += clamp(tw - w, -SL_SLOPE, SL_SLOPE);
+                r0 = (int32_t)(wp - (d >> 16)) & (int32_t)(IL_LEN - 1u);
+                r1 = (r0 - 1) & (int32_t)(IL_LEN - 1u);
+                fr = (int32_t)((d >> 1) & 0x7FFFu);
+                v = s->line[r0] + (((s->line[r1] - s->line[r0]) * fr) >> 15);
+                s->line[wp] = (int16_t)clamp((x >> 2) + softclip(mulq15(v, fbk)), -32767, 32767);
+                wp = (uint16_t)((wp + 1u) & (IL_LEN - 1u));
+                v <<= 1;
+                dc += ((v << 8) - dc) >> 9;
+                b[i] = pf_mix(x, (x >> 1) + v - (dc >> 8), w);
+            }
         }
+        s->ph = ph;
+        s->w = w;
+        s->dc = dc;
+        s->wp = wp;
     }
 }
 
@@ -1625,19 +1727,25 @@ static void mix_part(track_t *t, uint32_t n SM_DECL)
         int32_t c = t->p[P_CHOR] * 258, d = t->p[P_DLY] * 258, r = t->p[P_REV] * 258, pk = t->peak;
         int32_t xmax = c > d ? c : d;
         xmax = 0x7FFFFFFF / ((xmax > r ? xmax : r) | 1);   /* sends: loud chords at a high LEVEL */
-        for (i = 0; i < n; i++) {
-            int32_t x = ((b[i] >> 2) * lvl) >> 10, a = x < 0 ? -x : x;   /* pre-shift: 8 loud voices */
-            int32_t xs = clamp(x, -xmax, xmax);         /* sends: mulq15 would overflow */
-            if (a > pk)
-                pk = a;
+        {   /* the part's level and pan (one loop), then each send on its own loop: a send at 0 is not a loop (no test per sample) */
+            int32_t xsb[CTL];
+            for (i = 0; i < n; i++) {
+                int32_t x = ((b[i] >> 2) * lvl) >> 10, a = x < 0 ? -x : x;   /* pre-shift: 8 loud voices */
+                if (a > pk)
+                    pk = a;
+                xsb[i] = clamp(x, -xmax, xmax);         /* sends: mulq15 would overflow */
+                SM(l)[i] += (x * gl) >> 12;
+                SM(r)[i] += (x * gr) >> 12;
+            }
             if (c)
-                SM(c)[i] += mulq15(xs, c);
+                for (i = 0; i < n; i++)
+                    SM(c)[i] += mulq15(xsb[i], c);
             if (d)
-                SM(d)[i] += mulq15(xs, d);
+                for (i = 0; i < n; i++)
+                    SM(d)[i] += mulq15(xsb[i], d);
             if (r)
-                SM(v)[i] += mulq15(xs, r);
-            SM(l)[i] += (x * gl) >> 12;
-            SM(r)[i] += (x * gr) >> 12;
+                for (i = 0; i < n; i++)
+                    SM(v)[i] += mulq15(xsb[i], r);
         }
         t->peak = pk;
     }

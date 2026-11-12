@@ -517,6 +517,8 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         }
     }
 
+    const int32_t amp0 = m->amp0;                      /* the voice's ramp (voice_amp), as a running sum below */
+    uint32_t xa = 0, da = (uint32_t)(m->amp1 - m->amp0);
     for (i = 0; i < n; i++) {
         int32_t x = softclip(mix[i]), S, fbc, u, xin, v1, v2, v3, v4, y1, y2, y3, y4, w, o;   /* the mixer overloads softly */
         S = (c0 * ((s0 + 128) >> 8) + c1 * ((s1 + 128) >> 8) + c2 * ((s2 + 128) >> 8) + c3 * ((s3 + 128) >> 8)) >> 14;   /* what the stages already hold */
@@ -539,7 +541,11 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         sx += w + w;
         /* HP: the stages are one-pole lows H; (1 - H)^4 = 1 - 4H + 6H^2 - 4H^3 + H^4 on the stages' outputs (linear, the states as they are) */
         o = hp ? xin - 4 * y1 + 6 * y2 - 4 * y3 + y4 : y4;
-        out[i] += voice_amp((((o + 128) >> 8) * trim12) >> 12, m, i) << 1;
+        {   /* voice_amp with amp_at's ramp by its running sum (x = (amp1 - amp0) * i, one add a sample, mod 2^32 as the product) */
+            int32_t xr = (int32_t)xa, amp = amp0 + ((xr + ((xr >> 31) & (CTL - 1))) >> CTL_LOG2);
+            xa += da;
+            out[i] += mulq15(mulq15((((o + 128) >> 8) * trim12) >> 12, amp), VOICE_FS) << 1;
+        }
     }
     v->ph[0] = ph0;
     v->ph[1] = ph1;
