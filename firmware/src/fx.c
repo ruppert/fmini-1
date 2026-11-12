@@ -1010,50 +1010,55 @@ static __attribute__((noinline)) void cho_block(const int32_t *cho_in, int32_t *
 {
     uint32_t i, ty = (uint32_t)song.g[G_ENGGO] % 3u;
     int32_t d = ty == 0u ? (cdepth * 3) >> 2 : ty == 1u ? cdepth >> 1 : (cdepth * 5) >> 3, kc = ty == 0u ? 14500 : ty == 1u ? 21500 : 26000;
+    uint32_t wp = fx.cho_w, ph = fx.cho_ph;             /* the state in locals for the block (fx.* is a global: per sample it is loads and stores) */
+    int32_t lp0 = fx.cho_lp[0], lp1 = fx.cho_lp[1];
     for (i = 0; i < n; i++) {
-        uint32_t wp = fx.cho_w;
         int32_t l, r;
         cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
-        fx.cho_ph += cinc;
+        ph += cinc;
         if (ty == 0u) {
-            l = cho_tap(wp, (300 << 8) + (((osc_tri(fx.cho_ph) + 32768) * d) >> 8));
-            r = cho_tap(wp, (300 << 8) + (((osc_tri(fx.cho_ph + 0x40000000u) + 32768) * d) >> 8));
+            l = cho_tap(wp, (300 << 8) + (((osc_tri(ph) + 32768) * d) >> 8));
+            r = cho_tap(wp, (300 << 8) + (((osc_tri(ph + 0x40000000u) + 32768) * d) >> 8));
         } else if (ty == 1u) {
-            int32_t a = osc_tri(fx.cho_ph) + 32768;
+            int32_t a = osc_tri(ph) + 32768;
             l = cho_tap(wp, (150 << 8) + ((a * d) >> 8));
             r = cho_tap(wp, (150 << 8) + (((65535 - a) * d) >> 8));
         } else {
-            int32_t v1 = cho_tap(wp, (500 << 8) + (((osc_sine(fx.cho_ph) + 32768) * d) >> 8));
-            int32_t v2 = cho_tap(wp, (640 << 8) + (((osc_sine(fx.cho_ph + 0x40000000u) + 32768) * d) >> 8));
-            int32_t v3 = cho_tap(wp, (420 << 8) + (((osc_sine(fx.cho_ph + 0x80000000u) + 32768) * d) >> 8));
-            int32_t v4 = cho_tap(wp, (760 << 8) + (((osc_sine(fx.cho_ph + 0xC0000000u) + 32768) * d) >> 8));
+            int32_t v1 = cho_tap(wp, (500 << 8) + (((osc_sine(ph) + 32768) * d) >> 8));
+            int32_t v2 = cho_tap(wp, (640 << 8) + (((osc_sine(ph + 0x40000000u) + 32768) * d) >> 8));
+            int32_t v3 = cho_tap(wp, (420 << 8) + (((osc_sine(ph + 0x80000000u) + 32768) * d) >> 8));
+            int32_t v4 = cho_tap(wp, (760 << 8) + (((osc_sine(ph + 0xC0000000u) + 32768) * d) >> 8));
             l = (6 * v1 + 2 * v2 + 6 * v3 + 2 * v4) >> 4;
             r = (2 * v1 + 6 * v2 + 2 * v3 + 6 * v4) >> 4;
         }
-        fx.cho_lp[0] += mulq15(l - fx.cho_lp[0], kc);
-        fx.cho_lp[1] += mulq15(r - fx.cho_lp[1], kc);
-        wet[i] += (fx.cho_lp[0] + fx.cho_lp[1]) >> 1;
-        dside[i] += (fx.cho_lp[0] - fx.cho_lp[1]) >> 1;
-        fx.cho_w++;
+        lp0 += mulq15(l - lp0, kc);
+        lp1 += mulq15(r - lp1, kc);
+        wet[i] += (lp0 + lp1) >> 1;
+        dside[i] += (lp0 - lp1) >> 1;
+        wp++;
     }
+    fx.cho_w = wp;
+    fx.cho_ph = ph;
+    fx.cho_lp[0] = lp0;
+    fx.cho_lp[1] = lp1;
 }
 
 /* FMini-1: the delay's seven TYPEs (params.c N_DLYTYPE: ANALOG DIGITAL TAPE P-PONG MULTI SLAP REVERSE), one loop each over the block, all on
  * dly_buf: the sample d back (1 .. 65535), or silence if the delay started less than d samples ago (older ones are from before) */
-static inline int32_t dly_at(uint32_t d)
+/* the delay's taps and write, on the block's locals (w: the next write index, st: the start: older samples are silence) */
+static inline int32_t dly_at_w(uint32_t w, uint32_t st, uint32_t d)
 {
-    return d <= fx.dly_w - fx.dly_start ? dly_buf[(fx.dly_w - d) & (DLY_LEN - 1u)] : 0;
+    return d <= w - st ? dly_buf[(w - d) & (DLY_LEN - 1u)] : 0;
 }
-static inline int32_t dly_atq(uint32_t dq)                  /* Q8 samples back, linear between two samples */
+static inline int32_t dly_atq_w(uint32_t w, uint32_t st, uint32_t dq)   /* Q8 samples back, linear between two samples */
 {
     uint32_t d = dq >> 8;
-    int32_t a = dly_at(d), b = dly_at(d + 1u);
+    int32_t a = dly_at_w(w, st, d), b = dly_at_w(w, st, d + 1u);
     return a + (((b - a) * (int32_t)(dq & 255u)) >> 8);
 }
-static inline void dly_put(int32_t v)                       /* the loop's input (clamped) */
+static inline void dly_put_w(uint32_t w, int32_t v)                     /* the loop's input (clamped) at the write index w */
 {
-    dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)clamp(v, -32768, 32767);
-    fx.dly_w++;
+    dly_buf[w & (DLY_LEN - 1u)] = (int16_t)clamp(v, -32768, 32767);
 }
 #define DLY_MAXQ ((int32_t)(DLY_LEN - 4u) << 8)
 /* ANALOG: a BBD chain's echo: dark (the loop's low-pass ~2.6 kHz: every repeat darker), a slow drift of the clock (+-12 samples at 1 Hz), the
@@ -1063,91 +1068,117 @@ static inline void dly_put(int32_t v)                       /* the loop's input 
  *   P-PONG: one line of 2T: the left is the line's T, the right its 2T (the feedback's source): echoes alternate L R L R from T. MULTI: four taps
  *   at T/4 T/2 3T/4 T spread over the two sides, the feedback from the last. REVERSE: two heads read the last T backwards through triangles (a
  *   chunk of T played backwards, crossfaded), the feedback takes the reversed sound (the next repeat is forward again). P-PONG and REVERSE
- *   reach 743 ms (the line's 65 k samples hold 2T). */
+ *   reach 743 ms (the line's 65 k samples hold 2T).
+ * The TYPE is chosen once a block (a loop per type, the state in locals and written back at the end) */
 static __attribute__((noinline)) void dly_block(const int32_t *dly_in, int32_t *wet, uint32_t n, int32_t fb)
 {
-    uint32_t i, ty = dly_kind(), w;
-    int32_t dmix = song.g[G_DMIX] * 258, tgt = (int32_t)delay_samples() << 8, st = tgt - fx.dl_q, slap;
-    fx.dl_q += clamp(st, -2048, 2048);                  /* up to 8 samples a block: +-25 % speed: a quick, smooth bend */
-    slap = (1323 << 8) + (((fx.dl_q >> 6) * 3277) >> 9);   /* SLAP's time, 30 ms + TIME / 10 */
-    for (i = 0; i < n; i++) {
-        int32_t x, in = dly_in[i] >> 1, y;
-        switch (ty) {
-        case 0u:                                        /* ANALOG */
-            fx.dly_ph += 97392u;
-            x = dly_atq((uint32_t)clamp(fx.dl_q + ((osc_sine(fx.dly_ph) * 12) >> 7), 4096, DLY_MAXQ));
-            fx.dly_lp += mulq15(x - fx.dly_lp, 11500);
-            dly_put(in + mulq15(softclip(fx.dly_lp), fb));
-            wet[i] += mulq15(fx.dly_lp << 1, dmix);
-            break;
-        case 1u:                                        /* DIGITAL */
-            x = dly_atq((uint32_t)clamp(fx.dl_q, 4096, DLY_MAXQ));
-            fx.dly_lp += mulq15(x - fx.dly_lp, 28000);
-            dly_put(in + mulq15(fx.dly_lp, fb));
+    uint32_t i, ty = dly_kind(), w = fx.dly_w, st = fx.dly_start, ph = fx.dly_ph, ph2 = fx.dly_ph2;
+    int32_t dmix = song.g[G_DMIX] * 258, tgt = (int32_t)delay_samples() << 8, slew = tgt - fx.dl_q, slap, dl, lp = fx.dly_lp, hp = fx.dly_hp;
+    fx.dl_q += clamp(slew, -2048, 2048);                /* up to 8 samples a block: +-25 % speed: a quick, smooth bend */
+    dl = fx.dl_q;
+    slap = (1323 << 8) + (((dl >> 6) * 3277) >> 9);     /* SLAP's time, 30 ms + TIME / 10 */
+    switch (ty) {
+    case 0u:                                            /* ANALOG */
+        for (i = 0; i < n; i++) {
+            int32_t in = dly_in[i] >> 1, x;
+            ph += 97392u;
+            x = dly_atq_w(w, st, (uint32_t)clamp(dl + ((osc_sine(ph) * 12) >> 7), 4096, DLY_MAXQ));
+            lp += mulq15(x - lp, 11500);
+            dly_put_w(w, in + mulq15(softclip(lp), fb));
+            w++;
+            wet[i] += mulq15(lp << 1, dmix);
+        }
+        break;
+    case 1u:                                            /* DIGITAL */
+        for (i = 0; i < n; i++) {
+            int32_t in = dly_in[i] >> 1, x;
+            x = dly_atq_w(w, st, (uint32_t)clamp(dl, 4096, DLY_MAXQ));
+            lp += mulq15(x - lp, 28000);
+            dly_put_w(w, in + mulq15(lp, fb));
+            w++;
             wet[i] += mulq15(x << 1, dmix);
-            break;
-        case 2u:                                        /* TAPE */
-            fx.dly_ph += 58437u;
-            fx.dly_ph2 += 629846u;
-            x = dly_atq((uint32_t)clamp(fx.dl_q + ((osc_sine(fx.dly_ph) * 24 + osc_sine(fx.dly_ph2) * 3 / 2) >> 7), 4096, DLY_MAXQ));
-            fx.dly_lp += mulq15(x - fx.dly_lp, 8800);
-            fx.dly_hp += (fx.dly_lp - fx.dly_hp) >> 6;
-            dly_put(in + mulq15((softclip((fx.dly_lp - fx.dly_hp) * 3 >> 1) * 21845) >> 15, fb));   /* (unity at small signals: the loop's gain stays fb) */
-            wet[i] += mulq15(fx.dly_lp << 1, dmix);
-            break;
-        case 3u: {                                      /* P-PONG */
-            uint32_t t = (uint32_t)clamp(fx.dl_q >> 8, 16, 32767);
-            int32_t l = dly_at(t), r = dly_at(2u * t);
-            fx.dly_lp += mulq15(r - fx.dly_lp, 22000);
-            dly_put(in + mulq15(fx.dly_lp, fb));
+        }
+        break;
+    case 2u:                                            /* TAPE */
+        for (i = 0; i < n; i++) {
+            int32_t in = dly_in[i] >> 1, x;
+            ph += 58437u;
+            ph2 += 629846u;
+            x = dly_atq_w(w, st, (uint32_t)clamp(dl + ((osc_sine(ph) * 24 + osc_sine(ph2) * 3 / 2) >> 7), 4096, DLY_MAXQ));
+            lp += mulq15(x - lp, 8800);
+            hp += (lp - hp) >> 6;
+            dly_put_w(w, in + mulq15((softclip((lp - hp) * 3 >> 1) * 21845) >> 15, fb));   /* (unity at small signals: the loop's gain stays fb) */
+            w++;
+            wet[i] += mulq15(lp << 1, dmix);
+        }
+        break;
+    case 3u:                                            /* P-PONG */
+        for (i = 0; i < n; i++) {
+            int32_t in = dly_in[i] >> 1;
+            uint32_t t = (uint32_t)clamp(dl >> 8, 16, 32767);
+            int32_t l = dly_at_w(w, st, t), r = dly_at_w(w, st, 2u * t);
+            lp += mulq15(r - lp, 22000);
+            dly_put_w(w, in + mulq15(lp, fb));
+            w++;
             wet[i] += mulq15(l + r, dmix);
             dside[i] += mulq15(l - r, dmix);
-            break;
         }
-        case 4u: {                                      /* MULTI */
-            uint32_t t = (uint32_t)clamp(fx.dl_q >> 8, 64, 65000);
-            int32_t t1 = dly_at(t >> 2), t2 = dly_at(t >> 1), t3 = dly_at((t * 3u) >> 2), t4 = dly_at(t), l, r;
-            fx.dly_lp += mulq15(t4 - fx.dly_lp, 24000);
-            dly_put(in + mulq15(fx.dly_lp, fb));
+        break;
+    case 4u:                                            /* MULTI */
+        for (i = 0; i < n; i++) {
+            int32_t in = dly_in[i] >> 1;
+            uint32_t t = (uint32_t)clamp(dl >> 8, 64, 65000);
+            int32_t t1 = dly_at_w(w, st, t >> 2), t2 = dly_at_w(w, st, t >> 1), t3 = dly_at_w(w, st, (t * 3u) >> 2), t4 = dly_at_w(w, st, t), l, r;
+            lp += mulq15(t4 - lp, 24000);
+            dly_put_w(w, in + mulq15(lp, fb));
+            w++;
             l = (22 * t1 + 16 * t3 + 13 * t4) >> 5;
             r = (19 * t2 + 8 * t3 + 13 * t4) >> 5;
             wet[i] += mulq15(l + r, dmix);
             dside[i] += mulq15(l - r, dmix);
-            break;
         }
-        case 5u:                                        /* SLAP */
-            fx.dly_ph += 48696u;
-            x = dly_atq((uint32_t)clamp(slap + ((osc_sine(fx.dly_ph) * 2) >> 7), 4096, DLY_MAXQ));
-            fx.dly_lp += mulq15(x - fx.dly_lp, 20000);
-            dly_put(in + mulq15(softclip(fx.dly_lp), mulq15(fb, 11000)));
-            wet[i] += mulq15(fx.dly_lp << 1, dmix);
-            break;
-        default: {                                      /* REVERSE */
-            int32_t o = 0, k;
-            w = fx.dly_w;
+        break;
+    case 5u:                                            /* SLAP */
+        for (i = 0; i < n; i++) {
+            int32_t in = dly_in[i] >> 1, x;
+            ph += 48696u;
+            x = dly_atq_w(w, st, (uint32_t)clamp(slap + ((osc_sine(ph) * 2) >> 7), 4096, DLY_MAXQ));
+            lp += mulq15(x - lp, 20000);
+            dly_put_w(w, in + mulq15(softclip(lp), mulq15(fb, 11000)));
+            w++;
+            wet[i] += mulq15(lp << 1, dmix);
+        }
+        break;
+    default:                                            /* REVERSE */
+        for (i = 0; i < n; i++) {
+            int32_t in = dly_in[i] >> 1, o = 0, k;
             for (k = 0; k < 2; k++) {
                 uint32_t c = fx.rv_c[k], nn = fx.rv_n[k];
                 int32_t wt = (int32_t)(c < nn / 2u ? c : nn - c) * (int32_t)fx.rv_i[k];
                 uint32_t age = w - fx.rv_p[k];
-                o += mulq15(age <= w - fx.dly_start && age < DLY_LEN - 2u ? dly_buf[fx.rv_p[k] & (DLY_LEN - 1u)] : 0, wt);
+                o += mulq15(age <= w - st && age < DLY_LEN - 2u ? dly_buf[fx.rv_p[k] & (DLY_LEN - 1u)] : 0, wt);
                 fx.rv_p[k]--;
                 if (++c >= nn) {                        /* a new sweep from the newest sample, the length from TIME now */
                     c = 0;
-                    nn = (uint32_t)clamp(fx.dl_q >> 8, 441, 32000);
+                    nn = (uint32_t)clamp(dl >> 8, 441, 32000);
                     fx.rv_p[k] = w;
                     fx.rv_n[k] = nn;
                     fx.rv_i[k] = 65536u / nn;
                 }
                 fx.rv_c[k] = c;
             }
-            fx.dly_lp += mulq15(o - fx.dly_lp, 20000);
-            dly_put(in + mulq15(fx.dly_lp, fb));
+            lp += mulq15(o - lp, 20000);
+            dly_put_w(w, in + mulq15(lp, fb));
+            w++;
             wet[i] += mulq15(o << 1, dmix);
-            break;
         }
-        }
-        (void)y;
+        break;
     }
+    fx.dly_w = w;
+    fx.dly_lp = lp;
+    fx.dly_hp = hp;
+    fx.dly_ph = ph;
+    fx.dly_ph2 = ph2;
 }
 #endif
 
@@ -1170,8 +1201,10 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
             sd |= (uint32_t)(trk[k].p[P_DLY] > 0);
             sr |= (uint32_t)(trk[k].p[P_REV] > 0);
         }
+        /* a delay whose MIX (G_DMIX) is at ZERO is off as well: its state is cleared when it starts again (below), as for
+         * a bus whose sends are all 0. (The chorus's DEPTH at 0 stays on: a pure delayed tone, fmini_fx_test) */
         cho_act = sc || fx_any(cho_in, n);
-        dly_act = sd || fx_any(dly_in, n);
+        dly_act = song.g[G_DMIX] > 0 && (sd || fx_any(dly_in, n));
         rev_act = sr || fx_any(rev_in, n);
     }
     /* FMini-1: RATE only changes the rate. The depth is a fixed, typical pitch swing (about +-16 cents, 25% above the first pick): the delay swing
