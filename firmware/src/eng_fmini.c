@@ -292,7 +292,8 @@ static inline int32_t fmini_shark(uint32_t ph)            /* a triangle that ris
     return x < 49152u ? (int32_t)((x * 43691u) >> 15) - 32768 : 32767 - (int32_t)((x - 49152u) * 4u);
 }
 
-/* one oscillator of the mix: mix[i] += its sample at level g (Q15); a loop per wave.
+/* one oscillator of the mix: mix[i] += its sample at level g (Q15); a loop per wave. keep = -1 adds to what the mix
+ * holds; keep = 0 writes it (the first oscillator: no zeroing pass, 0 + x = x exactly).
  * The polyBLEP residual is zero except within one step of a wrap: its bounds (lo, hi) and the step d are
  * worked out once per call, so each sample tests two constants (the same branches as dsp.c's blep, same bits). */
 static inline int32_t fm_blep(uint32_t ph, uint32_t d, uint32_t lo, uint32_t hi)
@@ -309,33 +310,33 @@ static inline int32_t fm_blep(uint32_t ph, uint32_t d, uint32_t lo, uint32_t hi)
     return 0;
 }
 
-static void fmini_wave(uint32_t w, uint32_t *php, uint32_t inc, int32_t g, int32_t *mix, uint32_t n)
+static void fmini_wave(uint32_t w, uint32_t *php, uint32_t inc, int32_t g, int32_t *mix, uint32_t n, int32_t keep)
 {
     uint32_t ph = *php, i, d = inc >> 15;
     uint32_t lo = d ? inc : 0u, hi = d ? 0xFFFFFFFFu - inc : 0xFFFFFFFFu;   /* d == 0: no residual at all (dsp.c blep) */
     switch (w) {
     case 0:
         for (i = 0; i < n; i++) {
-            mix[i] += mulq15(osc_tri(ph), g);
+            mix[i] = (mix[i] & keep) + mulq15(osc_tri(ph), g);
             ph += inc;
         }
         break;
     case 1:
         for (i = 0; i < n; i++) {
-            mix[i] += mulq15(fmini_shark(ph), g);
+            mix[i] = (mix[i] & keep) + mulq15(fmini_shark(ph), g);
             ph += inc;
         }
         break;
     case 2:
         for (i = 0; i < n; i++) {
-            mix[i] += mulq15(((int32_t)(ph >> 16) - 32768) - fm_blep(ph, d, lo, hi), g);
+            mix[i] = (mix[i] & keep) + mulq15(((int32_t)(ph >> 16) - 32768) - fm_blep(ph, d, lo, hi), g);
             ph += inc;
         }
         break;
     case 3:                                             /* PULSE 50 %: the saw minus the saw half a turn on */
         for (i = 0; i < n; i++) {
             uint32_t q = ph + 0x80000000u;
-            mix[i] += mulq15((((int32_t)(ph >> 16) - 32768) - fm_blep(ph, d, lo, hi)
+            mix[i] = (mix[i] & keep) + mulq15((((int32_t)(ph >> 16) - 32768) - fm_blep(ph, d, lo, hi)
                             - (((int32_t)(q >> 16) - 32768) - fm_blep(q, d, lo, hi))) >> 1, g);
             ph += inc;
         }
@@ -343,21 +344,21 @@ static void fmini_wave(uint32_t w, uint32_t *php, uint32_t inc, int32_t g, int32
     case 4:
         for (i = 0; i < n; i++) {
             uint32_t q = ph + 0x55555555u;
-            mix[i] += mulq15((((int32_t)(ph >> 16) - 32768) - fm_blep(ph, d, lo, hi)
+            mix[i] = (mix[i] & keep) + mulq15((((int32_t)(ph >> 16) - 32768) - fm_blep(ph, d, lo, hi)
                             - (((int32_t)(q >> 16) - 32768) - fm_blep(q, d, lo, hi))) >> 1, g);
             ph += inc;
         }
         break;
     case 6:                                             /* SIN: the sine table (dsp.c), no harmonics to fold back */
         for (i = 0; i < n; i++) {
-            mix[i] += mulq15(osc_sine(ph), g);
+            mix[i] = (mix[i] & keep) + mulq15(osc_sine(ph), g);
             ph += inc;
         }
         break;
     default:
         for (i = 0; i < n; i++) {
             uint32_t q = ph + 0x1C71C71Cu;
-            mix[i] += mulq15((((int32_t)(ph >> 16) - 32768) - fm_blep(ph, d, lo, hi)
+            mix[i] = (mix[i] & keep) + mulq15((((int32_t)(ph >> 16) - 32768) - fm_blep(ph, d, lo, hi)
                             - (((int32_t)(q >> 16) - 32768) - fm_blep(q, d, lo, hi))) >> 1, g);
             ph += inc;
         }
@@ -481,20 +482,27 @@ static void fmini_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     if (sw & FS_O2) l2 = (int32_t)(g[FG_L2] * g[FG_L2] * 2);
     if (sw & FS_O3) l3 = (int32_t)(g[FG_L3] * g[FG_L3] * 2);
     if (sw & FS_NZ) ln = (int32_t)(g[FG_LN] * g[FG_LN] * 2);
-    for (i = 0; i < n; i++)
-        mix[i] = 0;
-    if (l1)
-        fmini_wave(g[FG_W1], &ph0, inc1, l1, mix, n);
-    else
-        ph0 += inc1 * n;
-    if (l2)
-        fmini_wave(g[FG_W2], &ph1, inc2, l2, mix, n);
-    else
-        ph1 += inc2 * n;
-    if (l3)
-        fmini_wave(g[FG_W3], &ph2, inc3, l3, mix, n);
-    else
-        ph2 += inc3 * n;
+    {   /* the first oscillator that runs writes the mix (keep 0); the others add (keep -1) */
+        int32_t keep = 0;
+        if (l1) {
+            fmini_wave(g[FG_W1], &ph0, inc1, l1, mix, n, keep);
+            keep = -1;
+        } else
+            ph0 += inc1 * n;
+        if (l2) {
+            fmini_wave(g[FG_W2], &ph1, inc2, l2, mix, n, keep);
+            keep = -1;
+        } else
+            ph1 += inc2 * n;
+        if (l3) {
+            fmini_wave(g[FG_W3], &ph2, inc3, l3, mix, n, keep);
+            keep = -1;
+        } else
+            ph2 += inc3 * n;
+        if (!keep)                                      /* no oscillator: the mix starts at zero */
+            for (i = 0; i < n; i++)
+                mix[i] = 0;
+    }
     if (ln)
         for (i = 0; i < n; i++)
             mix[i] += mulq15(fmini_nbuf[tr][i], ln);
