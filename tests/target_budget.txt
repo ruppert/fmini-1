@@ -58,8 +58,8 @@ rev_side_mix 17
 spring_one 134
 rev_plate 655
 dly_block 630
-cho_block 309
+cho_block 270
 track_dist 126
 track_insert 3
 ins_drive 187
-ins_swept 300
+ins_swept 228

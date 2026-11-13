@@ -1043,62 +1043,32 @@ static __attribute__((noinline)) void cho_block(const int32_t *cho_in, int32_t *
 {
     uint32_t i, ty = (uint32_t)song.g[G_ENGGO] % 3u;
     int32_t d = ty == 0u ? (cdepth * 3) >> 2 : ty == 1u ? cdepth >> 1 : (cdepth * 5) >> 3, kc = ty == 0u ? 14500 : ty == 1u ? 21500 : 26000;
-    uint32_t wp = fx.cho_w, ph = fx.cho_ph;             /* the state in locals for the block (fx.* is a global: per sample it is loads and stores) */
-    int32_t lp0 = fx.cho_lp[0], lp1 = fx.cho_lp[1];
-    /* the TYPE is one a block: a loop per type (the state's update and the outputs are the same in each) */
-    switch (ty) {
-    case 0u:
-        for (i = 0; i < n; i++) {
-            int32_t l, r;
-            cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
-            ph += cinc;
-            l = cho_tap(wp, (300 << 8) + (((osc_tri(ph) + 32768) * d) >> 8));
-            r = cho_tap(wp, (300 << 8) + (((osc_tri(ph + 0x40000000u) + 32768) * d) >> 8));
-            lp0 += mulq15(l - lp0, kc);
-            lp1 += mulq15(r - lp1, kc);
-            wet[i] += (lp0 + lp1) >> 1;
-            dside[i] += (lp0 - lp1) >> 1;
-            wp++;
-        }
-        break;
-    case 1u:
-        for (i = 0; i < n; i++) {
-            int32_t l, r, a;
-            cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
-            ph += cinc;
-            a = osc_tri(ph) + 32768;
+    for (i = 0; i < n; i++) {
+        uint32_t wp = fx.cho_w;
+        int32_t l, r;
+        cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
+        fx.cho_ph += cinc;
+        if (ty == 0u) {
+            l = cho_tap(wp, (300 << 8) + (((osc_tri(fx.cho_ph) + 32768) * d) >> 8));
+            r = cho_tap(wp, (300 << 8) + (((osc_tri(fx.cho_ph + 0x40000000u) + 32768) * d) >> 8));
+        } else if (ty == 1u) {
+            int32_t a = osc_tri(fx.cho_ph) + 32768;
             l = cho_tap(wp, (150 << 8) + ((a * d) >> 8));
             r = cho_tap(wp, (150 << 8) + (((65535 - a) * d) >> 8));
-            lp0 += mulq15(l - lp0, kc);
-            lp1 += mulq15(r - lp1, kc);
-            wet[i] += (lp0 + lp1) >> 1;
-            dside[i] += (lp0 - lp1) >> 1;
-            wp++;
-        }
-        break;
-    default:
-        for (i = 0; i < n; i++) {
-            int32_t l, r, v1, v2, v3, v4;
-            cho_buf[wp & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
-            ph += cinc;
-            v1 = cho_tap(wp, (500 << 8) + (((osc_sine(ph) + 32768) * d) >> 8));
-            v2 = cho_tap(wp, (640 << 8) + (((osc_sine(ph + 0x40000000u) + 32768) * d) >> 8));
-            v3 = cho_tap(wp, (420 << 8) + (((osc_sine(ph + 0x80000000u) + 32768) * d) >> 8));
-            v4 = cho_tap(wp, (760 << 8) + (((osc_sine(ph + 0xC0000000u) + 32768) * d) >> 8));
+        } else {
+            int32_t v1 = cho_tap(wp, (500 << 8) + (((osc_sine(fx.cho_ph) + 32768) * d) >> 8));
+            int32_t v2 = cho_tap(wp, (640 << 8) + (((osc_sine(fx.cho_ph + 0x40000000u) + 32768) * d) >> 8));
+            int32_t v3 = cho_tap(wp, (420 << 8) + (((osc_sine(fx.cho_ph + 0x80000000u) + 32768) * d) >> 8));
+            int32_t v4 = cho_tap(wp, (760 << 8) + (((osc_sine(fx.cho_ph + 0xC0000000u) + 32768) * d) >> 8));
             l = (6 * v1 + 2 * v2 + 6 * v3 + 2 * v4) >> 4;
             r = (2 * v1 + 6 * v2 + 2 * v3 + 6 * v4) >> 4;
-            lp0 += mulq15(l - lp0, kc);
-            lp1 += mulq15(r - lp1, kc);
-            wet[i] += (lp0 + lp1) >> 1;
-            dside[i] += (lp0 - lp1) >> 1;
-            wp++;
         }
-        break;
+        fx.cho_lp[0] += mulq15(l - fx.cho_lp[0], kc);
+        fx.cho_lp[1] += mulq15(r - fx.cho_lp[1], kc);
+        wet[i] += (fx.cho_lp[0] + fx.cho_lp[1]) >> 1;
+        dside[i] += (fx.cho_lp[0] - fx.cho_lp[1]) >> 1;
+        fx.cho_w++;
     }
-    fx.cho_w = wp;
-    fx.cho_ph = ph;
-    fx.cho_lp[0] = lp0;
-    fx.cho_lp[1] = lp1;
 }
 
 /* FMini-1: the delay's seven TYPEs (params.c N_DLYTYPE: ANALOG DIGITAL TAPE P-PONG MULTI SLAP REVERSE), one loop each over the block, all on
@@ -1520,70 +1490,47 @@ static __attribute__((noinline)) void ins_swept(ins_t *s, const track_t *t, int3
         uint32_t tr = pf_tri(s->ph + (n >> 1) * inc), q = 32768u + (uint32_t)(((int32_t)tr - 32768) * (int32_t)dep / 127);
         int32_t a = PH_A[q >> 11] + (((PH_A[(q >> 11) + 1u] - PH_A[q >> 11]) * (int32_t)(q & 2047u)) >> 11);
         int32_t fbk = c * 180;                          /* 0 .. 0.7, Q15 */
-        int32_t w = s->w, dc = s->dc, fbv = s->fb;      /* the states in locals for the block */
         for (i = 0; i < n; i++) {
-            int32_t x = b[i], xs = clamp((x + 4) >> 3, -16383, 16383), u = xs + ((fbv * fbk + 16384) >> 15), y = u;
+            int32_t x = b[i], xs = clamp((x + 4) >> 3, -16383, 16383), u = xs + ((s->fb * fbk + 16384) >> 15), y = u;
             uint32_t st;
-            w += clamp(tw - w, -SL_SLOPE, SL_SLOPE);
+            s->w += clamp(tw - s->w, -SL_SLOPE, SL_SLOPE);
             for (st = 0; st < PH_ST; st++) {            /* y = a (u - y1) + u1 */
                 y = clamp(s->px[st] + ((a * (u - s->py[st]) + 8192) >> 14), -65535, 65535);
                 s->px[st] = u;
                 s->py[st] = y;
                 u = y;
             }
-            fbv = clamp(y, -32767, 32767);
+            s->fb = clamp(y, -32767, 32767);
             y <<= 2;                                    /* (y: at an eighth) */
-            dc += ((y << 8) - dc) >> 9;                 /* DC blocker, ~14 Hz (a clipped loud input is lopsided) */
-            b[i] = pf_mix(x, (x >> 1) + y - (dc >> 8), w);   /* (dry + all-passed) / 2 */
+            s->dc += ((y << 8) - s->dc) >> 9;           /* DC blocker, ~14 Hz (a clipped loud input is lopsided) */
+            b[i] = pf_mix(x, (x >> 1) + y - (s->dc >> 8), s->w);   /* (dry + all-passed) / 2 */
         }
-        s->w = w;
-        s->dc = dc;
-        s->fb = fbv;
         s->ph += n * inc;
         return;
     }
     {
-        /* CHORUS and FLANGER: the states in locals; the kind is one a block, a loop each (the same update and output) */
         int32_t chorus = s->type == IT_CHORUS, fbk = c * (chorus ? 103 : 219);   /* 0 .. 0.4 / 0 .. 0.85, Q15 */
         uint32_t dq = dep * 516u;                       /* DEPTH, Q16 */
-        uint32_t ph = s->ph;
-        int32_t w = s->w, dc = s->dc;
-        uint16_t wp = s->wp;
-        if (chorus) {
-            for (i = 0; i < n; i++, ph += inc) {
-                int32_t x = b[i], r0, r1, v, fr;
-                uint32_t d = (uint32_t)((140 << 16) + ((osc_sine(ph) * (int32_t)dep * 50) >> 5));   /* 3.2 +- 2.3 ms, Q16 samples */
-                w += clamp(tw - w, -SL_SLOPE, SL_SLOPE);
-                r0 = (int32_t)(wp - (d >> 16)) & (int32_t)(IL_LEN - 1u);
-                r1 = (r0 - 1) & (int32_t)(IL_LEN - 1u);
-                fr = (int32_t)((d >> 1) & 0x7FFFu);
-                v = s->line[r0] + (((s->line[r1] - s->line[r0]) * fr) >> 15);
-                s->line[wp] = (int16_t)clamp((x >> 2) + softclip(mulq15(v, fbk)), -32767, 32767);
-                wp = (uint16_t)((wp + 1u) & (IL_LEN - 1u));
-                v <<= 1;                                /* (v: at a quarter) */
-                dc += ((v << 8) - dc) >> 9;             /* DC blocker (the line's clip on a loud lopsided wave) */
-                b[i] = pf_mix(x, (x >> 1) + v - (dc >> 8), w);   /* (dry + delayed) / 2 */
+        for (i = 0; i < n; i++, s->ph += inc) {
+            int32_t x = b[i], r0, r1, v, fr;
+            uint32_t d;                                 /* the delay, Q16 samples */
+            s->w += clamp(tw - s->w, -SL_SLOPE, SL_SLOPE);
+            if (chorus) {
+                d = (uint32_t)((140 << 16) + ((osc_sine(s->ph) * (int32_t)dep * 50) >> 5));   /* 3.2 +- 2.3 ms */
+            } else {
+                uint32_t tr = pf_tri(s->ph), sw = (tr * tr) >> 16;   /* longer near the short end (perform.c) */
+                d = (11u << 16) + 209u * (((sw >> 1) * dq) >> 15);  /* 0.25 .. 5 ms */
             }
-        } else {
-            for (i = 0; i < n; i++, ph += inc) {
-                int32_t x = b[i], r0, r1, v, fr;
-                uint32_t tr = pf_tri(ph), sw = (tr * tr) >> 16, d = (11u << 16) + 209u * (((sw >> 1) * dq) >> 15);   /* 0.25 .. 5 ms, Q16 samples; longer near the short end (perform.c) */
-                w += clamp(tw - w, -SL_SLOPE, SL_SLOPE);
-                r0 = (int32_t)(wp - (d >> 16)) & (int32_t)(IL_LEN - 1u);
-                r1 = (r0 - 1) & (int32_t)(IL_LEN - 1u);
-                fr = (int32_t)((d >> 1) & 0x7FFFu);
-                v = s->line[r0] + (((s->line[r1] - s->line[r0]) * fr) >> 15);
-                s->line[wp] = (int16_t)clamp((x >> 2) + softclip(mulq15(v, fbk)), -32767, 32767);
-                wp = (uint16_t)((wp + 1u) & (IL_LEN - 1u));
-                v <<= 1;
-                dc += ((v << 8) - dc) >> 9;
-                b[i] = pf_mix(x, (x >> 1) + v - (dc >> 8), w);
-            }
+            r0 = (int32_t)(s->wp - (d >> 16)) & (int32_t)(IL_LEN - 1u);
+            r1 = (r0 - 1) & (int32_t)(IL_LEN - 1u);
+            fr = (int32_t)((d >> 1) & 0x7FFFu);
+            v = s->line[r0] + (((s->line[r1] - s->line[r0]) * fr) >> 15);
+            s->line[s->wp] = (int16_t)clamp((x >> 2) + softclip(mulq15(v, fbk)), -32767, 32767);
+            s->wp = (uint16_t)((s->wp + 1u) & (IL_LEN - 1u));
+            v <<= 1;                                    /* (v: at a quarter) */
+            s->dc += ((v << 8) - s->dc) >> 9;           /* DC blocker (the line's clip on a loud lopsided wave) */
+            b[i] = pf_mix(x, (x >> 1) + v - (s->dc >> 8), s->w);   /* (dry + delayed) / 2 */
         }
-        s->ph = ph;
-        s->w = w;
-        s->dc = dc;
-        s->wp = wp;
     }
 }
 
